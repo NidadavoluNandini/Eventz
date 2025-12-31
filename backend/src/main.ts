@@ -5,35 +5,31 @@ import { AppModule } from './app.module';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  // ✅ ALL APIs will be under /api
+  // API prefix
   app.setGlobalPrefix('api');
 
-  // ✅ CORS: allow Vercel + localhost
+  // ✅ CORRECT CORS for Vercel + local
   app.enableCors({
     origin: [
       'http://localhost:5173',
-      'https://eventz-zeta.vercel.app/', // 🔴 CHANGE if your Vercel URL is different
+      'http://localhost:3000',
+      'https://eventz-git-main-nandinis-projects-a92240b5.vercel.app',
+      'https://eventz-zeta.vercel.app',
     ],
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
     credentials: true,
   });
 
-  // ✅ Validation
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
-      forbidNonWhitelisted: true,
       transform: true,
     }),
   );
 
   const port = process.env.PORT || 3000;
   await app.listen(port);
-
-  console.log('🚀 Eventz Backend Running');
-  console.log(`🌍 Port: ${port}`);
-  console.log(`📡 API Base: /api`);
+  console.log(`🚀 Backend running on port ${port}`);
 }
 
 bootstrap();
