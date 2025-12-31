@@ -245,7 +245,7 @@ export default function RegisterEvent() {
             <label className="text-sm font-medium text-gray-700">
               Number of attendees
             </label>
-            <input
+            <Input
               type="number"
               min={1}
               max={selectedTicket?.available || 1}

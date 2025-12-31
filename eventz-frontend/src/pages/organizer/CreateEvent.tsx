@@ -8,7 +8,6 @@ const CATEGORIES = [
   "sports",
   "science",
   "industry",
-  "health",
   "entertainment",
   "business",
 ];

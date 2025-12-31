@@ -1,6 +1,8 @@
 import { Link, useNavigate } from "react-router-dom";
-import axios from "axios";
+
 import { useState } from "react";
+import api from "../../utils/axios";
+import axios from "../../utils/axios";
 
 export default function Register() {
   const navigate = useNavigate();
@@ -15,21 +17,21 @@ export default function Register() {
 
     const formData = new FormData(e.currentTarget);
 
-    const payload = {
-      name: formData.get("name"),
-      email: formData.get("email"),
-      password: formData.get("password"),
-    };
+const payload = {
+  name: formData.get("name"),
+  email: formData.get("email"),
+  password: formData.get("password"),
+};
 
-    try {
-      await axios.post(
-        "http://localhost:3000/api/auth/organizer/register",
-        payload
-      );
+try {
+  await axios.post(
+    `${import.meta.env.VITE_API_URL}/auth/organizer/register`,
+    payload
+  );
 
-      setSuccess("Registration successful. Please login.");
-      setTimeout(() => navigate("/organizer/login"), 1500);
-    } catch (err: any) {
+  setSuccess("Registration successful. Please login.");
+  setTimeout(() => navigate("/organizer/login"), 1500);
+} catch (err: any) {
       setError(
         err.response?.data?.message || "Registration failed. Please try again."
       );

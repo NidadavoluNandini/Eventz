@@ -20,8 +20,7 @@ const getImageUrl = (url: string): string => {
   }
   
   // If it's a relative path, prepend backend URL
-  const backendUrl = import.meta.env.VITE_API_URL || "http://localhost:3000";
-  
+const backendUrl = import.meta.env.VITE_API_URL;  
   // Remove leading slash if present to avoid double slashes
   const cleanUrl = url.startsWith("/") ? url.slice(1) : url;
   

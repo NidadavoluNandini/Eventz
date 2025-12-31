@@ -17,7 +17,7 @@ export default function OrganizerLogin() {
     setIsLoading(true);
 
     try {
-      const res = await api.post("/auth/organizer/login", {
+      const res = await api.post("/api/auth/organizer/login", {
         email,
         password,
       });
