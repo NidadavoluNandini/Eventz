@@ -44,42 +44,43 @@ export default function RegisterEvent() {
     form.ticketType &&
     form.quantity > 0;
 
-  const sendOtp = async () => {
-    try {
-      setLoading(true);
-      setError("");
+ const sendOtp = async () => {
+  try {
+    setLoading(true);
+    setError("");
 
-      const res = await axios.post(
-        `${API_URL}/api/registrations/initiate`,
-        {
-          eventId: id,
-          userName: `${form.firstName} ${form.lastName}`,
-          userEmail: form.email,
-          userPhone: form.phone,
-          ticketType: form.ticketType,
-          quantity: form.quantity,
-        }
-      );
-
-      if (res.data.resumePayment) {
-        navigate(`/payment/${res.data.registrationId}`);
-        return;
+    const res = await axios.post(
+      `${API_URL}/api/registrations/initiate`,
+      {
+        eventId: id,
+        userName: `${form.firstName} ${form.lastName}`,
+        userEmail: form.email,
+        userPhone: form.phone,
+        ticketType: form.ticketType,
+        quantity: form.quantity,
       }
+    );
 
-      sessionStorage.setItem(
-        "otpSession",
-        JSON.stringify({ registrationId: res.data.registrationId })
-      );
-
-      navigate("/verify-otp");
-    } catch (err: any) {
-      setError(
-        err.response?.data?.message || "Failed to start registration"
-      );
-    } finally {
-      setLoading(false);
+    if (res.data.resumePayment === true) {
+      navigate(`/payment/${res.data.registrationId}`);
+      return;
     }
-  };
+
+    sessionStorage.setItem(
+      "otpSession",
+      JSON.stringify({ registrationId: res.data.registrationId })
+    );
+
+    navigate("/verify-otp");
+  } catch (err: any) {
+    console.error("OTP ERROR:", err.response?.data || err);
+    setError(err.response?.data?.message || "Failed to start registration");
+    setLoading(false); // 🔴 THIS WAS MISSING
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   if (!event) {
     return (
