@@ -10,12 +10,7 @@ async function bootstrap() {
 
   // ✅ CORRECT CORS for Vercel + local
   app.enableCors({
-    origin: [
-      'http://localhost:5173',
-      'http://localhost:3000',
-      'https://eventz-git-main-nandinis-projects-a92240b5.vercel.app',
-      'https://eventz-zeta.vercel.app',
-    ],
+    origin: true,
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
     credentials: true,
   });
