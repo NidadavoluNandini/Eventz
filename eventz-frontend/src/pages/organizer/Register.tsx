@@ -24,10 +24,9 @@ const payload = {
 };
 
 try {
-  await axios.post(
-    `${import.meta.env.VITE_API_URL}/auth/organizer/register`,
-    payload
-  );
+ await api.post("/api/auth/organizer/register", payload);
+
+
 
   setSuccess("Registration successful. Please login.");
   setTimeout(() => navigate("/organizer/login"), 1500);

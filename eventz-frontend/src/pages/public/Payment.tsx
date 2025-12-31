@@ -43,9 +43,10 @@ export default function Payment() {
 
       // 1️⃣ Create order
       const { data } = await axios.post(
-        `${API_URL}/payments/registration/create-order`,
-        { registrationId }
-      );
+  `${API_URL}/api/payments/registration/create-order`,
+  { registrationId }
+);
+
 
       // 2️⃣ Razorpay options
       const options = {

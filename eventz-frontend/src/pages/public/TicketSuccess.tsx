@@ -17,7 +17,7 @@ export default function TicketSuccess() {
 
   const fetchRegistration = async () => {
     try {
-      const res = await axios.get(`${API_URL}/registrations/${id}`);
+      const res = await axios.get(`${API_URL}/api/registrations/${id}`);
       setReg(res.data);
     } catch (err) {
       console.error("Failed to load ticket", err);

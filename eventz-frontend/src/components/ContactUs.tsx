@@ -21,7 +21,7 @@ export default function ContactUs() {
 
     try {
       setLoading(true);
-      await api.post("/contact", formData);
+  await api.post("/api/contact", formData);
 
       setSubmitted(true);
       setFormData({

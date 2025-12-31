@@ -26,10 +26,11 @@ export default function OrganizerResetPassword() {
 
     try {
       setLoading(true);
-      await api.post("/auth/organizer/reset-password", {
-        email,
-        newPassword: password,
-      });
+      await api.post("/api/auth/organizer/reset-password", {
+  email,
+  newPassword: password,
+});
+
 
       setSuccess("Password updated successfully 🎉");
       setTimeout(() => navigate("/organizer/login"), 1500);

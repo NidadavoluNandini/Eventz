@@ -1,27 +1,25 @@
 import api from "../utils/axios";
 
 // PUBLIC
-export const getAllEvents = () => api.get("/events");
-
+export const getAllEvents = () => api.get("/api/events");
 export const getEventById = (id: string) =>
-  api.get(`/events/${id}`);
+  api.get(`/api/events/${id}`);
 
 // ORGANIZER
 export const createEvent = (data: any) =>
-  api.post("/events", data);
+  api.post("/api/events", data);
 
-
+export const getOrganizerEvents = () =>
+  api.get("/api/events/organizer/me");
 
 export const publishEvent = (id: string) =>
-  api.patch(`/events/${id}/publish`);
+  api.patch(`/api/events/${id}/publish`);
 
 export const unpublishEvent = (id: string) =>
-  api.patch(`/events/${id}/unpublish`);
+  api.patch(`/api/events/${id}/unpublish`);
 
 export const completeEvent = (id: string) =>
-  api.patch(`/events/${id}/complete`);
+  api.patch(`/api/events/${id}/complete`);
 
 export const deleteEvent = (id: string) =>
-  api.delete(`/events/${id}`);
-export const getOrganizerEvents = () =>
-  api.get("/events/organizer/me");
+  api.delete(`/api/events/${id}`);

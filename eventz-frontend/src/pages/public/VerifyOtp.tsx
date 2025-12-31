@@ -59,7 +59,7 @@ export default function VerifyOtp() {
       const otpValue = Number(otp.join(""));
 
       const res = await axios.post(
-        `${API_URL}/registrations/verify-otp`,
+        `${API_URL}/api/registrations/verify-otp`,
         {
           registrationId: session.registrationId,
           otp: otpValue,

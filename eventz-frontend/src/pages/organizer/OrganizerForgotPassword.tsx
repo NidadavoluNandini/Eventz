@@ -17,7 +17,7 @@ export default function OrganizerForgotPassword() {
     setLoading(true);
 
     try {
-      await api.post("/auth/organizer/forgot-password", { email });
+await api.post("/api/auth/organizer/forgot-password", { email });
 
       setMessage("Password reset email sent.");
       setTimeout(() => {

@@ -50,7 +50,7 @@ export default function RegisterEvent() {
       setError("");
 
       const res = await axios.post(
-        `${API_URL}/registrations/initiate`,
+        `${API_URL}/api/registrations/initiate`,
         {
           eventId: id,
           userName: `${form.firstName} ${form.lastName}`,
