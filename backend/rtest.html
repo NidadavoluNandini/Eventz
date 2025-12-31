@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Eventz – Razorpay Test</title>
+  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+</head>
+<body>
+
+  <h2>Eventz Payment Test</h2>
+
+  <button onclick="startPayment()">Pay Now</button>
+
+  <script>
+    async function startPayment() {
+      // 👉 STEP 1: Replace with your backend order ID
+      const backendOrderId = "694de796b9624c2707cdceb4";
+
+      // 👉 STEP 2: Call backend to create Razorpay order
+      const res = await fetch("http://localhost:3000/payments/create-order", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          orderId: backendOrderId
+        })
+      });
+
+      const data = await res.json();
+
+      console.log("Razorpay Order:", data);
+
+      // 👉 STEP 3: Open Razorpay Checkout
+      const options = {
+        key: "order_Rw3z85C2bjewzn", // 👈 your test key
+        amount: data.amount,
+        currency: "INR",
+        name: "Eventz",
+        description: "Event Ticket Payment",
+        order_id: data.razorpayOrderId,
+
+        handler: function (response) {
+          console.log("Payment Success:", response);
+
+          // 👉 STEP 4: Send payment details to backend (optional if webhook used)
+          fetch("http://localhost:3000/payments/verify", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature
+            })
+          })
+          .then(res => res.json())
+          .then(data => {
+            alert("Payment verified successfully!");
+            console.log(data);
+          });
+        },
+
+        prefill: {
+          name: "Test User",
+          email: "test@example.com",
+          contact: "9876543210"
+        },
+
+        theme: {
+          color: "#3399cc"
+        }
+      };
+
+      const rzp = new Razorpay(options);
+      rzp.open();
+    }
+  </script>
+
+</body>
+</html>

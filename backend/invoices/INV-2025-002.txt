@@ -1,0 +1,8 @@
+
+Invoice: INV-2025-002
+Event: Tech Expo 2025 Updated
+Name: krishna vamsi
+Email: nidadavolunandini@gmail.com
+Quantity: 3
+Unit Price: ₹499
+Total: ₹1497

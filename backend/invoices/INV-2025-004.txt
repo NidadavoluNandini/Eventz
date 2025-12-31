@@ -1,0 +1,8 @@
+
+Invoice: INV-2025-004
+Event: Tech Expo 2025 Updated
+Name: nandini vamsi
+Email: nidadhavolunanhdini@gmail.com
+Quantity: 1
+Unit Price: ₹499
+Total: ₹499
