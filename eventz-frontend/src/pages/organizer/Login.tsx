@@ -45,20 +45,13 @@ export default function OrganizerLogin() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-4 relative overflow-hidden">
-      {/* Animated Background Elements */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-0 left-1/4 w-96 h-96 bg-indigo-600/20 rounded-full blur-3xl animate-pulse"></div>
-        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-purple-600/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-gradient-to-r from-indigo-500/10 to-purple-500/10 rounded-full blur-3xl animate-spin-slow"></div>
-      </div>
-
+    <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
       {/* Login Card */}
-      <div className="w-full max-w-md relative z-10">
-        {/* Glassmorphism Card */}
-        <div className="bg-white/10 backdrop-blur-2xl rounded-3xl shadow-2xl p-8 border border-white/20 relative overflow-hidden">
-          {/* Decorative gradient overlay */}
-          <div className="absolute inset-0 bg-gradient-to-br from-white/5 via-transparent to-white/5 pointer-events-none"></div>
+      <div className="w-full max-w-md">
+        {/* Main Card */}
+        <div className="bg-white rounded-3xl shadow-2xl p-8 border border-slate-200 relative overflow-hidden">
+          {/* Subtle decorative element */}
+          <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-50 rounded-full blur-3xl opacity-50 -z-0"></div>
 
           <div className="relative z-10">
             {/* Header Icon with Animation */}
@@ -79,17 +72,17 @@ export default function OrganizerLogin() {
                   />
                 </svg>
               </div>
-              <h1 className="text-4xl font-extrabold text-white mb-2 bg-gradient-to-r from-white via-indigo-100 to-white bg-clip-text text-transparent">
+              <h1 className="text-4xl font-extrabold text-slate-900 mb-2">
                 Welcome Back
               </h1>
-              <p className="text-slate-300 text-sm font-medium">
+              <p className="text-slate-600 text-sm font-medium">
                 Sign in to manage your events
               </p>
             </div>
 
             {/* Error Message with Animation */}
             {error && (
-              <div className="mb-6 p-4 bg-red-500/20 backdrop-blur-sm border border-red-500/50 rounded-2xl flex items-start gap-3 animate-in fade-in slide-in-from-top duration-300">
+              <div className="mb-6 p-4 bg-red-50 border-l-4 border-red-500 rounded-xl flex items-start gap-3 animate-in fade-in slide-in-from-top duration-300">
                 <div className="w-6 h-6 bg-red-500 rounded-full flex items-center justify-center flex-shrink-0">
                   <svg
                     className="w-4 h-4 text-white"
@@ -103,7 +96,7 @@ export default function OrganizerLogin() {
                     />
                   </svg>
                 </div>
-                <p className="text-sm text-red-100 font-medium">{error}</p>
+                <p className="text-sm text-red-700 font-medium">{error}</p>
               </div>
             )}
 
@@ -113,14 +106,14 @@ export default function OrganizerLogin() {
               <div className="group">
                 <label
                   htmlFor="email"
-                  className="block text-sm font-semibold text-slate-200 mb-2"
+                  className="block text-sm font-semibold text-slate-700 mb-2"
                 >
                   Email Address
                 </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                     <svg
-                      className="h-5 w-5 text-slate-400 group-focus-within:text-indigo-400 transition-colors"
+                      className="h-5 w-5 text-slate-400 group-focus-within:text-indigo-500 transition-colors"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -137,7 +130,7 @@ export default function OrganizerLogin() {
                     id="email"
                     type="email"
                     placeholder="organizer@example.com"
-                    className="w-full pl-12 pr-4 py-3.5 bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl text-white placeholder-slate-400 focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition duration-200 outline-none disabled:opacity-50 disabled:cursor-not-allowed hover:bg-white/15"
+                    className="w-full pl-12 pr-4 py-3.5 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 placeholder-slate-400 focus:ring-2 focus:ring-indigo-500 focus:border-transparent focus:bg-white transition duration-200 outline-none disabled:opacity-50 disabled:cursor-not-allowed hover:border-slate-400"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
@@ -150,14 +143,14 @@ export default function OrganizerLogin() {
               <div className="group">
                 <label
                   htmlFor="password"
-                  className="block text-sm font-semibold text-slate-200 mb-2"
+                  className="block text-sm font-semibold text-slate-700 mb-2"
                 >
                   Password
                 </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                     <svg
-                      className="h-5 w-5 text-slate-400 group-focus-within:text-indigo-400 transition-colors"
+                      className="h-5 w-5 text-slate-400 group-focus-within:text-indigo-500 transition-colors"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -174,7 +167,7 @@ export default function OrganizerLogin() {
                     id="password"
                     type={showPassword ? "text" : "password"}
                     placeholder="••••••••"
-                    className="w-full pl-12 pr-12 py-3.5 bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl text-white placeholder-slate-400 focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition duration-200 outline-none disabled:opacity-50 disabled:cursor-not-allowed hover:bg-white/15"
+                    className="w-full pl-12 pr-12 py-3.5 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 placeholder-slate-400 focus:ring-2 focus:ring-indigo-500 focus:border-transparent focus:bg-white transition duration-200 outline-none disabled:opacity-50 disabled:cursor-not-allowed hover:border-slate-400"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
@@ -183,7 +176,7 @@ export default function OrganizerLogin() {
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400 hover:text-indigo-400 transition-colors disabled:opacity-50"
+                    className="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400 hover:text-indigo-500 transition-colors disabled:opacity-50"
                     disabled={isLoading}
                   >
                     {showPassword ? (
@@ -230,15 +223,15 @@ export default function OrganizerLogin() {
                 <label className="flex items-center cursor-pointer group">
                   <input
                     type="checkbox"
-                    className="w-4 h-4 text-indigo-600 bg-white/10 border-white/30 rounded focus:ring-indigo-500 focus:ring-offset-0 cursor-pointer"
+                    className="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500 cursor-pointer"
                   />
-                  <span className="ml-2 text-slate-300 group-hover:text-white transition-colors">
+                  <span className="ml-2 text-slate-600 group-hover:text-slate-900 transition-colors">
                     Remember me
                   </span>
                 </label>
                 <Link
                   to="/organizer/forgot-password"
-                  className="text-indigo-400 hover:text-indigo-300 font-semibold transition-colors"
+                  className="text-indigo-600 hover:text-indigo-700 font-semibold transition-colors"
                 >
                   Forgot password?
                 </Link>
@@ -303,10 +296,10 @@ export default function OrganizerLogin() {
             {/* Divider */}
             <div className="relative my-8">
               <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-white/20"></div>
+                <div className="w-full border-t border-slate-200"></div>
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="px-4 bg-transparent text-slate-400 font-medium">
+                <span className="px-4 bg-white text-slate-500 font-medium">
                   New to the platform?
                 </span>
               </div>
@@ -316,7 +309,7 @@ export default function OrganizerLogin() {
             <div className="text-center">
               <Link
                 to="/organizer/register"
-                className="inline-flex items-center gap-2 text-sm text-slate-300 hover:text-white font-semibold transition-colors group"
+                className="inline-flex items-center gap-2 text-sm text-slate-600 hover:text-slate-900 font-semibold transition-colors group"
               >
                 <span>Create an account</span>
                 <svg
@@ -339,9 +332,9 @@ export default function OrganizerLogin() {
 
         {/* Security Badge */}
         <div className="mt-8 text-center">
-          <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/5 backdrop-blur-sm rounded-full border border-white/10">
+          <div className="inline-flex items-center gap-2 px-4 py-2 bg-white rounded-full border border-slate-200 shadow-sm">
             <svg
-              className="w-4 h-4 text-green-400"
+              className="w-4 h-4 text-green-500"
               fill="currentColor"
               viewBox="0 0 20 20"
             >
@@ -351,30 +344,12 @@ export default function OrganizerLogin() {
                 clipRule="evenodd"
               />
             </svg>
-            <span className="text-xs text-slate-300 font-medium">
+            <span className="text-xs text-slate-600 font-medium">
               256-bit SSL Encrypted & Secure
             </span>
           </div>
         </div>
       </div>
-
-      {/* Add custom animation styles */}
-      <style>{`
-        @keyframes spin-slow {
-          from {
-            transform: translate(-50%, -50%) rotate(0deg);
-          }
-          to {
-            transform: translate(-50%, -50%) rotate(360deg);
-          }
-        }
-        .animate-spin-slow {
-          animation: spin-slow 20s linear infinite;
-        }
-        .delay-1000 {
-          animation-delay: 1s;
-        }
-      `}</style>
     </div>
   );
 }
