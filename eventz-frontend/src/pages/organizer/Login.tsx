@@ -226,7 +226,7 @@ export default function OrganizerLogin() {
                     className="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500 cursor-pointer"
                   />
                   <span className="ml-2 text-slate-600 group-hover:text-slate-900 transition-colors">
-                    Remember me
+                    Remember me!
                   </span>
                 </label>
                 <Link
