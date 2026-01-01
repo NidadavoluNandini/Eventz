@@ -56,7 +56,7 @@ export default function OrganizerLogin() {
     }
 
     // Check for common typos in popular domains
-    const commonDomains: { [key: string]: string } = {
+    const commonDomains: Record<string, string> = {
       "gmial.com": "gmail.com",
       "gmai.com": "gmail.com",
       "gmil.com": "gmail.com",
@@ -503,7 +503,7 @@ export default function OrganizerLogin() {
               />
             </svg>
             <span className="text-xs text-slate-600 font-medium">
-              256-bit SSL Encrypted & Secure
+              256-bit SSL Encrypted and  Secure
             </span>
           </div>
         </div>

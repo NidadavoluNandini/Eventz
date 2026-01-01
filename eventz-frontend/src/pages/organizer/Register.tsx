@@ -55,7 +55,7 @@ export default function Register() {
     }
 
     // Check for common typos in popular domains
-    const commonDomains: Record<string, string> = {
+    const commonDomains: { [key: string]: string } = {
       "gmial.com": "gmail.com",
       "gmai.com": "gmail.com",
       "gmil.com": "gmail.com",
@@ -578,7 +578,7 @@ export default function Register() {
               />
             </svg>
             <span className="text-xs text-slate-600 font-medium">
-              256-bit SSL Encrypted & Secure
+              256-bit SSL Encrypted and Secure
             </span>
           </div>
         </div>
