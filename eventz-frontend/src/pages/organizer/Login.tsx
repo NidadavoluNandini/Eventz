@@ -10,11 +10,129 @@ export default function OrganizerLogin() {
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [emailError, setEmailError] = useState("");
+
+  // Advanced email validation function
+  const validateEmail = (email: string): { isValid: boolean; error: string } => {
+    // Remove whitespace
+    email = email.trim();
+
+    // Check if email is empty
+    if (!email) {
+      return { isValid: false, error: "Email is required" };
+    }
+
+    // Basic email regex pattern
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return { isValid: false, error: "Invalid email format" };
+    }
+
+    // Split email into local and domain parts
+    const [localPart, domainPart] = email.split("@");
+
+    // Check for double dots (..)
+    if (email.includes("..")) {
+      return { isValid: false, error: "Email cannot contain consecutive dots (..)" };
+    }
+
+    // Check if domain has multiple dots at the end (e.g., .com.com, .in.in)
+    const domainParts = domainPart.split(".");
+    
+    // Common duplicate TLD patterns
+    const duplicateTLDs = [
+      ".com.com", ".org.org", ".net.net", ".edu.edu", 
+      ".in.in", ".uk.uk", ".us.us", ".io.io"
+    ];
+    
+    if (duplicateTLDs.some(dup => domainPart.endsWith(dup))) {
+      return { isValid: false, error: "Invalid domain - duplicate extension detected" };
+    }
+
+    // Check for valid TLD length (2-6 characters is typical)
+    const tld = domainParts[domainParts.length - 1];
+    if (tld.length < 2 || tld.length > 6) {
+      return { isValid: false, error: "Invalid domain extension" };
+    }
+
+    // Check for common typos in popular domains
+    const commonDomains: { [key: string]: string } = {
+      "gmial.com": "gmail.com",
+      "gmai.com": "gmail.com",
+      "gmil.com": "gmail.com",
+      "yahooo.com": "yahoo.com",
+      "yaho.com": "yahoo.com",
+      "hotmial.com": "hotmail.com",
+      "outlok.com": "outlook.com",
+    };
+
+    if (commonDomains[domainPart.toLowerCase()]) {
+      return { 
+        isValid: false, 
+        error: `Did you mean ${commonDomains[domainPart.toLowerCase()]}?` 
+      };
+    }
+
+    // Check for spaces in email
+    if (email.includes(" ")) {
+      return { isValid: false, error: "Email cannot contain spaces" };
+    }
+
+    // Check for valid characters in local part
+    const validLocalRegex = /^[a-zA-Z0-9._+-]+$/;
+    if (!validLocalRegex.test(localPart)) {
+      return { isValid: false, error: "Email contains invalid characters" };
+    }
+
+    // Check if local part starts or ends with a dot
+    if (localPart.startsWith(".") || localPart.endsWith(".")) {
+      return { isValid: false, error: "Email cannot start or end with a dot" };
+    }
+
+    // Check minimum domain length
+    if (domainParts.length < 2) {
+      return { isValid: false, error: "Invalid domain format" };
+    }
+
+    // Check for numbers-only domain (suspicious)
+    if (/^\d+$/.test(domainParts[0])) {
+      return { isValid: false, error: "Invalid domain name" };
+    }
+
+    return { isValid: true, error: "" };
+  };
+
+  const handleEmailBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+    const emailValue = e.target.value;
+    const validation = validateEmail(emailValue);
+    
+    if (!validation.isValid && emailValue) {
+      setEmailError(validation.error);
+    } else {
+      setEmailError("");
+    }
+  };
+
+  const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setEmail(e.target.value);
+    // Clear email error when user starts typing
+    if (emailError) {
+      setEmailError("");
+    }
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setIsLoading(true);
+
+    // Validate email before submission
+    const validation = validateEmail(email);
+    if (!validation.isValid) {
+      setEmailError(validation.error);
+      setIsLoading(false);
+      return;
+    }
 
     try {
       const res = await api.post("/api/auth/organizer/login", {
@@ -102,7 +220,7 @@ export default function OrganizerLogin() {
 
             {/* Form */}
             <form onSubmit={handleLogin} className="space-y-5">
-              {/* Email Input */}
+              {/* Email Input with Validation */}
               <div className="group">
                 <label
                   htmlFor="email"
@@ -113,7 +231,11 @@ export default function OrganizerLogin() {
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                     <svg
-                      className="h-5 w-5 text-slate-400 group-focus-within:text-indigo-500 transition-colors"
+                      className={`h-5 w-5 transition-colors ${
+                        emailError
+                          ? "text-red-500"
+                          : "text-slate-400 group-focus-within:text-indigo-500"
+                      }`}
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -130,13 +252,49 @@ export default function OrganizerLogin() {
                     id="email"
                     type="email"
                     placeholder="organizer@example.com"
-                    className="w-full pl-12 pr-4 py-3.5 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 placeholder-slate-400 focus:ring-2 focus:ring-indigo-500 focus:border-transparent focus:bg-white transition duration-200 outline-none disabled:opacity-50 disabled:cursor-not-allowed hover:border-slate-400"
+                    className={`w-full pl-12 pr-4 py-3.5 bg-slate-50 border rounded-xl text-slate-900 placeholder-slate-400 focus:ring-2 focus:border-transparent focus:bg-white transition duration-200 outline-none disabled:opacity-50 disabled:cursor-not-allowed hover:border-slate-400 ${
+                      emailError
+                        ? "border-red-500 focus:ring-red-500"
+                        : "border-slate-300 focus:ring-indigo-500"
+                    }`}
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    onChange={handleEmailChange}
+                    onBlur={handleEmailBlur}
                     required
                     disabled={isLoading}
                   />
+                  {emailError && (
+                    <div className="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none">
+                      <svg
+                        className="h-5 w-5 text-red-500"
+                        fill="currentColor"
+                        viewBox="0 0 20 20"
+                      >
+                        <path
+                          fillRule="evenodd"
+                          d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
+                          clipRule="evenodd"
+                        />
+                      </svg>
+                    </div>
+                  )}
                 </div>
+                {emailError && (
+                  <p className="mt-2 text-sm text-red-600 flex items-start gap-1.5 animate-in fade-in slide-in-from-top duration-200">
+                    <svg
+                      className="w-4 h-4 mt-0.5 flex-shrink-0"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                    <span>{emailError}</span>
+                  </p>
+                )}
               </div>
 
               {/* Password Input */}
@@ -226,7 +384,7 @@ export default function OrganizerLogin() {
                     className="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500 cursor-pointer"
                   />
                   <span className="ml-2 text-slate-600 group-hover:text-slate-900 transition-colors">
-                    Remember me!
+                    Remember me
                   </span>
                 </label>
                 <Link
@@ -240,7 +398,7 @@ export default function OrganizerLogin() {
               {/* Submit Button */}
               <button
                 type="submit"
-                disabled={isLoading}
+                disabled={isLoading || !!emailError}
                 className="group relative w-full bg-gradient-to-r from-indigo-600 via-indigo-700 to-purple-700 text-white py-4 rounded-xl font-bold shadow-2xl shadow-indigo-500/50 hover:shadow-indigo-500/70 hover:scale-[1.02] transition-all duration-300 disabled:opacity-70 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center gap-2 overflow-hidden"
               >
                 {/* Shimmer Effect */}
