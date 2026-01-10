@@ -31,7 +31,7 @@ export const setToken = (token: string) => {
 };
 
 export const getToken = () => {
-  return localStorage.getItem('token');
+  return localStorage.getItem('organizerToken');
 };
 
 export const removeToken = () => {

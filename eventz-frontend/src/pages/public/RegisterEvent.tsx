@@ -1,10 +1,9 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
-import axios from "axios";
+import api from "../../utils/axios";
 import PublicLayout from "../../layouts/PublicLayout";
 import { getEventById } from "../../api/events.api";
 
-const API_URL = import.meta.env.VITE_API_URL;
 
 export default function RegisterEvent() {
   const { id } = useParams();
@@ -48,18 +47,19 @@ export default function RegisterEvent() {
   try {
     setLoading(true);
     setError("");
+const res = await api.post(
+  "/api/registrations/initiate",
+  {
+    eventId: id,
+    userName: `${form.firstName} ${form.lastName}`,
+    userEmail: form.email,
+    userPhone: form.phone,
+    ticketType: form.ticketType,
+    quantity: form.quantity,
+  }
+);
 
-    const res = await axios.post(
-      `${API_URL}/api/registrations/initiate`,
-      {
-        eventId: id,
-        userName: `${form.firstName} ${form.lastName}`,
-        userEmail: form.email,
-        userPhone: form.phone,
-        ticketType: form.ticketType,
-        quantity: form.quantity,
-      }
-    );
+    
 
     if (res.data.resumePayment === true) {
       navigate(`/payment/${res.data.registrationId}`);

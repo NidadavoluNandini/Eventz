@@ -1,11 +1,10 @@
 // src/pages/public/VerifyOtp.tsx
 import { useEffect, useRef, useState } from "react";
-import axios from "axios";
+import api from "../../utils/axios";
 import { useNavigate } from "react-router-dom";
 import PublicLayout from "../../layouts/PublicLayout";
 
-const API_URL = import.meta.env.VITE_API_URL;
-
+ 
 export default function VerifyOtp() {
   const navigate = useNavigate();
   const inputs = useRef<HTMLInputElement[]>([]);
@@ -58,13 +57,13 @@ export default function VerifyOtp() {
 
       const otpValue = Number(otp.join(""));
 
-      const res = await axios.post(
-        `${API_URL}/api/registrations/verify-otp`,
-        {
-          registrationId: session.registrationId,
-          otp: otpValue,
-        }
-      );
+      const res = await api.post(
+  "/api/registrations/verify-otp",
+  {
+    registrationId: session.registrationId,
+    otp: otpValue,
+  }
+);
 
       const { requiresPayment } = res.data;
 

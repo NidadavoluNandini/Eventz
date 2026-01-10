@@ -1,36 +1,42 @@
-// src/pages/public/TicketSuccess.tsx
 import { useParams, Link } from "react-router-dom";
 import { useEffect, useState } from "react";
-import axios from "axios";
 import PublicLayout from "../../layouts/PublicLayout";
-
-const API_URL = import.meta.env.VITE_API_URL;
+import api from "../../utils/axios";
 
 export default function TicketSuccess() {
-  const { id } = useParams();
+  const { id } = useParams<{ id: string }>();
   const [reg, setReg] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    fetchRegistration();
-  }, []);
+    if (id) {
+      fetchRegistration();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
 
   const fetchRegistration = async () => {
     try {
-      const res = await axios.get(`${API_URL}/api/registrations/${id}`);
+      const res = await api.get(`/api/registrations/${id}`);
       setReg(res.data);
     } catch (err) {
       console.error("Failed to load ticket", err);
+      setError("Failed to load ticket details");
     } finally {
       setLoading(false);
     }
   };
 
   const resendTicket = async () => {
-    await axios.post(`${API_URL}/tickets/resend`, {
-      registrationId: id,
-    });
-    alert("📧 Ticket email resent!");
+    try {
+      await api.post("/api/tickets/resend", {
+        registrationId: id,
+      });
+      alert("📧 Ticket email resent!");
+    } catch (err) {
+      alert("Failed to resend ticket email");
+    }
   };
 
   if (loading) {
@@ -43,7 +49,7 @@ export default function TicketSuccess() {
     );
   }
 
-  if (!reg) {
+  if (!reg || error) {
     return (
       <PublicLayout>
         <div className="min-h-screen flex items-center justify-center text-red-600">
@@ -58,7 +64,7 @@ export default function TicketSuccess() {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
         <div className="w-full max-w-md bg-white rounded-3xl shadow-2xl overflow-hidden">
 
-          {/* ✅ HEADER */}
+          {/* HEADER */}
           <div className="bg-gradient-to-r from-black to-gray-800 text-white p-6 text-center">
             <div className="text-4xl mb-2">🎟️</div>
             <h1 className="text-2xl font-bold">Ticket Confirmed</h1>
@@ -67,7 +73,7 @@ export default function TicketSuccess() {
             </p>
           </div>
 
-          {/* ✅ BODY */}
+          {/* BODY */}
           <div className="p-6 space-y-5">
 
             {/* EVENT CARD */}
@@ -93,15 +99,17 @@ export default function TicketSuccess() {
               </div>
             </div>
 
-            {/* PRIMARY CTA */}
+            {/* DOWNLOAD TICKET */}
             <a
-              href={`${API_URL}/tickets/download/${id}`}
+              href={`${import.meta.env.VITE_API_URL}/api/tickets/download/${id}`}
+              target="_blank"
+              rel="noopener noreferrer"
               className="block w-full bg-black text-white py-3 rounded-xl font-semibold text-center hover:bg-gray-800 transition"
             >
               ⬇ Download Ticket (PDF)
             </a>
 
-            {/* SECONDARY ACTIONS */}
+            {/* RESEND EMAIL */}
             <button
               onClick={resendTicket}
               className="w-full border border-gray-300 py-3 rounded-xl font-medium hover:bg-gray-100 transition"

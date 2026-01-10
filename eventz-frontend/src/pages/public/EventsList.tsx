@@ -13,9 +13,20 @@ export default function EventsList() {
   const [loading, setLoading] = useState(true);
   const [, tick] = useState(0); // 🔄 auto refresh
 
+  // ✅ FETCH EVENTS (FIXED)
   useEffect(() => {
     getAllEvents()
-      .then((res) => setEvents(res.data))
+      .then((res) => {
+        // 🛡️ Handle all possible backend response shapes safely
+        const list = Array.isArray(res.data)
+          ? res.data
+          : res.data?.data || res.data?.events || [];
+        setEvents(list);
+      })
+      .catch((err) => {
+        console.error("Failed to fetch events:", err);
+        setEvents([]);
+      })
       .finally(() => setLoading(false));
   }, []);
 
@@ -35,7 +46,7 @@ export default function EventsList() {
         e.endTime
       ),
     }))
-    .filter((e) => e.status !== "ENDED"); // ✅ IMPORTANT
+    .filter((e) => e.status !== "ENDED"); // ❌ hide ended events
 
   const liveEvents = enriched.filter(
     (e) =>
@@ -55,7 +66,9 @@ export default function EventsList() {
       <EventsFilter selected={filter} setSelected={setFilter} />
 
       <div className="max-w-7xl mx-auto px-6 py-12 space-y-12">
-        {loading && <p className="text-center">Loading events…</p>}
+        {loading && (
+          <p className="text-center text-gray-500">Loading events…</p>
+        )}
 
         {liveEvents.length > 0 && (
           <section>

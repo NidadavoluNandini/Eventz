@@ -1,10 +1,7 @@
-// src/pages/public/Payment.tsx
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import axios from "axios";
 import PublicLayout from "../../layouts/PublicLayout";
-
-const API_URL = import.meta.env.VITE_API_URL;
+import api from "../../utils/axios";
 
 declare global {
   interface Window {
@@ -13,95 +10,97 @@ declare global {
 }
 
 export default function Payment() {
-  const { id: registrationId } = useParams();
+  const { registrationId } = useParams<{ registrationId: string }>();
   const navigate = useNavigate();
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    const script = document.createElement("script");
-    script.src = "https://checkout.razorpay.com/v1/checkout.js";
-    script.async = true;
-
-    script.onload = () => initPayment();
-    script.onerror = () => {
-      setError("Failed to load payment gateway");
+    if (!registrationId) {
+      setError("Invalid payment session.");
       setLoading(false);
-    };
+      return;
+    }
 
-    document.body.appendChild(script);
-  }, []);
+    startPayment();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [registrationId]);
 
-  const initPayment = async () => {
+  const startPayment = async () => {
     try {
-      if (!registrationId) {
-        setError("Invalid registration");
-        setLoading(false);
-        return;
+      setLoading(true);
+      setError("");
+
+      // ✅ CREATE ORDER (CORRECT API CALL)
+      const res = await api.post(
+        "/api/payment/initiate/create-order",
+        {
+          registrationId,
+        }
+      );
+
+      const {
+        orderId,
+        amount,
+        currency,
+        key,
+        user,
+      } = res.data;
+
+      if (!window.Razorpay) {
+        throw new Error("Razorpay SDK not loaded");
       }
 
-      // 1️⃣ Create order
-      const { data } = await axios.post(
-  `${API_URL}/api/payments/registration/create-order`,
-  { registrationId }
-);
-
-
-      // 2️⃣ Razorpay options
       const options = {
-        key: import.meta.env.VITE_RAZORPAY_KEY_ID,
-        amount: data.amount,
-        currency: "INR",
+        key,
+        amount,
+        currency,
         name: "Eventz",
-        description: "Event Ticket Payment",
-        order_id: data.razorpayOrderId,
+        description: "Event Registration",
+        order_id: orderId,
 
-        // ✅ PAYMENT SUCCESS
-        handler: async (response: any) => {
-          await axios.post(
-            `${API_URL}/payments/registration/verify`,
-            {
-              registrationId,
-              razorpay_order_id: response.razorpay_order_id,
-              razorpay_payment_id: response.razorpay_payment_id,
-              razorpay_signature: response.razorpay_signature,
-            }
-          );
-
-          navigate(`/ticket-success/${registrationId}`);
+        prefill: {
+          name: user?.name,
+          email: user?.email,
+          contact: user?.phone,
         },
 
-        // ❌ PAYMENT CANCELLED
-        modal: {
-          ondismiss: async () => {
-            try {
-              // 🔥 INFORM BACKEND (EMAIL TRIGGER)
-              await axios.post(
-                `${API_URL}/payments/registration/failed`,
-                { registrationId }
-              );
-            } catch (e) {
-              console.error("Failed to notify backend", e);
-            }
+        theme: {
+          color: "#000000",
+        },
 
-            navigate(`/payment-cancelled/${registrationId}`);
+        handler: async (response: any) => {
+          try {
+            // ✅ VERIFY PAYMENT
+            await api.post(
+              "/api/payment/verify",
+              {
+                registrationId,
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature,
+              }
+            );
+
+            navigate(`/ticket-success/${registrationId}`);
+          } catch (err) {
+            console.error("VERIFY ERROR:", err);
+            setError("Payment verification failed.");
+          }
+        },
+
+        modal: {
+          ondismiss: () => {
+            setError("Payment cancelled.");
           },
         },
-
-        method: {
-          upi: true,
-          card: true,
-          netbanking: true,
-          wallet: true,
-        },
-
-        theme: { color: "#000000" },
       };
 
       const razorpay = new window.Razorpay(options);
       razorpay.open();
     } catch (err: any) {
+      console.error("PAYMENT ERROR:", err.response?.data || err);
       setError(
         err.response?.data?.message ||
           "Unable to start payment. Please try again."
@@ -115,22 +114,26 @@ export default function Payment() {
     <PublicLayout>
       <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
         <div className="bg-white rounded-3xl shadow-xl w-full max-w-md p-8 text-center">
-
           {loading && (
             <>
-              <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-black mx-auto mb-4"></div>
-              <p className="text-gray-600">
-                Opening payment gateway…
+              <div className="text-3xl mb-4">💳</div>
+              <h2 className="text-xl font-bold mb-2">
+                Initializing Payment
+              </h2>
+              <p className="text-gray-500">
+                Please wait…
               </p>
             </>
           )}
 
-          {error && (
+          {!loading && error && (
             <>
-              <p className="text-red-600 mb-4">{error}</p>
+              <p className="text-red-600 font-medium mb-4">
+                {error}
+              </p>
               <button
                 onClick={() => navigate(-1)}
-                className="bg-black text-white px-6 py-3 rounded-xl font-semibold"
+                className="bg-black text-white px-6 py-2 rounded-xl"
               >
                 Go Back
               </button>
