@@ -70,14 +70,20 @@ export default function VerifyOtp() {
       // ✅ SHOW SUCCESS UI
       setSuccess(true);
 
-      // ✅ SMOOTH REDIRECT
-      setTimeout(() => {
-        if (requiresPayment) {
-          navigate(`/payment/${session.registrationId}`);
-        } else {
-          navigate(`/ticket-success/${session.registrationId}`);
-        }
-      }, 1200);
+setTimeout(() => {
+  if (requiresPayment) {
+    sessionStorage.setItem(
+      "paymentSession",
+      JSON.stringify({
+        registrationId: session.registrationId,
+      })
+    );
+    navigate(`/payment/${session.registrationId}`);
+  } else {
+    navigate(`/ticket-success/${session.registrationId}`);
+  }
+}, 1200);
+
     } catch (err: any) {
       setError(
         err.response?.data?.message || "Invalid or expired OTP"

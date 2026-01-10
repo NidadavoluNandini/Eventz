@@ -47,6 +47,7 @@ const order = await this.razorpayService.createOrder(
   totalAmount,
   registrationId,
 );
+    console.log("RAZORPAY KEY:", process.env.RAZORPAY_KEY_ID);
 
     registration.razorpayOrderId = order.id;
     await registration.save();
@@ -55,8 +56,11 @@ const order = await this.razorpayService.createOrder(
       razorpayOrderId: order.id,
       amount: order.amount,
       currency: order.currency,
+        key: process.env.RAZORPAY_KEY_ID, // 🔥 REQUIRED
+
       registrationId: registration._id,
     };
+
   }
 
   // 🔹 VERIFY PAYMENT

@@ -100,14 +100,35 @@ export default function TicketSuccess() {
             </div>
 
             {/* DOWNLOAD TICKET */}
-            <a
-              href={`${import.meta.env.VITE_API_URL}/api/tickets/download/${id}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="block w-full bg-black text-white py-3 rounded-xl font-semibold text-center hover:bg-gray-800 transition"
-            >
-              ⬇ Download Ticket (PDF)
-            </a>
+            <button
+  onClick={async () => {
+    try {
+      const res = await api.get(
+        `/api/tickets/download/${id}`,
+        { responseType: "blob" }
+      );
+
+      const blob = new Blob([res.data], {
+        type: "application/pdf",
+      });
+
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "event-ticket.pdf";
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      alert("Failed to download ticket");
+    }
+  }}
+  className="block w-full bg-black text-white py-3 rounded-xl font-semibold hover:bg-gray-800 transition"
+>
+  ⬇ Download Ticket (PDF)
+</button>
+
 
             {/* RESEND EMAIL */}
             <button

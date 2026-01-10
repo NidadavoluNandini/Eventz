@@ -10,7 +10,8 @@ declare global {
 }
 
 export default function Payment() {
-  const { registrationId } = useParams<{ registrationId: string }>();
+  // ✅ FIX 1: Correct param name (matches /payment/:id)
+  const { id: registrationId } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
   const [loading, setLoading] = useState(true);
@@ -32,16 +33,16 @@ export default function Payment() {
       setLoading(true);
       setError("");
 
-      // ✅ CREATE ORDER (CORRECT API CALL)
+      // ✅ FIX 2: Correct backend endpoint
       const res = await api.post(
-        "/api/payment/initiate/create-order",
+        "/api/payments/registration/create-order",
         {
           registrationId,
         }
       );
 
       const {
-        orderId,
+        razorpayOrderId,
         amount,
         currency,
         key,
@@ -58,7 +59,7 @@ export default function Payment() {
         currency,
         name: "Eventz",
         description: "Event Registration",
-        order_id: orderId,
+        order_id: razorpayOrderId,
 
         prefill: {
           name: user?.name,
@@ -72,9 +73,9 @@ export default function Payment() {
 
         handler: async (response: any) => {
           try {
-            // ✅ VERIFY PAYMENT
+            // ✅ FIX 3: Correct verify endpoint
             await api.post(
-              "/api/payment/verify",
+              "/api/payments/registration/verify",
               {
                 registrationId,
                 razorpay_order_id: response.razorpay_order_id,
@@ -91,8 +92,15 @@ export default function Payment() {
         },
 
         modal: {
-          ondismiss: () => {
+          ondismiss: async () => {
             setError("Payment cancelled.");
+            // optional: notify backend
+            try {
+              await api.post(
+                "/api/payments/registration/failed",
+                { registrationId }
+              );
+            } catch {}
           },
         },
       };

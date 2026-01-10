@@ -168,6 +168,9 @@ if (registration.otp !== otp) {
     }
 
     registration.status = RegistrationStatus.PENDING_PAYMENT;
+    registration.paymentStatus = PaymentStatus.PENDING; // 🔥 MISSING
+    registration.otp = undefined;
+    registration.otpExpiresAt = undefined;
     await registration.save();
 
     return {
