@@ -5,19 +5,25 @@ import * as nodemailer from 'nodemailer';
 export class EmailService {
   private transporter: nodemailer.Transporter;
 
-  constructor() {
-    this.transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: Number(process.env.SMTP_PORT),
-      secure: false,
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
-      },
-    });
+  private getTransporter() {
+    if (!this.transporter) {
+      this.transporter = nodemailer.createTransport({
+        host: process.env.SMTP_HOST,
+        port: Number(process.env.SMTP_PORT),
+        secure: false, // for 587
+        auth: {
+          user: process.env.SMTP_USER,
+          pass: process.env.SMTP_PASS,
+        },
+        tls: {
+          rejectUnauthorized: false,
+        },
+      });
+    }
+
+    return this.transporter;
   }
 
-  // ✅ BACKWARD COMPATIBLE + HTML SUPPORT
   async sendEmail(
     to: string,
     subject: string,
@@ -26,21 +32,30 @@ export class EmailService {
     html?: string,
   ) {
     try {
-      await this.transporter.sendMail({
-        from: process.env.EMAIL_FROM,
+      const transporter = this.getTransporter();
+
+      await transporter.verify(); // ✅ confirms SMTP connection
+
+      await transporter.sendMail({
+        from:
+          process.env.EMAIL_FROM ||
+          `"Eventz" <${process.env.SMTP_USER}>`,
         to,
         subject,
         text,
-        html,          // ⭐ HTML APPLIED
+        html,
         attachments,
       });
+
+      console.log('✅ Email sent successfully to', to);
     } catch (e) {
-      console.error('Email failed:', e);
-      throw new InternalServerErrorException('Email failed');
+      console.error('❌ Email failed:', e);
+      throw new InternalServerErrorException(
+        'Unable to send email. Please try again later.',
+      );
     }
   }
 
-  // ✅ USED BY TicketsService
   async sendTicketEmail(data: {
     to: string;
     subject: string;
