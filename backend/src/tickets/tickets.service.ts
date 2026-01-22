@@ -76,12 +76,12 @@ export class TicketsService {
 
     // 📧 SEND EMAIL (ONCE)
     await this.emailService.sendTicketEmail({
-      to: reg.userEmail,
-      subject: `🎟 Your Ticket for ${event.title}`,
-      text: `Your ticket for ${event.title} is confirmed.`,
-      html,
-      pdfPath,
-    });
+  to: reg.userEmail,
+  subject: `🎟 Your Ticket for ${event.title}`,
+  html,
+  pdfPath,
+});
+
 
     // 💾 UPDATE DB (CRITICAL)
     await this.registrationModel.findByIdAndUpdate(reg._id, {

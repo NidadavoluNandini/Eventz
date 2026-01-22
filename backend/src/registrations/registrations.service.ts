@@ -218,27 +218,37 @@ if (registration.otp !== otp) {
       unitPrice: registration.ticketPrice,
     });
 
-   await this.emailService.sendEmail(
-  registration.userEmail,
-  '🧾 Payment Successful – Your Event Invoice',
-  `
-Hi ${registration.userName},
+await this.emailService.sendTicketEmail({
+  to: registration.userEmail,
+  subject: '🧾 Payment Successful – Your Event Invoice',
+  html: `
+    <h2>Payment Successful</h2>
 
-Thank you for registering for the event "${(registration.eventId as any).title}".
+    <p>Hi ${registration.userName},</p>
 
-Your payment has been successfully received and your registration is now confirmed.
+    <p>
+      Thank you for registering for the event
+      <strong>${(registration.eventId as any).title}</strong>.
+    </p>
 
-Please find your invoice attached with this email for your records.
+    <p>
+      Your payment has been successfully received and your registration
+      is now confirmed.
+    </p>
 
-If you have any questions regarding the event or your registration,
-feel free to contact the event organizer.
+    <p>
+      Please find your invoice attached with this email for your records.
+    </p>
 
-We look forward to seeing you at the event!
+    <p>
+      We look forward to seeing you at the event!
+    </p>
 
-— Team Eventz
-`,
-  [{ filename: 'invoice.pdf', path: invoicePath }],
-);
+    <br/>
+    <strong>— Team Eventz</strong>
+  `,
+  pdfPath: invoicePath,
+});
 
 
     return registration;
