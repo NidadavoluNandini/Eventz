@@ -177,19 +177,11 @@ export class ContactsService {
     await this.emailService.sendEmail(
       adminEmail,
       `📩 New Contact Message: ${dto.subject}`,
-      `
-New Contact Message Received
+        `text content`,
 
-Name: ${dto.name}
-Email: ${dto.email}
-Subject: ${dto.subject}
 
-Message:
-${dto.message}
 
-— Eventz
-      `,
-      undefined,
+
       htmlContent,
     );
 
@@ -373,25 +365,13 @@ ${dto.message}
 </body>
 </html>
     `.trim();
-
     await this.emailService.sendEmail(
-      dto.email,
-      '✅ We received your message – Eventz',
-      `
-Hi ${dto.name},
+  dto.email,
+  '✅ We received your message – Eventz',
+  `text content`,
+  htmlContent,
+);
 
-Thank you for contacting Eventz.
-
-We have received your message regarding:
-"${dto.subject}"
-
-Our team will respond shortly.
-
-— Team Eventz
-      `,
-      undefined,
-      htmlContent,
-    );
 
     this.logger.log(`Confirmation email sent to ${dto.email}`);
   }
