@@ -1,74 +1,65 @@
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
-import * as nodemailer from 'nodemailer';
+import { Resend } from 'resend';
 
 @Injectable()
 export class EmailService {
-  private transporter: nodemailer.Transporter;
+  private resend: Resend;
 
-  private getTransporter() {
-    if (!this.transporter) {
-      this.transporter = nodemailer.createTransport({
-        host: process.env.SMTP_HOST,
-        port: Number(process.env.SMTP_PORT),
-        secure: false, // for 587
-        auth: {
-          user: process.env.SMTP_USER,
-          pass: process.env.SMTP_PASS,
-        },
-        tls: {
-          rejectUnauthorized: false,
-        },
-      });
-    }
-
-    return this.transporter;
+  constructor() {
+    this.resend = new Resend(process.env.RESEND_API_KEY);
   }
 
   async sendEmail(
     to: string,
     subject: string,
-    text: string,
-    attachments?: { filename: string; path: string }[],
+    text?: string,
     html?: string,
   ) {
     try {
-      const transporter = this.getTransporter();
-
-      await transporter.verify(); // ✅ confirms SMTP connection
-
-      await transporter.sendMail({
-        from:
-          process.env.EMAIL_FROM ||
-          `"Eventz" <${process.env.SMTP_USER}>`,
+      await this.resend.emails.send({
+        from: 'Eventz <noreply@eventstg.online>',
         to,
         subject,
-        text,
-        html,
-        attachments,
+        html: html || `<p>${text}</p>`,
       });
-
-      console.log('✅ Email sent successfully to', to);
-    } catch (e) {
-      console.error('❌ Email failed:', e);
-      throw new InternalServerErrorException(
-        'Unable to send email. Please try again later.',
-      );
+    } catch (error) {
+      console.error('Resend email error:', error);
+      throw new InternalServerErrorException('Unable to send email');
     }
   }
 
-  async sendTicketEmail(data: {
-    to: string;
-    subject: string;
-    text: string;
-    html: string;
-    pdfPath: string;
-  }) {
-    await this.sendEmail(
-      data.to,
-      data.subject,
-      data.text,
-      [{ filename: 'ticket.pdf', path: data.pdfPath }],
-      data.html,
+  async sendOtpEmail(email: string, otp: string) {
+    return this.sendEmail(
+      email,
+      'Your OTP - Eventz',
+      '',
+      `
+        <h2>Your OTP</h2>
+        <p>Your OTP is:</p>
+        <h1>${otp}</h1>
+        <p>This OTP is valid for 5 minutes.</p>
+      `,
     );
+  }
+
+  async sendTicketEmail(
+    to: string,
+    html: string,
+    pdfUrl?: string,
+  ) {
+    await this.resend.emails.send({
+      from: 'Eventz <tickets@eventstg.online>',
+      to,
+      subject: 'Your Event Ticket',
+      html,
+      attachments: pdfUrl
+        ? [
+            {
+              filename: 'ticket.pdf',
+              path: pdfUrl,
+            },
+          ]
+        : [],
+    });git 
   }
 }
