@@ -1,5 +1,6 @@
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { Resend } from 'resend';
+import * as fs from 'fs';
 
 @Injectable()
 export class EmailService {
@@ -41,25 +42,31 @@ export class EmailService {
       `,
     );
   }
+ async sendTicketEmail(data: {
+    to: string;
+    subject: string;
+    html: string;
+    pdfPath: string;
+  }) {
+    try {
+      const pdfBuffer = fs.readFileSync(data.pdfPath);
 
-  async sendTicketEmail(
-    to: string,
-    html: string,
-    pdfUrl?: string,
-  ) {
-    await this.resend.emails.send({
-      from: 'Eventz <tickets@eventstg.online>',
-      to,
-      subject: 'Your Event Ticket',
-      html,
-      attachments: pdfUrl
-        ? [
-            {
-              filename: 'ticket.pdf',
-              path: pdfUrl,
-            },
-          ]
-        : [],
-    });git 
+      await this.resend.emails.send({
+        from: 'Eventz <tickets@eventstg.online>',
+        to: data.to,
+        subject: data.subject,
+        html: data.html,
+        attachments: [
+          {
+            filename: 'ticket.pdf',
+            content: pdfBuffer,
+          },
+        ],
+      });
+    } catch (error) {
+      console.error('Ticket email failed:', error);
+      throw new InternalServerErrorException('Ticket email failed');
+    }
   }
+
 }
