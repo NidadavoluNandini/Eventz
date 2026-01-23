@@ -19,9 +19,7 @@ async function bootstrap() {
       'Authorization',
       'X-Requested-With',
       'Accept',
-      'Origin',
-      'x-rtb-fingerprint-id',
-      'x-razorpay-signature',
+      
     ],
   });
 
