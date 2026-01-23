@@ -24,7 +24,7 @@ export default function OrganizerProfile() {
 
   const fetchProfile = async () => {
     try {
-      const res = await api.get("/organizers/me");
+      const res = await api.get("/api/organizers/me");
       setProfile({
         name: res.data.name || "",
         email: res.data.email || "",
@@ -44,9 +44,9 @@ export default function OrganizerProfile() {
 
 
   const saveProfile = async () => {
-  await api.put("/organizers/me", profile);
+  await api.put("/api/organizers/me", profile);
 
-  const updated = await api.get("/organizers/me");
+  const updated = await api.get("/api/organizers/me");
 
   localStorage.setItem(
     "organizer",
@@ -66,7 +66,7 @@ export default function OrganizerProfile() {
     }
 
     try {
-      await api.put("/organizers/change-password", password);
+      await api.put("/api/organizers/change-password", password);
       alert("Password changed successfully");
 
       setPassword({
