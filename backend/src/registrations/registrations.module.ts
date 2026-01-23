@@ -45,10 +45,12 @@ import { RegistrationExpiryService } from './registration-expiry.service';
     EmailService,
     SmsService,
     InvoiceService,
+    RegistrationExpiryService,
+
   ],
   exports: [
     RegistrationsService,
-    RegistrationExpiryService, 
+   
 
   ],
 })
