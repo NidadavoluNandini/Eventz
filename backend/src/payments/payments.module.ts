@@ -9,7 +9,7 @@ import { Registration, RegistrationSchema } from '../registrations/schemas/regis
 import { RegistrationsModule } from '../registrations/registrations.module';
 import { TicketsModule } from '../tickets/tickets.module';
 import { NotificationsModule } from '../notifications/notifications.module';
-
+import { PaymentReminderService } from './payment-remainder.service';
 @Module({
   imports: [
     MongooseModule.forFeature([
@@ -23,6 +23,7 @@ import { NotificationsModule } from '../notifications/notifications.module';
   providers: [
     PaymentsIntegrationService,
     RazorpayService,
+    PaymentReminderService,
   ],
 })
 export class PaymentsModule {}

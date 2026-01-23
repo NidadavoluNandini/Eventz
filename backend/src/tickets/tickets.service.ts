@@ -26,34 +26,35 @@ export class TicketsService {
   // =====================================================
   // 🎟 GENERATE + SEND TICKET (SAFE + HTML)
   // =====================================================
-  async generateAndSendTicket(reg: Registration) {
-    // 🔒 HARD GUARD — FIXES DOUBLE EMAILS
-    if (reg.ticketSent) {
-      return;
-    }
+async generateAndSendTicket(reg: Registration) {
+  // 🔒 prevent duplicate emails
+  if (reg.ticketSent) {
+    return;
+  }
 
-    if (reg.status !== RegistrationStatus.COMPLETED) {
-      throw new Error('Ticket can only be generated after completion');
-    }
+  if (reg.status !== RegistrationStatus.COMPLETED) {
+    throw new Error('Ticket can only be generated after completion');
+  }
 
-    const event =
-      reg.eventId instanceof Types.ObjectId
-        ? null
-        : (reg.eventId as Event);
+  const event =
+    reg.eventId instanceof Types.ObjectId
+      ? null
+      : (reg.eventId as Event);
 
-    if (!event) {
-      throw new Error('Event not populated');
-    }
+  if (!event) {
+    throw new Error('Event not populated');
+  }
 
-    // 🔳 QR CODE
-    const qrCode = await this.qrService.generateQr({
-      registrationId: reg._id.toString(),
-      registrationNumber: reg.registrationNumber!,
-      eventId: event._id.toString(),
-    });
+  // 🔳 QR CODE
+  const qrCode = await this.qrService.generateQr({
+    registrationId: reg._id.toString(),
+    registrationNumber: reg.registrationNumber!,
+    eventId: event._id.toString(),
+  });
 
-    // 📄 PDF
-    const pdfPath = await this.pdfService.generateTicketPdf({
+  // 📄 PDF BUFFER (NO FILE SYSTEM)
+  const pdfBuffer =
+    await this.pdfService.generateTicketPdfBuffer({
       userName: reg.userName,
       eventTitle: event.title,
       venue: event.location,
@@ -64,32 +65,30 @@ export class TicketsService {
       amount: reg.ticketPrice * reg.quantity,
     });
 
-    // 🎨 HTML EMAIL
-    const html = ticketConfirmationTemplate({
-      userName: reg.userName,
-      eventTitle: event.title,
-      eventDate: event.startDate.toDateString(),
-      venue: event.location,
-      ticketType: reg.ticketType,
-      registrationNumber: reg.registrationNumber!,
-    });
+  // 🎨 HTML EMAIL
+  const html = ticketConfirmationTemplate({
+    userName: reg.userName,
+    eventTitle: event.title,
+    eventDate: event.startDate.toDateString(),
+    venue: event.location,
+    ticketType: reg.ticketType,
+    registrationNumber: reg.registrationNumber!,
+  });
 
-    // 📧 SEND EMAIL (ONCE)
-    await this.emailService.sendTicketEmail({
-  to: reg.userEmail,
-  subject: `🎟 Your Ticket for ${event.title}`,
-  html,
-  pdfPath,
-});
+  // 📧 SEND EMAIL
+  await this.emailService.sendTicketEmail({
+    to: reg.userEmail,
+    subject: `🎟 Your Ticket for ${event.title}`,
+    html,
+    pdfBuffer,
+  });
 
-
-    // 💾 UPDATE DB (CRITICAL)
-    await this.registrationModel.findByIdAndUpdate(reg._id, {
-      qrCode,
-      ticketUrl: pdfPath,
-      ticketSent: true,
-    });
-  }
+  // 💾 UPDATE DATABASE
+  await this.registrationModel.findByIdAndUpdate(reg._id, {
+    qrCode,
+    ticketSent: true,
+  });
+}
 
   // =====================================================
   // REQUIRED BY CONTROLLER

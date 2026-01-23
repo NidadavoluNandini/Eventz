@@ -26,6 +26,8 @@ import OrganizerLayout from "./pages/organizer/OrganizerLayout";
 
 /* PROTECTION */
 import ProtectedRoute from "./components/ProtectedRoute";
+import ResumeRegistration from "./pages/public/ResumeRegistration";
+import RegistrationExpired from "./pages/public/RegistrationExpired";
 
 export default function App() {
   return (
@@ -70,6 +72,11 @@ export default function App() {
           <Route path="events" element={<Events />} />
           <Route path="events/create" element={<CreateEvent />} />
           <Route path="users" element={<UserManagement />} />
+          <Route path="/resume/:registrationId" element={<ResumeRegistration />} />
+          <Route path="/verify-otp/:registrationId" element={<VerifyOtp />} />
+          <Route path="/payment/:registrationId" element={<Payment />} />
+          <Route path="/registration-expired" element={<RegistrationExpired />} />
+
         </Route>
       </Routes>
     </BrowserRouter>

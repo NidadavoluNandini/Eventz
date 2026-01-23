@@ -89,6 +89,11 @@ export class Registration extends Document {
   @Prop()
 ticketUrl?: string;
 
+// ⏳ auto-expiry
+@Prop()
+expiresAt?: Date;
+
+
 }
 
 export const RegistrationSchema =

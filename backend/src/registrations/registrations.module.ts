@@ -24,6 +24,7 @@ import {
 } from '../payments/schemas/invoice-counter.schema';
 
 import { TicketsModule } from '../tickets/tickets.module';
+import { RegistrationExpiryService } from './registration-expiry.service';
 
 @Module({
   imports: [
@@ -47,6 +48,8 @@ import { TicketsModule } from '../tickets/tickets.module';
   ],
   exports: [
     RegistrationsService,
+    RegistrationExpiryService, 
+
   ],
 })
 export class RegistrationsModule {}

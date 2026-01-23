@@ -1,11 +1,9 @@
 import { Injectable } from '@nestjs/common';
-import * as fs from 'fs';
-import * as path from 'path';
-const PDFDocument = require('pdfkit');
+import * as PDFDocument from 'pdfkit';
 
 @Injectable()
 export class PdfService {
-  async generateTicketPdf(data: {
+  async generateTicketPdfBuffer(data: {
     userName: string;
     eventTitle: string;
     venue: string;
@@ -14,107 +12,47 @@ export class PdfService {
     ticketType: string;
     qrCode: string;
     amount?: number;
-  }): Promise<string> {
-    const dir = path.join(process.cwd(), 'uploads/tickets');
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
-    }
+  }): Promise<Buffer> {
+    return new Promise((resolve, reject) => {
+      const doc = new PDFDocument({ size: 'A4', margin: 50 });
 
-    const filePath = path.join(dir, `${data.registrationNumber}.pdf`);
-    const doc = new PDFDocument({ size: 'A4', margin: 50 });
+      const buffers: Buffer[] = [];
 
-    doc.pipe(fs.createWriteStream(filePath));
+      doc.on('data', buffers.push.bind(buffers));
+      doc.on('end', () => {
+        resolve(Buffer.concat(buffers));
+      });
 
-    /* ================= HEADER ================= */
-    doc
-      .fontSize(24)
-      .fillColor('#111827')
-      .text('EVENT TICKET', { align: 'center' });
+      doc.on('error', reject);
 
-    doc.moveDown(0.5);
-    doc
-      .fontSize(14)
-      .fillColor('#6B7280')
-      .text(data.eventTitle, { align: 'center' });
+      /* ===== PDF CONTENT ===== */
 
-    doc.moveDown(1);
-    doc
-      .moveTo(50, doc.y)
-      .lineTo(545, doc.y)
-      .strokeColor('#E5E7EB')
-      .stroke();
+      doc.fontSize(24).text('EVENT TICKET', { align: 'center' });
+      doc.moveDown();
+      doc.fontSize(16).text(data.eventTitle, { align: 'center' });
+      doc.moveDown();
 
-    doc.moveDown(1.5);
+      doc.text(`Name: ${data.userName}`);
+      doc.text(`Ticket Type: ${data.ticketType}`);
+      doc.text(`Date: ${new Date(data.eventDate).toDateString()}`);
+      doc.text(`Venue: ${data.venue}`);
+      doc.text(`Registration: ${data.registrationNumber}`);
 
-    /* ================= DETAILS ================= */
-    doc.fontSize(12).fillColor('#111827');
+      if (data.amount !== undefined) {
+        doc.text(`Amount Paid: ₹${data.amount}`);
+      }
 
-    const leftX = 60;
-    const rightX = 300;
-    let y = doc.y;
+      doc.moveDown();
 
-    doc.text('Name', leftX, y);
-    doc.text(data.userName, leftX, y + 15);
+      const qrBase64 = data.qrCode.split(',')[1];
+      const qrBuffer = Buffer.from(qrBase64, 'base64');
 
-    doc.text('Ticket Type', rightX, y);
-    doc.text(data.ticketType, rightX, y + 15);
+      doc.image(qrBuffer, {
+        fit: [200, 200],
+        align: 'center',
+      });
 
-    y += 45;
-
-    doc.text('Date', leftX, y);
-    doc.text(new Date(data.eventDate).toDateString(), leftX, y + 15);
-
-    doc.text('Venue', rightX, y);
-    doc.text(data.venue, rightX, y + 15);
-
-    y += 45;
-
-    doc.text('Registration Number', leftX, y);
-    doc.text(data.registrationNumber, leftX, y + 15);
-
-    if (data.amount !== undefined) {
-      doc.text('Amount Paid', rightX, y);
-      doc.text(`₹ ${data.amount}`, rightX, y + 15);
-    }
-
-    doc.moveDown(4);
-
-    /* ================= QR SECTION ================= */
-    doc
-      .moveTo(50, doc.y)
-      .lineTo(545, doc.y)
-      .strokeColor('#E5E7EB')
-      .stroke();
-
-    doc.moveDown(1);
-
-    doc
-      .fontSize(12)
-      .fillColor('#374151')
-      .text('Scan this QR code at the event entry', { align: 'center' });
-
-    doc.moveDown(1);
-
-    const base64 = data.qrCode.split(',')[1];
-    const qrBuffer = Buffer.from(base64, 'base64');
-
-    doc.image(qrBuffer, doc.page.width / 2 - 75, doc.y, {
-      width: 150,
+      doc.end();
     });
-
-    doc.moveDown(6);
-
-    /* ================= FOOTER ================= */
-    doc
-      .fontSize(10)
-      .fillColor('#9CA3AF')
-      .text(
-        'This ticket is auto-generated. Please carry a valid ID for verification.',
-        { align: 'center' },
-      );
-
-    doc.end();
-
-    return filePath;
   }
 }

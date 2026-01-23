@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import api from "../../utils/axios";
 import { useNavigate } from "react-router-dom";
 import PublicLayout from "../../layouts/PublicLayout";
+import { useParams } from "react-router-dom";
 
  
 export default function VerifyOtp() {
@@ -14,9 +15,11 @@ export default function VerifyOtp() {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
 
-  const session = JSON.parse(
-    sessionStorage.getItem("otpSession") || "null"
-  );
+const { registrationId } = useParams();
+
+const session =
+  JSON.parse(sessionStorage.getItem("otpSession") || "null") ??
+  { registrationId };
 
   useEffect(() => {
     if (!session?.registrationId) {
@@ -85,10 +88,20 @@ setTimeout(() => {
 }, 1200);
 
     } catch (err: any) {
-      setError(
-        err.response?.data?.message || "Invalid or expired OTP"
-      );
-    } finally {
+
+  // ✅ registration expired → redirect page
+  if (
+    err.response?.data?.message === "Registration expired"
+  ) {
+    navigate("/registration-expired");
+    return;
+  }
+
+  setError(
+    err.response?.data?.message || "Invalid or expired OTP"
+  );
+}
+finally {
       setLoading(false);
     }
   };

@@ -20,6 +20,7 @@ import { EmailService } from '../notifications/email.service';
 import { SmsService } from '../notifications/sms.service';
 import { InvoiceService } from '../payments/invoice.service';
 import { TicketsService } from '../tickets/tickets.service';
+import { TicketType } from '../events/schemas/event.schema';
 
 @Injectable()
 export class RegistrationsService {
@@ -40,89 +41,118 @@ export class RegistrationsService {
     private readonly ticketsService: TicketsService,
   ) {}
 
-  // =====================================================
-  // STEP 1: INITIATE REGISTRATION
-  // =====================================================
-  async initiateRegistration(dto: {
-    eventId: string;
-    userName: string;
-    userEmail: string;
-    userPhone: string;
-    ticketType: string;
-    quantity: number;
-  }) {
-    const event = await this.eventModel.findById(dto.eventId);
-    if (!event) throw new NotFoundException('Event not found');
+ // =====================================================
+// STEP 1: INITIATE REGISTRATION
+// =====================================================
+async initiateRegistration(dto: {
+  eventId: string;
+  userName: string;
+  userEmail: string;
+  userPhone: string;
+  ticketType: string;
+  quantity: number;
+}) {
+  const event = await this.eventModel.findById(dto.eventId);
+  if (!event) throw new NotFoundException('Event not found');
 
-    if (event.status !== 'PUBLISHED') {
-      throw new BadRequestException('Event not open for registration');
-    }
+  if (event.status !== 'PUBLISHED') {
+    throw new BadRequestException('Event not open for registration');
+  }
 
-    const ticket = event.tickets.find(t => t.type === dto.ticketType);
-    if (!ticket) throw new BadRequestException('Invalid ticket type');
+  const ticket = event.tickets.find(t => t.type === dto.ticketType);
+  if (!ticket) throw new BadRequestException('Invalid ticket type');
 
-    if (ticket.available < dto.quantity) {
-      throw new BadRequestException('Tickets sold out');
-    }
+  if (ticket.available < dto.quantity) {
+    throw new BadRequestException('Tickets sold out');
+  }
 
-    const completed = await this.registrationModel.findOne({
-      eventId: new Types.ObjectId(dto.eventId),
-      status: RegistrationStatus.COMPLETED,
-      $or: [{ userEmail: dto.userEmail }, { userPhone: dto.userPhone }],
-    });
+  // block only COMPLETED registrations
+  const completed = await this.registrationModel.findOne({
+    eventId: new Types.ObjectId(dto.eventId),
+    status: RegistrationStatus.COMPLETED,
+    $or: [{ userEmail: dto.userEmail }, { userPhone: dto.userPhone }],
+  });
 
-    if (completed) {
-      throw new ConflictException('You have already registered');
-    }
+  if (completed) {
+    throw new ConflictException('You have already registered');
+  }
 
-    const otp = Math.floor(100000 + Math.random() * 900000);
-    const otpExpiresAt = new Date(Date.now() + 5 * 60 * 1000);
+  // 🔐 OTP
+  const otp = Math.floor(100000 + Math.random() * 900000);
+  const otpExpiresAt = new Date(Date.now() + 5 * 60 * 1000);
 
-    const paymentStatus =
+  // ⏳ registration expiry (24h)
+  const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+  // reuse incomplete registration
+  const existingPending = await this.registrationModel.findOne({
+    eventId: new Types.ObjectId(dto.eventId),
+    status: { $ne: RegistrationStatus.COMPLETED },
+    $or: [{ userEmail: dto.userEmail }, { userPhone: dto.userPhone }],
+  });
+
+  if (existingPending) {
+    existingPending.ticketType = dto.ticketType as TicketType;
+    existingPending.quantity = dto.quantity;
+    existingPending.ticketPrice = ticket.price;
+
+    existingPending.otp = otp;
+    existingPending.otpExpiresAt = otpExpiresAt;
+    existingPending.expiresAt = expiresAt; // ✅ IMPORTANT
+
+    existingPending.status = RegistrationStatus.PENDING_OTP;
+    existingPending.paymentStatus =
       ticket.price === 0
         ? PaymentStatus.NOT_REQUIRED
         : PaymentStatus.PENDING;
 
-    const registration = await this.registrationModel.create({
-      eventId: new Types.ObjectId(dto.eventId),
-      userName: dto.userName,
-      userEmail: dto.userEmail,
-      userPhone: dto.userPhone,
-      ticketType: dto.ticketType,
-      ticketPrice: ticket.price,
-      quantity: dto.quantity,
-      status: RegistrationStatus.PENDING_OTP,
-      paymentStatus,
-      otp,
-      otpExpiresAt,
-    });
+    await existingPending.save();
 
     await this.emailService.sendEmail(
-  dto.userEmail,
-  'Your OTP for Event Registration',
-  `
-Hi ${dto.userName},
-
-Thank you for your interest in registering for the event "${event.title}".
-
-Your One-Time Password (OTP) to continue the registration process is:
-
-OTP: ${otp}
-
-This OTP is valid for the next 5 minutes. Please do not share it with anyone.
-
-If you did not initiate this request, you can safely ignore this email.
-
-Thank you,
-Team Eventz
-`,
-);
-
+      dto.userEmail,
+      'Your OTP for Event Registration',
+      `OTP: ${otp}`,
+    );
 
     await this.smsService.sendSms(dto.userPhone, `OTP: ${otp}`);
 
-    return { status: 'OTP_SENT', registrationId: registration._id };
+    return {
+      status: 'OTP_SENT',
+      registrationId: existingPending._id,
+      reused: true,
+    };
   }
+
+  // create new registration
+  const registration = await this.registrationModel.create({
+    eventId: new Types.ObjectId(dto.eventId),
+    userName: dto.userName,
+    userEmail: dto.userEmail,
+    userPhone: dto.userPhone,
+    ticketType: dto.ticketType as TicketType,
+    ticketPrice: ticket.price,
+    quantity: dto.quantity,
+    status: RegistrationStatus.PENDING_OTP,
+    paymentStatus:
+      ticket.price === 0
+        ? PaymentStatus.NOT_REQUIRED
+        : PaymentStatus.PENDING,
+    otp,
+    otpExpiresAt,
+    expiresAt, // ✅ IMPORTANT
+  });
+
+  await this.emailService.sendEmail(
+    dto.userEmail,
+    'Your OTP for Event Registration',
+    `OTP: ${otp}`,
+  );
+
+  await this.smsService.sendSms(dto.userPhone, `OTP: ${otp}`);
+
+  return { status: 'OTP_SENT', registrationId: registration._id };
+}
+
 
   // =====================================================
   // STEP 2: VERIFY OTP
@@ -209,45 +239,26 @@ if (registration.otp !== otp) {
     await registration.save();
 
     // INVOICE
-    const invoicePath = await this.invoiceService.generateInvoicePdf({
-      registrationId: registration._id,
-      eventTitle: (registration.eventId as any).title,
-      userName: registration.userName,
-      userEmail: registration.userEmail,
-      quantity: registration.quantity,
-      unitPrice: registration.ticketPrice,
-    });
+   const invoiceBuffer =
+  await this.invoiceService.generateInvoicePdfBuffer({
+    registrationId: registration._id.toString(),
+    eventTitle: (registration.eventId as any).title,
+    userName: registration.userName,
+    userEmail: registration.userEmail,
+    quantity: registration.quantity,
+    unitPrice: registration.ticketPrice,
+  });
+
 
 await this.emailService.sendTicketEmail({
   to: registration.userEmail,
   subject: '🧾 Payment Successful – Your Event Invoice',
   html: `
     <h2>Payment Successful</h2>
-
     <p>Hi ${registration.userName},</p>
-
-    <p>
-      Thank you for registering for the event
-      <strong>${(registration.eventId as any).title}</strong>.
-    </p>
-
-    <p>
-      Your payment has been successfully received and your registration
-      is now confirmed.
-    </p>
-
-    <p>
-      Please find your invoice attached with this email for your records.
-    </p>
-
-    <p>
-      We look forward to seeing you at the event!
-    </p>
-
-    <br/>
-    <strong>— Team Eventz</strong>
+    <p>Your payment has been received successfully.</p>
   `,
-  pdfPath: invoicePath,
+  pdfBuffer: invoiceBuffer,
 });
 
 

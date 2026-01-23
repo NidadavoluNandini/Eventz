@@ -42,31 +42,24 @@ export class EmailService {
       `,
     );
   }
- async sendTicketEmail(data: {
-    to: string;
-    subject: string;
-    html: string;
-    pdfPath: string;
-  }) {
-    try {
-      const pdfBuffer = fs.readFileSync(data.pdfPath);
-
-      await this.resend.emails.send({
-        from: 'Eventz <tickets@eventstg.online>',
-        to: data.to,
-        subject: data.subject,
-        html: data.html,
-        attachments: [
-          {
-            filename: 'ticket.pdf',
-            content: pdfBuffer,
-          },
-        ],
-      });
-    } catch (error) {
-      console.error('Ticket email failed:', error);
-      throw new InternalServerErrorException('Ticket email failed');
-    }
-  }
+async sendTicketEmail(data: {
+  to: string;
+  subject: string;
+  html: string;
+  pdfBuffer: Buffer;
+}) {
+  await this.resend.emails.send({
+    from: 'Eventz <tickets@eventstg.online>',
+    to: data.to,
+    subject: data.subject,
+    html: data.html,
+    attachments: [
+      {
+        filename: 'ticket.pdf',
+        content: data.pdfBuffer,
+      },
+    ],
+  });
+}
 
 }
