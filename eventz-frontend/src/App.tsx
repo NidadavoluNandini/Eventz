@@ -38,9 +38,13 @@ export default function App() {
         <Route path="/events/:id/register" element={<RegisterEvent />} />
 
         {/* 🔥 RESUME FLOW */}
-        <Route path="/resume/:registrationId" element={<ResumeRegistration />} />
+        <Route path="/verify-otp" element={<VerifyOtp />} />
         <Route path="/verify-otp/:registrationId" element={<VerifyOtp />} />
+
+        <Route path="/payment" element={<Payment />} />
         <Route path="/payment/:registrationId" element={<Payment />} />
+
+        <Route path="/resume/:registrationId" element={<ResumeRegistration />} />
         <Route path="/ticket-success/:id" element={<TicketSuccess />} />
         <Route path="/payment-cancelled/:id" element={<PaymentCancelled />} />
         <Route path="/registration-expired" element={<RegistrationExpired />} />
