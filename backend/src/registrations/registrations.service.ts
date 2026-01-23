@@ -212,59 +212,138 @@ if (registration.otp !== otp) {
   // =====================================================
   // STEP 3: COMPLETE REGISTRATION (PAID)
   // =====================================================
-  async completeRegistration(registrationId: string, payment?: any) {
-    const registration = await this.registrationModel
-      .findById(registrationId)
-      .populate('eventId');
+async completeRegistration(
+  registrationId: string,
+  payment?: {
+    razorpayPaymentId?: string;
+    razorpayOrderId?: string;
+  },
+) {
+  const registration = await this.registrationModel
+    .findById(registrationId)
+    .populate('eventId');
 
-    if (!registration) throw new NotFoundException('Registration not found');
-    if (registration.ticketSent) return registration;
+  if (!registration) {
+    throw new NotFoundException('Registration not found');
+  }
 
-    registration.status = RegistrationStatus.COMPLETED;
-    registration.paymentStatus = PaymentStatus.PAID;
-    registration.registrationNumber = `REG-${Date.now()}`;
-    registration.razorpayPaymentId = payment?.razorpayPaymentId;
+  // already processed
+  if (registration.ticketSent) {
+    return registration;
+  }
 
-    await registration.save();
+  // ✅ FINAL STATE UPDATE FIRST
+  registration.status = RegistrationStatus.COMPLETED;
+  registration.paymentStatus = PaymentStatus.PAID;
+  registration.registrationNumber = `REG-${Date.now()}`;
+  registration.razorpayPaymentId = payment?.razorpayPaymentId;
+  registration.razorpayOrderId = payment?.razorpayOrderId;
 
-    await this.decrementTicketAvailability(
-      registration.eventId as Types.ObjectId,
-      registration.ticketType,
-      registration.quantity,
-    );
+  await registration.save(); // 🔥 MUST COMPLETE BEFORE ANY EMAIL
 
+  // ✅ decrement tickets AFTER payment success
+  await this.decrementTicketAvailability(
+    registration.eventId as Types.ObjectId,
+    registration.ticketType,
+    registration.quantity,
+  );
+
+  // ✅ generate ticket (non-blocking safety)
+  try {
     await this.ticketsService.generateAndSendTicket(registration);
 
     registration.ticketSent = true;
     await registration.save();
+  } catch (err) {
+    console.error('Ticket generation failed:', err);
+    // payment succeeded — do not rollback
+  }
 
-    // INVOICE
-   const invoiceBuffer =
-  await this.invoiceService.generateInvoicePdfBuffer({
-    registrationId: registration._id.toString(),
-    eventTitle: (registration.eventId as any).title,
-    userName: registration.userName,
-    userEmail: registration.userEmail,
-    quantity: registration.quantity,
-    unitPrice: registration.ticketPrice,
-  });
+  // ✅ invoice email must never break registration
+  try {
+    const invoiceBuffer =
+      await this.invoiceService.generateInvoicePdfBuffer({
+        registrationId: registration._id.toString(),
+        eventTitle: (registration.eventId as any).title,
+        userName: registration.userName,
+        userEmail: registration.userEmail,
+        quantity: registration.quantity,
+        unitPrice: registration.ticketPrice,
+      });
 
-
-await this.emailService.sendTicketEmail({
+    await this.emailService.sendTicketEmail({
   to: registration.userEmail,
-  subject: '🧾 Payment Successful – Your Event Invoice',
+  subject: '🎟️ Payment Successful – Your Event Ticket',
   html: `
-    <h2>Payment Successful</h2>
-    <p>Hi ${registration.userName},</p>
-    <p>Your payment has been received successfully.</p>
+    <h2>Payment Successful 🎉</h2>
+
+    <p>Hi <b>${registration.userName}</b>,</p>
+
+    <p>Your registration for the event has been successfully completed.</p>
+
+    <hr />
+
+    <h3>📌 Registration Details</h3>
+
+    <table cellpadding="6">
+      <tr>
+        <td><b>Event</b></td>
+        <td>${(registration.eventId as any).title}</td>
+      </tr>
+
+      <tr>
+        <td><b>Ticket Type</b></td>
+        <td>${registration.ticketType}</td>
+      </tr>
+
+      <tr>
+        <td><b>No. of Members</b></td>
+        <td>${registration.quantity}</td>
+      </tr>
+
+      <tr>
+        <td><b>Price per Ticket</b></td>
+        <td>₹${registration.ticketPrice}</td>
+      </tr>
+
+      <tr>
+        <td><b>Total Paid</b></td>
+        <td>
+          <b>₹${registration.ticketPrice * registration.quantity}</b>
+        </td>
+      </tr>
+
+      <tr>
+        <td><b>Registration No</b></td>
+        <td>${registration.registrationNumber}</td>
+      </tr>
+    </table>
+
+    <br />
+
+    <p>
+      🎫 Your ticket is attached to this email as a PDF.
+    </p>
+
+    <p>
+      Please carry the QR code during event entry.
+    </p>
+
+    <br />
+
+    <p>
+      — Team <b>Eventz</b>
+    </p>
   `,
   pdfBuffer: invoiceBuffer,
 });
 
-
-    return registration;
+  } catch (err) {
+    console.error('Invoice email failed:', err);
   }
 
+  return registration;
+}
   // =====================================================
   // EXTRA METHODS REQUIRED BY CONTROLLER
   // =====================================================

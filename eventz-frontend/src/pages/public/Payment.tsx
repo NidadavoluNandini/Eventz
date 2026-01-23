@@ -15,7 +15,7 @@ export default function Payment() {
   const navigate = useNavigate();
   const { registrationId } = useParams();
 
-  // get from session if page refreshed
+  // allow refresh
   const storedSession = JSON.parse(
     sessionStorage.getItem("paymentSession") || "null"
   );
@@ -23,10 +23,9 @@ export default function Payment() {
   const finalRegistrationId =
     registrationId || storedSession?.registrationId;
 
-  const [error, setError] = useState<string>("");
+  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // validate session
   useEffect(() => {
     if (!finalRegistrationId) {
       setError("Invalid payment session.");
@@ -40,7 +39,7 @@ export default function Payment() {
       setLoading(true);
       setError("");
 
-      // 🔹 create razorpay order
+      // 🔹 create Razorpay order
       const res = await api.post(
         "/api/payments/registration/create-order",
         {
@@ -78,22 +77,23 @@ export default function Payment() {
               }
             );
 
-            // ✅ redirect only if verification success
+            // ✅ verified instantly
             if (verify.data?.success) {
               sessionStorage.removeItem("paymentSession");
               navigate(`/ticket-success/${finalRegistrationId}`);
-            } else {
-              setError(
-                "Payment completed but verification failed. Please check your email."
-              );
+              return;
             }
-          } catch (err) {
-            console.error("Verification error:", err);
 
-            // 🔥 IMPORTANT:
-            // webhook will still complete registration
+            throw new Error("Verification pending");
+          } catch (err) {
+            console.warn(
+              "Verification delayed, webhook will complete:",
+              err
+            );
+
+            // ⚠️ webhook still succeeds
             setError(
-              "Payment successful. Ticket will be emailed shortly."
+              "Payment successful. Ticket will be sent shortly."
             );
 
             setTimeout(() => {
@@ -111,24 +111,19 @@ export default function Payment() {
                   registrationId: finalRegistrationId,
                 }
               );
-            } catch (e) {
-              console.warn("Payment cancel notify failed");
-            }
+            } catch {}
 
             navigate(`/payment-cancelled/${finalRegistrationId}`);
           },
         },
 
-        theme: {
-          color: "#000000",
-        },
+        theme: { color: "#000000" },
       };
 
       const rzp = new window.Razorpay(options);
       rzp.open();
     } catch (err: any) {
       console.error(err);
-
       setError(
         err.response?.data?.message ||
           "Payment initialization failed"
