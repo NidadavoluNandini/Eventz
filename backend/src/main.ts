@@ -5,28 +5,45 @@ import { AppModule } from './app.module';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
+  // API prefix
   app.setGlobalPrefix('api');
 
-  const allowedOrigins = [
-    'http://localhost:5173',
-    'https://eventz-zeta.vercel.app',
-  ];
-
+  /**
+   * ✅ CORS CONFIGURATION
+   * Works with:
+   * - localhost
+   * - Vercel frontend
+   * - Render backend
+   * - Postman
+   */
   app.enableCors({
     origin: (origin, callback) => {
-      // allow server-to-server & Postman
+      // allow mobile apps, Postman, server-to-server
       if (!origin) return callback(null, true);
 
-      if (allowedOrigins.includes(origin)) {
+      if (
+        origin.startsWith('http://localhost:5173') ||
+        origin.startsWith('https://eventz-zeta.vercel.app')
+      ) {
         return callback(null, true);
       }
 
+      console.log('❌ Blocked CORS origin:', origin);
       return callback(new Error('Not allowed by CORS'), false);
     },
     credentials: true,
-    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+    methods: [
+      'GET',
+      'HEAD',
+      'PUT',
+      'PATCH',
+      'POST',
+      'DELETE',
+      'OPTIONS',
+    ],
   });
 
+  // global validation
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
@@ -39,4 +56,5 @@ async function bootstrap() {
 
   console.log(`🚀 Backend running on port ${port}`);
 }
+
 bootstrap();
