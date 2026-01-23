@@ -30,7 +30,7 @@ export default function Payment() {
       setLoading(true);
 
       const res = await api.post(
-        "/api/payments/create-order",
+  "/api/payments/registration/create-order",
         {
           registrationId: finalRegistrationId,
         }
@@ -52,7 +52,7 @@ export default function Payment() {
         order_id: razorpayOrderId,
         handler: async (response: any) => {
           await api.post(
-            "/api/payments/verify",
+  "/api/payments/registration/verify",
             {
               registrationId: finalRegistrationId,
               razorpay_order_id:
@@ -70,7 +70,7 @@ export default function Payment() {
         modal: {
           ondismiss: async () => {
             await api.post(
-              `/api/payments/fail/${finalRegistrationId}`
+              `/api/payments/registration/fail/${finalRegistrationId}`
             );
             navigate(
               `/payment-cancelled/${finalRegistrationId}`

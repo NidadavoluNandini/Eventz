@@ -5,9 +5,10 @@ import {
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
+
 import { RegistrationsService } from '../registrations/registrations.service';
-import { TicketsService } from '../tickets/tickets.service';
 import { RazorpayService } from './razorpay.service';
+
 import {
   Registration,
   PaymentStatus,
@@ -16,38 +17,44 @@ import {
 
 import { EmailService } from '../notifications/email.service';
 
-
 @Injectable()
 export class PaymentsIntegrationService {
   constructor(
     @InjectModel(Registration.name)
     private registrationModel: Model<Registration>,
     private readonly registrationsService: RegistrationsService,
-    private readonly ticketsService: TicketsService,
     private readonly razorpayService: RazorpayService,
     private readonly emailService: EmailService,
   ) {}
 
-  // 🔹 CREATE ORDER
+  // ===============================
+  // CREATE RAZORPAY ORDER
+  // ===============================
   async createOrderForRegistration(registrationId: string) {
-    const registration = await this.registrationModel.findById(registrationId);
+    const registration =
+      await this.registrationModel.findById(registrationId);
 
     if (!registration) {
       throw new NotFoundException('Registration not found');
     }
 
-    if (registration.status !== 'PENDING_PAYMENT') {
-      throw new BadRequestException('Payment not required');
+    if (
+      registration.status !==
+      RegistrationStatus.PENDING_PAYMENT
+    ) {
+      throw new BadRequestException(
+        'Payment not required',
+      );
     }
 
-   const totalAmount =
-  registration.ticketPrice * registration.quantity;
+    const totalAmount =
+      registration.ticketPrice *
+      registration.quantity;
 
-const order = await this.razorpayService.createOrder(
-  totalAmount,
-  registrationId,
-);
-    console.log("RAZORPAY KEY:", process.env.RAZORPAY_KEY_ID);
+    const order = await this.razorpayService.createOrder(
+      totalAmount,
+      registrationId,
+    );
 
     registration.razorpayOrderId = order.id;
     await registration.save();
@@ -56,31 +63,34 @@ const order = await this.razorpayService.createOrder(
       razorpayOrderId: order.id,
       amount: order.amount,
       currency: order.currency,
-        key: process.env.RAZORPAY_KEY_ID, // 🔥 REQUIRED
-
+      key: process.env.RAZORPAY_KEY_ID,
       registrationId: registration._id,
     };
-
   }
 
-  // 🔹 VERIFY PAYMENT
+  // ===============================
+  // VERIFY PAYMENT
+  // ===============================
   async verifyPaymentForRegistration(dto: {
     registrationId: string;
     razorpay_order_id: string;
     razorpay_payment_id: string;
     razorpay_signature: string;
   }) {
-    const isValid = this.razorpayService.verifySignature(
-      dto.razorpay_order_id,
-      dto.razorpay_payment_id,
-      dto.razorpay_signature,
-    );
+    const isValid =
+      this.razorpayService.verifySignature(
+        dto.razorpay_order_id,
+        dto.razorpay_payment_id,
+        dto.razorpay_signature,
+      );
 
     if (!isValid) {
-      throw new BadRequestException('Invalid payment signature');
+      throw new BadRequestException(
+        'Invalid payment signature',
+      );
     }
 
-    // 1️⃣ COMPLETE REGISTRATION
+    // ✅ single source of truth
     await this.registrationsService.completeRegistration(
       dto.registrationId,
       {
@@ -89,31 +99,12 @@ const order = await this.razorpayService.createOrder(
       },
     );
 
-    // 2️⃣ FETCH FULL REGISTRATION (WITH EVENT)
-    const registration = await this.registrationModel
-      .findById(dto.registrationId)
-      .populate('eventId');
-
-    if (!registration) {
-      throw new NotFoundException(
-        'Registration not found after payment',
-      );
-    }
-
-    // 3️⃣ GENERATE + SEND TICKET (SAFE)
-    try {
-      await this.ticketsService.generateAndSendTicket(
-        registration,
-      );
-    } catch (err) {
-      console.error('Ticket generation failed:', err);
-      // ⚠️ Do NOT throw – payment already succeeded
-    }
-
     return { success: true };
   }
 
-  // 🔹 WEBHOOK
+  // ===============================
+  // WEBHOOK
+  // ===============================
   async handleWebhook(payload: any, signature: string) {
     const isValid =
       this.razorpayService.verifyWebhookSignature(
@@ -130,6 +121,7 @@ const order = await this.razorpayService.createOrder(
     if (payload.event === 'payment.captured') {
       const razorpayOrderId =
         payload.payload.payment.entity.order_id;
+
       const razorpayPaymentId =
         payload.payload.payment.entity.id;
 
@@ -140,7 +132,8 @@ const order = await this.razorpayService.createOrder(
 
       if (
         registration &&
-        registration.status === 'PENDING_PAYMENT'
+        registration.status ===
+          RegistrationStatus.PENDING_PAYMENT
       ) {
         await this.registrationsService.completeRegistration(
           registration._id.toString(),
@@ -155,28 +148,36 @@ const order = await this.razorpayService.createOrder(
     return { status: 'ok' };
   }
 
-async markPaymentFailed(registrationId: string) {
-  const reg = await this.registrationModel.findById(registrationId);
-  if (!reg) return;
+  // ===============================
+  // PAYMENT FAILED
+  // ===============================
+  async markPaymentFailed(registrationId: string) {
+    const reg =
+      await this.registrationModel.findById(
+        registrationId,
+      );
 
-  reg.paymentStatus = PaymentStatus.FAILED;
-  reg.status = RegistrationStatus.PENDING_PAYMENT;
-  await reg.save();
+    if (!reg) return;
 
-  await this.emailService.sendEmail(
-    reg.userEmail,
-    '❌ Payment Failed – Retry Your Registration',
-    `
+    reg.paymentStatus = PaymentStatus.FAILED;
+    reg.status = RegistrationStatus.PENDING_PAYMENT;
+    await reg.save();
+
+    await this.emailService.sendEmail(
+      reg.userEmail,
+      '❌ Payment Failed – Retry Your Registration',
+      `
 Hi ${reg.userName},
 
-Your payment for the event could not be completed.
+Your payment attempt failed.
 
-👉 Retry payment here:
+👉 Retry here:
 ${process.env.FRONTEND_URL}/payment/${reg._id}
 
-Your spot is still reserved.
-`,
-  );
-}
+Your tickets are still reserved.
 
+– Eventz Team
+`,
+    );
+  }
 }
