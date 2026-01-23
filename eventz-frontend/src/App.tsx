@@ -26,6 +26,7 @@ import OrganizerLayout from "./pages/organizer/OrganizerLayout";
 
 /* PROTECTION */
 import ProtectedRoute from "./components/ProtectedRoute";
+import OrganizerProfile from "./pages/organizer/OrganizerProfile";
 
 export default function App() {
   return (
@@ -63,6 +64,11 @@ export default function App() {
           path="/organizer/reset-password"
           element={<OrganizerResetPassword />}
         />
+              <Route
+        path="/organizer/profile"
+        element={<OrganizerProfile />}
+      />
+
 
         {/* ========== ORGANIZER PROTECTED ========== */}
         <Route

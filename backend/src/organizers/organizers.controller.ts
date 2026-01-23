@@ -3,7 +3,7 @@ import {
   Get,
   Put,
   Delete,
-  Post,     // ✅ ADD THIS
+  Post,
   Body,
   Req,
   UseGuards,
@@ -23,30 +23,42 @@ export class OrganizersController {
     private readonly organizersService: OrganizersService,
   ) {}
 
-  // Get my account
+  // ✅ GET MY PROFILE
   @Get('me')
   getProfile(@Req() req) {
-    return this.organizersService.findById(req.user.userId);
+    return this.organizersService.findById(
+      req.user.userId,
+    );
   }
 
-  // Update my account
+  // ✅ UPDATE PROFILE
   @Put('me')
   updateProfile(
     @Req() req,
     @Body() dto: UpdateOrganizerDto,
   ) {
-    return this.organizersService.update(req.user.userId, dto);
+    return this.organizersService.update(
+      req.user.userId,
+      dto,
+    );
   }
 
-  // Delete my account
+  // ✅ DELETE ACCOUNT
   @Delete('me')
   deleteAccount(@Req() req) {
-    return this.organizersService.delete(req.user.userId);
+    return this.organizersService.delete(
+      req.user.userId,
+    );
   }
 
-  // Logout (JWT-based)
+  // ✅ LOGOUT
   @Post('logout')
   logout() {
-    return { message: 'Logout successful (client must delete token)' };
+    return {
+      message:
+        'Logout successful (client must delete token)',
+    };
   }
 }
+
+
