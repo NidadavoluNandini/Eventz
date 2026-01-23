@@ -19,7 +19,33 @@ export class OrganizersService {
     private organizerModel: Model<Organizer>,
   ) {}
 
+  // =====================================
+  // ✅ CREATE ORGANIZER (REGISTER)
+  // =====================================
+  async create(data: Partial<Organizer>) {
+    const exists = await this.organizerModel.findOne({
+      email: data.email,
+    });
+
+    if (exists) {
+      throw new ConflictException(
+        'Email already registered',
+      );
+    }
+
+    return this.organizerModel.create(data);
+  }
+
+  // =====================================
+  // ✅ FIND BY EMAIL (LOGIN / RESET)
+  // =====================================
+  async findByEmail(email: string) {
+    return this.organizerModel.findOne({ email });
+  }
+
+  // =====================================
   // ✅ GET PROFILE
+  // =====================================
   async findById(id: string) {
     const organizer = await this.organizerModel
       .findById(id)
@@ -34,7 +60,9 @@ export class OrganizersService {
     return organizer;
   }
 
+  // =====================================
   // ✅ UPDATE PROFILE
+  // =====================================
   async update(
     id: string,
     dto: UpdateOrganizerDto,
@@ -69,7 +97,9 @@ export class OrganizersService {
     return updated;
   }
 
+  // =====================================
   // ✅ CHANGE PASSWORD
+  // =====================================
   async changePassword(
     id: string,
     dto: ChangePasswordDto,
@@ -106,7 +136,9 @@ export class OrganizersService {
     };
   }
 
+  // =====================================
   // ✅ DELETE ACCOUNT
+  // =====================================
   async delete(id: string) {
     await this.organizerModel.findByIdAndDelete(id);
 

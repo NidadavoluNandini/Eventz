@@ -18,13 +18,9 @@ export class AuthService {
     private readonly emailService: EmailService,
   ) {}
 
-
-
-  
-  // =======================
-  // ORGANIZER – REGISTER
-  // =======================
-
+  // ============================
+  // ORGANIZER REGISTER
+  // ============================
   async registerOrganizer(dto: {
     name: string;
     email: string;
@@ -55,20 +51,22 @@ export class AuthService {
     };
   }
 
-  // =======================
-  // ORGANIZER – LOGIN
-  // =======================
-
+  // ============================
+  // ORGANIZER LOGIN
+  // ============================
   async loginOrganizer(dto: {
     email: string;
     password: string;
   }) {
-    const organizer = await this.organizersService.findByEmail(
-      dto.email,
-    );
+    const organizer =
+      await this.organizersService.findByEmail(
+        dto.email,
+      );
 
     if (!organizer) {
-      throw new UnauthorizedException('Organizer not found');
+      throw new UnauthorizedException(
+        'Organizer not found',
+      );
     }
 
     const isMatch = await bcrypt.compare(
@@ -77,7 +75,9 @@ export class AuthService {
     );
 
     if (!isMatch) {
-      throw new UnauthorizedException('Invalid password');
+      throw new UnauthorizedException(
+        'Invalid password',
+      );
     }
 
     const token = this.jwtService.sign({
@@ -96,17 +96,20 @@ export class AuthService {
     };
   }
 
-  // =======================
-  // ORGANIZER – FORGOT PASSWORD
-  // =======================
-async organizerForgotPassword(email: string) {
-  const organizer = await this.organizersService.findByEmail(email);
+  // ============================
+  // ORGANIZER FORGOT PASSWORD
+  // ============================
+  async organizerForgotPassword(email: string) {
+    const organizer =
+      await this.organizersService.findByEmail(
+        email,
+      );
 
-  if (organizer) {
-    await this.emailService.sendEmail(
-      organizer.email,
-      'Password Reset Request – Eventz',
-      `
+    if (organizer) {
+      await this.emailService.sendEmail(
+        organizer.email,
+        'Password Reset Request – Eventz',
+        `
 Hi ${organizer.name},
 
 We received a request to reset your Eventz organizer account password.
@@ -117,47 +120,57 @@ If you did not request this, you can safely ignore this email.
 
 — Team Eventz
 `,
+      );
+    }
+
+    // always return same response
+    return {
+      message:
+        'If this email exists, a password reset notification has been sent.',
+    };
+  }
+
+  // ============================
+  // CHANGE PASSWORD (LOGGED IN)
+  // ============================
+  async changeOrganizerPassword(
+    organizerId: string,
+    currentPassword: string,
+    newPassword: string,
+  ) {
+    const organizer =
+      await this.organizersService.findById(
+        organizerId,
+      );
+
+    if (!organizer) {
+      throw new NotFoundException(
+        'Organizer not found',
+      );
+    }
+
+    const isMatch = await bcrypt.compare(
+      currentPassword,
+      organizer.password,
     );
-  }
 
-  // Always return same message (security)
-  return {
-    message:
-      'If this email exists, a password reset notification has been sent.',
-  };
-}
+    if (!isMatch) {
+      throw new UnauthorizedException(
+        'Current password is incorrect',
+      );
+    }
 
-async changeOrganizerPassword(
-  organizerId: string,
-  currentPassword: string,
-  newPassword: string,
-) {
-  const organizer =
-    await this.organizersService.findById(organizerId);
-
-  if (!organizer) {
-    throw new NotFoundException('Organizer not found');
-  }
-
-  const isMatch = await bcrypt.compare(
-    currentPassword,
-    organizer.password,
-  );
-
-  if (!isMatch) {
-    throw new UnauthorizedException(
-      'Current password is incorrect',
+    organizer.password = await bcrypt.hash(
+      newPassword,
+      10,
     );
-  }
 
-  organizer.password = await bcrypt.hash(newPassword, 10);
-  await organizer.save();
+    await organizer.save();
 
-  // optional security email
-  await this.emailService.sendEmail(
-    organizer.email,
-    'Password Changed – Eventz',
-    `
+    await this.emailService.sendEmail(
+      organizer.email,
+      'Password Changed – Eventz',
+      `
 Hi ${organizer.name},
 
 Your Eventz organizer account password was changed successfully.
@@ -166,32 +179,41 @@ If this was not you, please contact support immediately.
 
 — Team Eventz
 `,
-  );
+    );
 
-  return { message: 'Password updated successfully' };
-}
-
-  // =======================
-  // ORGANIZER – RESET PASSWORD
-  // =======================
-
-async organizerResetPasswordDirect(
-  email: string,
-  newPassword: string,
-) {
-  const organizer = await this.organizersService.findByEmail(email);
-
-  if (!organizer) {
-    throw new NotFoundException('Organizer not found');
+    return {
+      message: 'Password updated successfully',
+    };
   }
 
-  organizer.password = await bcrypt.hash(newPassword, 10);
-  await organizer.save();
+  // ============================
+  // RESET PASSWORD (WITHOUT TOKEN)
+  // ============================
+  async organizerResetPasswordDirect(
+    email: string,
+    newPassword: string,
+  ) {
+    const organizer =
+      await this.organizersService.findByEmail(
+        email,
+      );
 
-  await this.emailService.sendEmail(
-    organizer.email,
-    'Password Updated – Eventz',
-    `
+    if (!organizer) {
+      throw new NotFoundException(
+        'Organizer not found',
+      );
+    }
+
+    organizer.password = await bcrypt.hash(
+      newPassword,
+      10,
+    );
+    await organizer.save();
+
+    await this.emailService.sendEmail(
+      organizer.email,
+      'Password Updated – Eventz',
+      `
 Hi ${organizer.name},
 
 Your Eventz organizer account password has been updated successfully.
@@ -200,26 +222,35 @@ If this was not you, please contact support immediately.
 
 — Team Eventz
 `,
-  );
+    );
 
-  return { message: 'Password updated successfully' };
-}
-  // =======================
-  // ORGANIZER – DELETE ACCOUNT
-  // =======================
+    return {
+      message: 'Password updated successfully',
+    };
+  }
 
-  async deleteOrganizerAccount(organizerId: string) {
+  // ============================
+  // DELETE ACCOUNT
+  // ============================
+  async deleteOrganizerAccount(
+    organizerId: string,
+  ) {
     const organizer =
-      await this.organizersService.findById(organizerId);
+      await this.organizersService.findById(
+        organizerId,
+      );
 
     if (!organizer) {
-      throw new NotFoundException('Organizer not found');
+      throw new NotFoundException(
+        'Organizer not found',
+      );
     }
 
     await organizer.deleteOne();
 
     return {
-      message: 'Organizer account deleted successfully',
+      message:
+        'Organizer account deleted successfully',
     };
   }
 }
