@@ -1,43 +1,38 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import PublicLayout from "../../layouts/PublicLayout";
 import api from "../../utils/axios";
-
-declare global {
-  interface Window {
-    Razorpay: any;
-  }
-}
+import PublicLayout from "../../layouts/PublicLayout";
 
 export default function Payment() {
-  // ✅ FIX 1: Correct param name (matches /payment/:id)
-  const { id: registrationId } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { registrationId } = useParams();
 
-  const [loading, setLoading] = useState(true);
+  const storedSession = JSON.parse(
+    sessionStorage.getItem("paymentSession") || "null"
+  );
+
+  const finalRegistrationId =
+    registrationId || storedSession?.registrationId;
+
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (!registrationId) {
+    if (!finalRegistrationId) {
       setError("Invalid payment session.");
-      setLoading(false);
-      return;
     }
-
-    startPayment();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [registrationId]);
+  }, [finalRegistrationId]);
 
   const startPayment = async () => {
+    if (!finalRegistrationId) return;
+
     try {
       setLoading(true);
-      setError("");
 
-      // ✅ FIX 2: Correct backend endpoint
       const res = await api.post(
-        "/api/payments/registration/create-order",
+        "/api/payments/create-order",
         {
-          registrationId,
+          registrationId: finalRegistrationId,
         }
       );
 
@@ -46,72 +41,51 @@ export default function Payment() {
         amount,
         currency,
         key,
-        user,
       } = res.data;
-
-      if (!window.Razorpay) {
-        throw new Error("Razorpay SDK not loaded");
-      }
 
       const options = {
         key,
         amount,
         currency,
         name: "Eventz",
-        description: "Event Registration",
+        description: "Event Ticket Payment",
         order_id: razorpayOrderId,
-
-        prefill: {
-          name: user?.name,
-          email: user?.email,
-          contact: user?.phone,
-        },
-
-        theme: {
-          color: "#000000",
-        },
-
         handler: async (response: any) => {
-          try {
-            // ✅ FIX 3: Correct verify endpoint
-            await api.post(
-              "/api/payments/registration/verify",
-              {
-                registrationId,
-                razorpay_order_id: response.razorpay_order_id,
-                razorpay_payment_id: response.razorpay_payment_id,
-                razorpay_signature: response.razorpay_signature,
-              }
-            );
+          await api.post(
+            "/api/payments/verify",
+            {
+              registrationId: finalRegistrationId,
+              razorpay_order_id:
+                response.razorpay_order_id,
+              razorpay_payment_id:
+                response.razorpay_payment_id,
+              razorpay_signature:
+                response.razorpay_signature,
+            }
+          );
 
-            navigate(`/ticket-success/${registrationId}`);
-          } catch (err) {
-            console.error("VERIFY ERROR:", err);
-            setError("Payment verification failed.");
-          }
+          sessionStorage.removeItem("paymentSession");
+          navigate(`/ticket-success/${finalRegistrationId}`);
         },
-
         modal: {
           ondismiss: async () => {
-            setError("Payment cancelled.");
-            // optional: notify backend
-            try {
-              await api.post(
-                "/api/payments/registration/failed",
-                { registrationId }
-              );
-            } catch {}
+            await api.post(
+              `/api/payments/fail/${finalRegistrationId}`
+            );
+            navigate(
+              `/payment-cancelled/${finalRegistrationId}`
+            );
           },
         },
+        theme: { color: "#000000" },
       };
 
-      const razorpay = new window.Razorpay(options);
-      razorpay.open();
+      const rzp = new (window as any).Razorpay(options);
+      rzp.open();
     } catch (err: any) {
-      console.error("PAYMENT ERROR:", err.response?.data || err);
       setError(
         err.response?.data?.message ||
-          "Unable to start payment. Please try again."
+          "Payment initialization failed"
       );
     } finally {
       setLoading(false);
@@ -120,33 +94,25 @@ export default function Payment() {
 
   return (
     <PublicLayout>
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
-        <div className="bg-white rounded-3xl shadow-xl w-full max-w-md p-8 text-center">
-          {loading && (
-            <>
-              <div className="text-3xl mb-4">💳</div>
-              <h2 className="text-xl font-bold mb-2">
-                Initializing Payment
-              </h2>
-              <p className="text-gray-500">
-                Please wait…
-              </p>
-            </>
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="bg-white p-8 rounded-xl shadow-md text-center">
+          <h2 className="text-xl font-bold mb-4">
+            Complete Payment
+          </h2>
+
+          {error && (
+            <p className="text-red-600 mb-4">
+              {error}
+            </p>
           )}
 
-          {!loading && error && (
-            <>
-              <p className="text-red-600 font-medium mb-4">
-                {error}
-              </p>
-              <button
-                onClick={() => navigate(-1)}
-                className="bg-black text-white px-6 py-2 rounded-xl"
-              >
-                Go Back
-              </button>
-            </>
-          )}
+          <button
+            onClick={startPayment}
+            disabled={loading || !!error}
+            className="bg-black text-white px-6 py-3 rounded-lg"
+          >
+            {loading ? "Processing..." : "Pay Now"}
+          </button>
         </div>
       </div>
     </PublicLayout>
