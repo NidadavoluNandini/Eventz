@@ -87,7 +87,9 @@ const changePassword = async () => {
       oldPassword: "",
       newPassword: "",
     });
-    
+     setTimeout(() => {
+      navigate("/organizer/dashboard");
+    }, 1500);
 
   } catch (err: any) {
     toast.error(
