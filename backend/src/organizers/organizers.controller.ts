@@ -10,7 +10,7 @@ import {
 } from '@nestjs/common';
 
 import { OrganizersService } from './organizer.service';
-import { UpdateOrganizerDto } from './dto/update-organizer.dto';
+import { ChangePasswordDto } from './dto/change-password.dto';
 import { JwtAuthGuard } from '../common/guards/jwt.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
@@ -32,16 +32,16 @@ export class OrganizersController {
   }
 
   // ✅ UPDATE PROFILE
-  @Put('me')
-  updateProfile(
-    @Req() req,
-    @Body() dto: UpdateOrganizerDto,
-  ) {
-    return this.organizersService.update(
-      req.user.userId,
-      dto,
-    );
-  }
+@Put('change-password')
+changePassword(
+  @Req() req,
+  @Body() dto: ChangePasswordDto,
+) {
+  return this.organizersService.changePassword(
+    req.user.userId,
+    dto,
+  );
+}
 
   // ✅ DELETE ACCOUNT
   @Delete('me')
