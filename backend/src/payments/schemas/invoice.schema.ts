@@ -27,8 +27,7 @@ export class Invoice extends Document {
   @Prop({ required: true })
   totalAmount: number;
 
-  @Prop({ required: true })
-  pdfPath: string;
+  
 }
 
 export const InvoiceSchema = SchemaFactory.createForClass(Invoice);

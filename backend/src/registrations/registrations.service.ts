@@ -39,6 +39,8 @@ export class RegistrationsService {
 
     @Inject(forwardRef(() => InvoiceService))
     private readonly invoiceService: InvoiceService,
+  @Inject(forwardRef(() => TicketsService))
+  private readonly ticketsService: TicketsService,
 
     private readonly moduleRef: ModuleRef,
   ) {}
