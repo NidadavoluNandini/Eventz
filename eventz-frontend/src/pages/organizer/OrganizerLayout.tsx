@@ -18,11 +18,14 @@ useEffect(() => {
   loadOrganizer();
 
   window.addEventListener("storage", loadOrganizer);
+  window.addEventListener("profileUpdated", loadOrganizer);
 
   return () => {
     window.removeEventListener("storage", loadOrganizer);
+    window.removeEventListener("profileUpdated", loadOrganizer);
   };
 }, []);
+
 
   // ======================
   // LOGOUT

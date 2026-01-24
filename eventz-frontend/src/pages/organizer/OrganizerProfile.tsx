@@ -52,7 +52,8 @@ export default function OrganizerProfile() {
     const res = await api.put("/api/organizers/me", profile);
 
     // update local storage
-    localStorage.setItem("user", JSON.stringify(res.data));
+localStorage.setItem("organizer", JSON.stringify(res.data));
+window.dispatchEvent(new Event("profileUpdated"));
     setProfile({
           name: res.data.name || "",
           email: res.data.email || "",
@@ -87,12 +88,13 @@ const changePassword = async () => {
 
     toast.success("Password updated successfully 🔐");
 
-    setPassword({
-      oldPassword: "",
-      newPassword: "",
-    });
-     setTimeout(() => {
-      navigate("/organizer/dashboard");
+    // 🔥 CLEAR AUTH STATE
+    localStorage.removeItem("organizerToken");
+    localStorage.removeItem("organizer");
+
+    // small delay for toast
+    setTimeout(() => {
+      navigate("/organizer/login");
     }, 1500);
 
   } catch (err: any) {
@@ -101,6 +103,7 @@ const changePassword = async () => {
     );
   }
 };
+
 
 
   if (loading) {
