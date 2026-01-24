@@ -3,14 +3,14 @@ import { useNavigate } from "react-router-dom";
 import { createEvent } from "../../api/events.api";
 
 const CATEGORIES = [
-  "technology",
-  "arts",
-  "sports",
-  "science",
-  "industry",
-  "entertainment",
-  "business",
-  "health",
+  "Technology",
+  "Arts",
+  "Sports",
+  "Science",
+  "Industry",
+  "Entertainment",
+  "Business",
+  "Health",
 ];
 
 const TICKET_TYPES = ["FREE", "EARLY_BIRD", "REGULAR", "VIP"];
