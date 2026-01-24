@@ -227,7 +227,9 @@ async generateQrForDownload(registrationId: string) {
   if (!reg) {
     throw new NotFoundException('Registration not found');
   }
-
+ if (!reg.registrationNumber) {
+    throw new BadRequestException('Registration incomplete');
+  }
   return this.qrService.generateQr({
     registrationId: reg._id.toString(),
  registrationNumber:

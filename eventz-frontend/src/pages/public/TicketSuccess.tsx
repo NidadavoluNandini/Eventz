@@ -28,16 +28,15 @@ export default function TicketSuccess() {
     }
   };
 
-  const resendTicket = async () => {
-    try {
-      await api.post("/api/tickets/resend", {
-        registrationId: id,
-      });
-      alert("📧 Ticket email resent!");
-    } catch (err) {
-      alert("Failed to resend ticket email");
-    }
-  };
+ const resendTicket = async () => {
+  try {
+    await api.post(`/api/tickets/resend/${id}`);
+    alert("📧 Ticket email resent!");
+  } catch (err) {
+    alert("Failed to resend ticket email");
+  }
+};
+
 
   if (loading) {
     return (
