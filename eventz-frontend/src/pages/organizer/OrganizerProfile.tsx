@@ -53,7 +53,11 @@ export default function OrganizerProfile() {
 
     // update local storage
     localStorage.setItem("user", JSON.stringify(res.data));
-
+    setProfile({
+          name: res.data.name || "",
+          email: res.data.email || "",
+          photoUrl: res.data.photoUrl || "",
+        });
     toast.success("Profile updated successfully ✅");
 
     // OPTIONAL redirect
@@ -141,7 +145,7 @@ const changePassword = async () => {
 
             {profile.photoUrl && (
               <img
-                src={profile.photoUrl}
+                src={`${profile.photoUrl}?t=${Date.now()}`}
                 className="w-24 h-24 rounded-full mt-3 object-cover"
               />
             )}
