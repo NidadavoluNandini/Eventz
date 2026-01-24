@@ -13,6 +13,7 @@ import ResumeRegistration from "./pages/public/ResumeRegistration";
 import RegistrationExpired from "./pages/public/RegistrationExpired";
 import AboutUs from "./components/AboutUs";
 import ContactUs from "./components/ContactUs";
+import PaymentProcessing from "./pages/public/PaymentProcessing";
 
 /* ORGANIZER */
 import OrganizerLogin from "./pages/organizer/Login";
@@ -47,6 +48,8 @@ export default function App() {
 
         <Route path="/payment" element={<Payment />} />
         <Route path="/payment/:registrationId" element={<Payment />} />
+
+        <Route path="/payment-processing/:registrationId" element={<PaymentProcessing />} />
 
         <Route
           path="/resume/:registrationId"

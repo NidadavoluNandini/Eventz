@@ -55,8 +55,8 @@ async downloadTicket(
   @Param('registrationId') registrationId: string,
   @Res() res: Response,
 ) {
-  const ticket: any =
-    await this.ticketsService.getTicketData(registrationId);
+  const ticket =
+    await this.ticketsService.getTicket(registrationId);
 
   if (!ticket) {
     throw new NotFoundException('Ticket not found');
@@ -80,16 +80,9 @@ async downloadTicket(
 
   doc.fontSize(14).text(`Name: ${ticket.userName}`);
   doc.text(`Email: ${ticket.userEmail}`);
-
-  // ✅ CAST HERE
-  doc.text(
-    `Event: ${(ticket.eventId as any)?.title}`,
-  );
-
+  doc.text(`Event: ${ticket.eventTitle}`);
   doc.text(`Ticket Type: ${ticket.ticketType}`);
-  doc.text(
-    `Registration No: ${ticket.registrationNumber}`,
-  );
+  doc.text(`Registration No: ${ticket.registrationNumber}`);
 
   doc.moveDown(2);
 

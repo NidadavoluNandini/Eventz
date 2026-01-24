@@ -17,6 +17,8 @@ import { Event } from '../events/schemas/event.schema';
 export class TicketsService {
   constructor(
     @InjectModel(Registration.name)
+    @InjectModel(Event.name)
+    private eventModel: Model<Event>,
     private readonly registrationModel: Model<Registration>,
     private readonly qrService: QrService,
     private readonly pdfService: PdfService,
@@ -91,11 +93,21 @@ async generateAndSendTicket(reg: Registration) {
 }
 
 
-  async getTicketData(registrationId: string) {
-    return this.registrationModel
+  async getTicket(registrationId: string) {
+    const reg = await this.registrationModel
       .findById(registrationId)
-      .populate('eventId')
       .lean();
+
+    if (!reg) return null;
+
+    const event = await this.eventModel
+      .findById(reg.eventId)
+      .lean();
+
+    return {
+      ...reg,
+      eventTitle: event?.title || 'Event',
+    };
   }
 
 
