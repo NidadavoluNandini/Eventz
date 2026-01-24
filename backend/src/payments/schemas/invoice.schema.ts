@@ -3,31 +3,33 @@ import { Document, Types } from 'mongoose';
 
 @Schema({ timestamps: true })
 export class Invoice extends Document {
-  @Prop({ required: true, unique: true })
-  invoiceNumber: string; // INV-2025-001
+  @Prop()
+  invoiceNumber: string;
 
-  @Prop({ type: Types.ObjectId, required: true })
+  @Prop({ type: Types.ObjectId, ref: 'Registration' })
   registrationId: Types.ObjectId;
 
-  @Prop({ required: true })
+  @Prop()
   userName: string;
 
-  @Prop({ required: true })
+  @Prop()
   userEmail: string;
 
-  @Prop({ required: true })
+  @Prop()
   eventTitle: string;
 
-  @Prop({ required: true })
+  @Prop()
   quantity: number;
 
-  @Prop({ required: true })
+  @Prop()
   unitPrice: number;
 
-  @Prop({ required: true })
+  @Prop()
   totalAmount: number;
 
-  
+  // ✅ NOT REQUIRED ANYMORE
+  @Prop()
+  pdfPath?: string;
 }
 
 export const InvoiceSchema = SchemaFactory.createForClass(Invoice);

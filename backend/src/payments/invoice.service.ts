@@ -1,8 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import * as fs from 'fs';
-import * as path from 'path';
 import PDFDocument from 'pdfkit';
 
 import { Invoice } from './schemas/invoice.schema';
@@ -34,54 +32,7 @@ export class InvoiceService {
   }
 
   // ======================================================
-  // ❌ FILE-BASED PDF (OPTIONAL — KEEP FOR ADMIN DOWNLOAD)
-  // ======================================================
-  async generateInvoicePdf(dto: {
-    registrationId: string;
-    eventTitle: string;
-    userName: string;
-    userEmail: string;
-    quantity: number;
-    unitPrice: number;
-  }): Promise<string> {
-    const invoiceNumber = await this.generateInvoiceNumber();
-    const total = dto.quantity * dto.unitPrice;
-
-    const dir = path.join(process.cwd(), 'invoices');
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
-    }
-
-    const pdfPath = path.join(dir, `${invoiceNumber}.pdf`);
-    const doc = new PDFDocument({ size: 'A4', margin: 50 });
-
-    doc.pipe(fs.createWriteStream(pdfPath));
-
-    this.buildInvoicePdf(doc, {
-      invoiceNumber,
-      ...dto,
-      total,
-    });
-
-    doc.end();
-
-    await this.invoiceModel.create({
-      invoiceNumber,
-      registrationId: dto.registrationId,
-      userName: dto.userName,
-      userEmail: dto.userEmail,
-      eventTitle: dto.eventTitle,
-      quantity: dto.quantity,
-      unitPrice: dto.unitPrice,
-      totalAmount: total,
-      pdfPath,
-    });
-
-    return pdfPath;
-  }
-
-  // ======================================================
-  // ✅ BUFFER-BASED PDF (RECOMMENDED FOR EMAIL)
+  // ✅ BUFFER-ONLY PDF (EMAIL + DOWNLOAD)
   // ======================================================
   async generateInvoicePdfBuffer(dto: {
     registrationId: string;
@@ -99,6 +50,7 @@ export class InvoiceService {
       const buffers: Buffer[] = [];
 
       doc.on('data', buffers.push.bind(buffers));
+
       doc.on('end', async () => {
         const buffer = Buffer.concat(buffers);
 
@@ -111,7 +63,6 @@ export class InvoiceService {
           quantity: dto.quantity,
           unitPrice: dto.unitPrice,
           totalAmount: total,
-          
         });
 
         resolve(buffer);
@@ -130,7 +81,7 @@ export class InvoiceService {
   }
 
   // ======================================================
-  // 🧾 COMMON PDF LAYOUT
+  // 🧾 PDF LAYOUT
   // ======================================================
   private buildInvoicePdf(
     doc: PDFDocument,
@@ -145,7 +96,6 @@ export class InvoiceService {
       total: number;
     },
   ) {
-    /* ---------- HEADER ---------- */
     doc.fontSize(22).text('INVOICE', { align: 'right' });
     doc
       .fontSize(10)
@@ -154,7 +104,6 @@ export class InvoiceService {
 
     doc.moveDown(2);
 
-    /* ---------- CUSTOMER ---------- */
     doc.fontSize(12).text('Billed To');
     doc.moveDown(0.5);
     doc.text(data.userName);
@@ -162,11 +111,9 @@ export class InvoiceService {
 
     doc.moveDown(1.5);
 
-    /* ---------- EVENT ---------- */
     doc.fontSize(12).text(`Event: ${data.eventTitle}`);
     doc.moveDown();
 
-    /* ---------- TABLE ---------- */
     const y = doc.y;
 
     doc.fontSize(11);
@@ -175,28 +122,23 @@ export class InvoiceService {
     doc.text('Unit Price', 420, y);
     doc.text('Amount', 490, y);
 
-    doc
-      .moveTo(50, y + 15)
-      .lineTo(545, y + 15)
-      .stroke();
+    doc.moveTo(50, y + 15).lineTo(545, y + 15).stroke();
 
     const rowY = y + 30;
 
     doc.text('Event Registration Ticket', 50, rowY);
     doc.text(String(data.quantity), 350, rowY);
-    doc.text(`₹ ${data.unitPrice}`, 420, rowY);
-    doc.text(`₹ ${data.total}`, 490, rowY);
+    doc.text(`₹${data.unitPrice}`, 420, rowY);
+    doc.text(`₹${data.total}`, 490, rowY);
 
     doc.moveDown(4);
 
-    /* ---------- TOTAL ---------- */
     doc
       .fontSize(14)
-      .text(`Total Paid: ₹ ${data.total}`, { align: 'right' });
+      .text(`Total Paid: ₹${data.total}`, { align: 'right' });
 
     doc.moveDown(2);
 
-    /* ---------- FOOTER ---------- */
     doc
       .fontSize(10)
       .fillColor('#6B7280')
