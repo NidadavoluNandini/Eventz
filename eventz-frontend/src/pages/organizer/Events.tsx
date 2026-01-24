@@ -46,32 +46,49 @@ export default function Events() {
       {/* FILTER BAR */}
       <div className="bg-white rounded-xl shadow p-4 flex flex-wrap gap-4 mb-6">
         {/* CATEGORY FILTER */}
-        <select
-          value={category}
-          onChange={(e) => setCategory(e.target.value)}
-          className="px-4 py-2 border rounded-lg"
-        >
-          <option value="ALL">All Categories</option>
-          {CATEGORIES.map((c) => (
-            <option key={c} value={c}>
-              {c}
-            </option>
-          ))}
-        </select>
+       <div className="flex flex-wrap gap-2 mb-4">
+  {["ALL", ...CATEGORIES].map((c) => (
+    <button
+      key={c}
+      onClick={() => setCategory(c)}
+      className={`px-4 py-2 rounded-full border text-sm transition
+        ${
+          category === c
+            ? "bg-indigo-600 text-white"
+            : "bg-white hover:bg-gray-100"
+        }`}
+    >
+      {c}
+    </button>
+  ))}
+</div>
+
 
         {/* STATUS FILTER */}
-        <select
-          value={status}
-          onChange={(e) => setStatus(e.target.value)}
-          className="px-4 py-2 border rounded-lg"
-        >
-          <option value="ALL">All Status</option>
-          <option value="DRAFT">Draft</option>
-          <option value="PUBLISHED">Published</option>
-          <option value="UNPUBLISHED">Unpublished</option>
-          <option value="ONGOING">Ongoing</option>
-          <option value="COMPLETED">Completed</option>
-        </select>
+       <div className="flex flex-wrap gap-2 mb-6">
+  {[
+    "ALL",
+    "DRAFT",
+    "PUBLISHED",
+    "UNPUBLISHED",
+    "ONGOING",
+    "COMPLETED",
+  ].map((s) => (
+    <button
+      key={s}
+      onClick={() => setStatus(s)}
+      className={`px-4 py-2 rounded-full text-sm transition
+        ${
+          status === s
+            ? "bg-blue-600 text-white"
+            : "bg-white border hover:bg-gray-100"
+        }`}
+    >
+      {s}
+    </button>
+  ))}
+</div>
+
       </div>
 
       {/* EVENTS LIST */}

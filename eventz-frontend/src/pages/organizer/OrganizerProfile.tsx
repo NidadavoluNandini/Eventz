@@ -1,8 +1,12 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import api from "../../utils/axios";
+import toast from "react-hot-toast";
+
 
 export default function OrganizerProfile() {
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
   const [profile, setProfile] = useState({
     name: "",
@@ -43,43 +47,54 @@ export default function OrganizerProfile() {
   
 
 
-  const saveProfile = async () => {
-  await api.put("/api/organizers/me", profile);
+ const saveProfile = async () => {
+  try {
+    const res = await api.put("/organizers/me", profile);
 
-  const updated = await api.get("/api/organizers/me");
+    // update local storage
+    localStorage.setItem("user", JSON.stringify(res.data));
 
-  localStorage.setItem(
-    "organizer",
-    JSON.stringify(updated.data)
-  );
+    toast.success("Profile updated successfully ✅");
 
-  alert("Profile updated");
+    // OPTIONAL redirect
+    setTimeout(() => {
+      navigate("/organizer/dashboard");
+    }, 1500);
+
+  } catch (err: any) {
+    toast.error(err.response?.data?.message || "Update failed");
+  }
 };
+
+
 
 
   // ==============================
   // Change password
   // ==============================
-  const changePassword = async () => {
-    if (!password.oldPassword || !password.newPassword) {
-      return alert("Fill both password fields");
-    }
+const changePassword = async () => {
+  if (!password.oldPassword || !password.newPassword) {
+    toast.error("Fill both password fields");
+    return;
+  }
 
-    try {
-      await api.put("/api/organizers/change-password", password);
-      alert("Password changed successfully");
+  try {
+    await api.put("/api/organizers/change-password", password);
 
-      setPassword({
-        oldPassword: "",
-        newPassword: "",
-      });
-    } catch (err: any) {
-      alert(
-        err.response?.data?.message ||
-          "Password change failed",
-      );
-    }
-  };
+    toast.success("Password updated successfully 🔐");
+
+    setPassword({
+      oldPassword: "",
+      newPassword: "",
+    });
+
+  } catch (err: any) {
+    toast.error(
+      err.response?.data?.message || "Password update failed"
+    );
+  }
+};
+
 
   if (loading) {
     return (
