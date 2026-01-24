@@ -25,7 +25,6 @@ import { TicketType } from '../events/schemas/event.schema';
 
 @Injectable()
 export class RegistrationsService {
-    private ticketsService: TicketsService;
 
   constructor(
     @InjectModel(Registration.name)
