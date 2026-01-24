@@ -9,6 +9,7 @@ import {
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
+import { ModuleRef } from '@nestjs/core';
 
 import {
   Registration,
@@ -24,6 +25,8 @@ import { TicketType } from '../events/schemas/event.schema';
 
 @Injectable()
 export class RegistrationsService {
+    private ticketsService: TicketsService;
+
   constructor(
     @InjectModel(Registration.name)
     private readonly registrationModel: Model<Registration>,
@@ -37,9 +40,9 @@ export class RegistrationsService {
     @Inject(forwardRef(() => InvoiceService))
     private readonly invoiceService: InvoiceService,
 
-    @Inject(forwardRef(() => TicketsService))
-    private readonly ticketsService: TicketsService,
+    private readonly moduleRef: ModuleRef,
   ) {}
+
 
  // =====================================================
 // STEP 1: INITIATE REGISTRATION

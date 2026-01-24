@@ -16,10 +16,13 @@ import { Event } from '../events/schemas/event.schema';
 @Injectable()
 export class TicketsService {
   constructor(
+   
     @InjectModel(Registration.name)
-    @InjectModel(Event.name)
-    private eventModel: Model<Event>,
     private readonly registrationModel: Model<Registration>,
+
+    @InjectModel(Event.name)
+    private readonly eventModel: Model<Event>,
+
     private readonly qrService: QrService,
     private readonly pdfService: PdfService,
     private readonly emailService: EmailService,
