@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 
@@ -154,4 +154,86 @@ export class TicketsService {
       registrationNumber: reg.registrationNumber,
     };
   }
+  async resendTicketEmail(registrationId: string) {
+  const reg = await this.registrationModel
+    .findById(registrationId)
+    .populate('eventId');
+
+  if (!reg) {
+    throw new NotFoundException('Registration not found');
+  }
+
+  if (reg.status !== RegistrationStatus.COMPLETED) {
+    throw new BadRequestException(
+      'Ticket not available before payment completion',
+    );
+  }
+
+  const event =
+    reg.eventId instanceof Types.ObjectId
+      ? null
+      : (reg.eventId as Event);
+
+  if (!event) {
+    throw new BadRequestException('Event not found');
+  }
+
+  // 🔳 regenerate QR
+  const qrCode = await this.qrService.generateQr({
+    registrationId: reg._id.toString(),
+    registrationNumber: reg.registrationNumber!,
+    eventId: event._id.toString(),
+  });
+
+  // 📄 regenerate PDF (buffer only)
+  const pdfBuffer =
+    await this.pdfService.generateTicketPdfBuffer({
+      userName: reg.userName,
+      eventTitle: event.title,
+      venue: event.location,
+      eventDate: event.startDate,
+      registrationNumber: reg.registrationNumber!,
+      ticketType: reg.ticketType,
+      qrCode,
+      amount: reg.ticketPrice * reg.quantity,
+    });
+
+  const html = ticketConfirmationTemplate({
+    userName: reg.userName,
+    eventTitle: event.title,
+    eventDate: event.startDate.toDateString(),
+    venue: event.location,
+    ticketType: reg.ticketType,
+    registrationNumber: reg.registrationNumber!,
+  });
+
+  await this.emailService.sendTicketEmail({
+    to: reg.userEmail,
+    subject: `🎟 Your Ticket for ${event.title}`,
+    html,
+    pdfBuffer,
+  });
+
+  return {
+    success: true,
+    message: 'Ticket email resent successfully',
+  };
+}
+async generateQrForDownload(registrationId: string) {
+  const reg = await this.registrationModel
+    .findById(registrationId)
+    .populate('eventId');
+
+  if (!reg) {
+    throw new NotFoundException('Registration not found');
+  }
+
+  return this.qrService.generateQr({
+    registrationId: reg._id.toString(),
+ registrationNumber:
+      reg.registrationNumber ?? reg._id.toString(),   
+       eventId: (reg.eventId as any)._id.toString(),
+  });
+}
+
 }
