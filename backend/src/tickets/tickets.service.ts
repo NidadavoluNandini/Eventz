@@ -11,12 +11,12 @@ import {
   Registration,
   RegistrationStatus,
 } from '../registrations/schemas/registration.schema';
+
 import { Event } from '../events/schemas/event.schema';
 
 @Injectable()
 export class TicketsService {
   constructor(
-   
     @InjectModel(Registration.name)
     private readonly registrationModel: Model<Registration>,
 
@@ -29,99 +29,104 @@ export class TicketsService {
   ) {}
 
   // =====================================================
-  // 🎟 GENERATE + SEND TICKET (SAFE + HTML)
+  // 🎟 GENERATE + EMAIL TICKET (NO STORAGE)
   // =====================================================
-async generateAndSendTicket(reg: Registration) {
-  // 🔒 prevent duplicate emails
-  if (reg.ticketSent) {
-    return;
-  }
+  async generateAndSendTicket(reg: Registration) {
+    if (reg.ticketSent) return;
 
-  if (reg.status !== RegistrationStatus.COMPLETED) {
-    throw new Error('Ticket can only be generated after completion');
-  }
+    if (reg.status !== RegistrationStatus.COMPLETED) {
+      throw new Error('Ticket generation allowed only after completion');
+    }
 
-  const event =
-    reg.eventId instanceof Types.ObjectId
-      ? null
-      : (reg.eventId as Event);
+    // ✅ ALWAYS LOAD EVENT
+    const event = await this.eventModel.findById(reg.eventId);
 
-  if (!event) {
-    throw new Error('Event not populated');
-  }
+    if (!event) {
+      throw new Error('Event not found');
+    }
 
-  // 🔳 QR CODE
-  const qrCode = await this.qrService.generateQr({
-    registrationId: reg._id.toString(),
-    registrationNumber: reg.registrationNumber!,
-    eventId: event._id.toString(),
-  });
-
-  // 📄 PDF BUFFER (NO FILE SYSTEM)
-  const pdfBuffer =
-    await this.pdfService.generateTicketPdfBuffer({
-      userName: reg.userName,
-      eventTitle: event.title,
-      venue: event.location,
-      eventDate: event.startDate,
+    // =============================
+    // QR CODE
+    // =============================
+    const qrCode = await this.qrService.generateQr({
+      registrationId: reg._id.toString(),
       registrationNumber: reg.registrationNumber!,
-      ticketType: reg.ticketType,
-      qrCode,
-      amount: reg.ticketPrice * reg.quantity,
+      eventId: event._id.toString(),
     });
 
-  // 🎨 HTML EMAIL
-  const html = ticketConfirmationTemplate({
-    userName: reg.userName,
-    eventTitle: event.title,
-    eventDate: event.startDate.toDateString(),
-    venue: event.location,
-    ticketType: reg.ticketType,
-    registrationNumber: reg.registrationNumber!,
-  });
+    // =============================
+    // PDF BUFFER (IN MEMORY)
+    // =============================
+    const pdfBuffer =
+      await this.pdfService.generateTicketPdfBuffer({
+        userName: reg.userName,
+        eventTitle: event.title,
+        venue: event.location,
+        eventDate: event.startDate,
+        registrationNumber: reg.registrationNumber!,
+        ticketType: reg.ticketType,
+        qrCode,
+        amount: reg.ticketPrice * reg.quantity,
+      });
 
-  // 📧 SEND EMAIL
-  await this.emailService.sendTicketEmail({
-    to: reg.userEmail,
-    subject: `🎟 Your Ticket for ${event.title}`,
-    html,
-    pdfBuffer,
-  });
+    // =============================
+    // EMAIL HTML
+    // =============================
+    const html = ticketConfirmationTemplate({
+      userName: reg.userName,
+      eventTitle: event.title,
+      eventDate: event.startDate.toDateString(),
+      venue: event.location,
+      ticketType: reg.ticketType,
+      registrationNumber: reg.registrationNumber!,
+    });
 
-  // 💾 UPDATE DATABASE
-  await this.registrationModel.findByIdAndUpdate(reg._id, {
-    qrCode,
-    ticketSent: true,
-  });
-}
+    // =============================
+    // SEND EMAIL
+    // =============================
+    await this.emailService.sendTicketEmail({
+      to: reg.userEmail,
+      subject: `🎟 Your Ticket for ${event.title}`,
+      html,
+      pdfBuffer,
+    });
 
+    // =============================
+    // MARK AS SENT
+    // =============================
+    await this.registrationModel.findByIdAndUpdate(reg._id, {
+      qrCode,
+      ticketSent: true,
+    });
+  }
 
+  // =====================================================
+  // 🎫 GET TICKET FOR DOWNLOAD PAGE
+  // =====================================================
   async getTicket(registrationId: string) {
     const reg = await this.registrationModel
       .findById(registrationId)
+      .populate('eventId')
       .lean();
 
     if (!reg) return null;
 
-    const event = await this.eventModel
-      .findById(reg.eventId)
-      .lean();
+    const event = reg.eventId as any;
 
     return {
-      ...reg,
-      eventTitle: event?.title || 'Event',
+      userName: reg.userName,
+      userEmail: reg.userEmail,
+      ticketType: reg.ticketType,
+      registrationNumber: reg.registrationNumber,
+      eventTitle: event.title,
+      venue: event.location,
+      eventDate: event.startDate,
     };
   }
 
-
   // =====================================================
-  // REQUIRED BY CONTROLLER
+  // ✅ QR VALIDATION AT ENTRY
   // =====================================================
-  async getTicketPdfPath(registrationId: string) {
-    const reg = await this.registrationModel.findById(registrationId);
-    return reg?.ticketUrl ?? null;
-  }
-
   async verifyQrCode(qrData: string) {
     let payload: any;
 
@@ -135,17 +140,16 @@ async generateAndSendTicket(reg: Registration) {
       .findById(payload.registrationId)
       .populate('eventId');
 
-    if (!reg) return { valid: false, message: 'Invalid ticket' };
+    if (!reg) {
+      return { valid: false, message: 'Invalid ticket' };
+    }
 
-    const event =
-      reg.eventId instanceof Types.ObjectId
-        ? null
-        : (reg.eventId as Event);
+    const event = reg.eventId as any;
 
     return {
       valid: true,
       userName: reg.userName,
-      eventTitle: event?.title,
+      eventTitle: event.title,
       ticketType: reg.ticketType,
       registrationNumber: reg.registrationNumber,
     };

@@ -2,116 +2,96 @@ import {
   Controller,
   Post,
   Get,
-  Put,
-  Delete,
   Param,
   Body,
-  UseGuards,
   NotFoundException,
   Res,
 } from '@nestjs/common';
 import type { Response } from 'express';
-import { TicketsInventoryService } from './tickets.inventory.service';
+
 import { TicketsService } from './tickets.service';
-import { CreateTicketDto } from './dto/create-tickets.dto';
-import { UpdateTicketDto } from './dto/update-tickets.dto';
 import { VerifyQrDto } from './dto/verify-qr.dto';
-import { JwtAuthGuard } from '../common/guards/jwt.guard';
-import { RolesGuard } from '../common/guards/roles.guard';
-import { Roles } from '../common/decorators/roles.decorator';
-import * as PDFDocument from 'pdfkit';
+
+import PDFDocument from 'pdfkit';
 
 @Controller('tickets')
 export class TicketsController {
   constructor(
-    private readonly ticketsInventoryService: TicketsInventoryService,
     private readonly ticketsService: TicketsService,
   ) {}
 
-  // ✅ QR VERIFICATION (MUST BE FIRST)
+  // ===============================
+  // QR VERIFY (ENTRY SCAN)
+  // ===============================
   @Post('verify-qr')
   verifyQr(@Body() dto: VerifyQrDto) {
     return this.ticketsService.verifyQrCode(dto.qrData);
   }
 
-  // 🔐 Organizer creates ticket
-  @Post(':eventId')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('ORGANIZER')
-  createTicket(
-    @Param('eventId') eventId: string,
-    @Body() dto: CreateTicketDto,
+  // ===============================
+  // DOWNLOAD PDF (DYNAMIC)
+  // ===============================
+  @Get('download/:registrationId')
+  async downloadTicket(
+    @Param('registrationId') registrationId: string,
+    @Res() res: Response,
   ) {
-    return this.ticketsInventoryService.create(eventId, dto);
-  }
+    const ticket =
+      await this.ticketsService.getTicket(registrationId);
 
-  // ✅ Public – tickets for event
-  @Get('event/:eventId')
-  getTickets(@Param('eventId') eventId: string) {
-    return this.ticketsInventoryService.findByEvent(eventId);
-  }
-@Get('download/:registrationId')
-async downloadTicket(
-  @Param('registrationId') registrationId: string,
-  @Res() res: Response,
-) {
-  const ticket =
-    await this.ticketsService.getTicket(registrationId);
+    if (!ticket) {
+      throw new NotFoundException('Ticket not found');
+    }
 
-  if (!ticket) {
-    throw new NotFoundException('Ticket not found');
-  }
+    const doc = new PDFDocument({
+      size: 'A4',
+      margin: 50,
+    });
 
-  const doc = new PDFDocument({ size: 'A4' });
-
-  res.setHeader('Content-Type', 'application/pdf');
-  res.setHeader(
-    'Content-Disposition',
-    'attachment; filename=ticket.pdf',
-  );
-
-  doc.pipe(res);
-
-  doc.fontSize(22).text('🎟 EVENT TICKET', {
-    align: 'center',
-  });
-
-  doc.moveDown();
-
-  doc.fontSize(14).text(`Name: ${ticket.userName}`);
-  doc.text(`Email: ${ticket.userEmail}`);
-  doc.text(`Event: ${ticket.eventTitle}`);
-  doc.text(`Ticket Type: ${ticket.ticketType}`);
-  doc.text(`Registration No: ${ticket.registrationNumber}`);
-
-  doc.moveDown(2);
-
-  doc
-    .fontSize(12)
-    .text(
-      'Please show this ticket at the event entrance.',
-      { align: 'center' },
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader(
+      'Content-Disposition',
+      'attachment; filename=event-ticket.pdf',
     );
 
-  doc.end();
-}
+    doc.pipe(res);
 
-  // 🔐 Organizer update ticket
-  @Put(':ticketId')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('ORGANIZER')
-  updateTicket(
-    @Param('ticketId') ticketId: string,
-    @Body() dto: UpdateTicketDto,
-  ) {
-    return this.ticketsInventoryService.update(ticketId, dto);
-  }
+    // ===== HEADER =====
+    doc
+      .fontSize(26)
+      .text('🎟 EVENT TICKET', { align: 'center' });
 
-  // 🔐 Organizer delete ticket
-  @Delete(':ticketId')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('ORGANIZER')
-  deleteTicket(@Param('ticketId') ticketId: string) {
-    return this.ticketsInventoryService.delete(ticketId);
+    doc.moveDown(0.5);
+
+    doc
+      .fontSize(18)
+      .text(ticket.eventTitle, { align: 'center' });
+
+    doc.moveDown();
+
+    doc
+      .moveTo(50, doc.y)
+      .lineTo(550, doc.y)
+      .stroke();
+
+    doc.moveDown(2);
+
+    // ===== BODY =====
+    doc.fontSize(14);
+    doc.text(`Name: ${ticket.userName}`);
+    doc.text(`Email: ${ticket.userEmail}`);
+    doc.text(`Ticket Type: ${ticket.ticketType}`);
+    doc.text(`Registration No: ${ticket.registrationNumber}`);
+
+    doc.moveDown(2);
+
+    doc
+      .fontSize(12)
+      .text(
+        'Please show this ticket at the event entrance.',
+        { align: 'center' },
+      );
+
+    doc.end();
   }
 }

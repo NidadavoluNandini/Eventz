@@ -19,14 +19,8 @@ import { RegistrationsModule } from '../registrations/registrations.module';
 @Module({
   imports: [
     MongooseModule.forFeature([
-      {
-        name: Registration.name,
-        schema: RegistrationSchema,
-      },
-      {
-        name: Event.name,
-        schema: EventSchema,
-      },
+      { name: Registration.name, schema: RegistrationSchema },
+      { name: Event.name, schema: EventSchema },
     ]),
     forwardRef(() => RegistrationsModule),
   ],
