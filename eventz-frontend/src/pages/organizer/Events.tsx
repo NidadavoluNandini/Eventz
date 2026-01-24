@@ -7,15 +7,16 @@ import {
 } from "../../api/events.api";
 
 const CATEGORIES = [
-  "Technology",
-  "Arts",
-  "Sports",
-  "Science",
-  "Industry",
-  "Health",
-  "Entertainment",
-  "Business",
+  "technology",
+  "arts",
+  "sports",
+  "science",
+  "industry",
+  "health",
+  "entertainment",
+  "business",
 ];
+
 
 export default function Events() {
   const [events, setEvents] = useState<any[]>([]);
@@ -47,20 +48,21 @@ export default function Events() {
       <div className="bg-white rounded-xl shadow p-4 flex flex-wrap gap-4 mb-6">
         {/* CATEGORY FILTER */}
        <div className="flex flex-wrap gap-2 mb-4">
-  {["ALL", ...CATEGORIES].map((c) => (
-    <button
-      key={c}
-      onClick={() => setCategory(c)}
-      className={`px-4 py-2 rounded-full border text-sm transition
-        ${
-          category === c
-            ? "bg-indigo-600 text-white"
-            : "bg-white hover:bg-gray-100"
-        }`}
-    >
-      {c}
-    </button>
-  ))}
+ {["ALL", ...CATEGORIES].map((c) => (
+  <button
+    key={c}
+    onClick={() => setCategory(c)}
+    className={`px-4 py-2 rounded-full border text-sm
+      ${
+        category === c
+          ? "bg-indigo-600 text-white"
+          : "bg-white hover:bg-gray-100"
+      }`}
+  >
+    {c.charAt(0).toUpperCase() + c.slice(1)}
+  </button>
+))}
+
 </div>
 
 

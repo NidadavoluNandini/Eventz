@@ -10,6 +10,7 @@ const CATEGORIES = [
   "industry",
   "entertainment",
   "business",
+  "health",
 ];
 
 const TICKET_TYPES = ["FREE", "EARLY_BIRD", "REGULAR", "VIP"];
