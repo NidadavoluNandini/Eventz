@@ -13,6 +13,7 @@ import { QrService } from './qr.service';
 import { PdfService } from './pdf.service';
 import { EmailService } from '../notifications/email.service';
 import { RegistrationsModule } from '../registrations/registrations.module';
+import { EventsModule } from '../events/events.module';
 
 @Module({
   imports: [
@@ -23,6 +24,8 @@ import { RegistrationsModule } from '../registrations/registrations.module';
       { name: Event.name, schema: EventSchema },
     ]),
     forwardRef(() => RegistrationsModule),
+      EventsModule, // 🔥 THIS IS REQUIRED
+
   ],
   controllers: [TicketsController],
   providers: [
