@@ -49,7 +49,7 @@ export default function OrganizerProfile() {
 
  const saveProfile = async () => {
   try {
-    const res = await api.put("/organizers/me", profile);
+    const res = await api.put("/api/organizers/me", profile);
 
     // update local storage
     localStorage.setItem("user", JSON.stringify(res.data));
