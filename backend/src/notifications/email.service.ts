@@ -1,6 +1,5 @@
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { Resend } from 'resend';
-import * as fs from 'fs';
 
 @Injectable()
 export class EmailService {
