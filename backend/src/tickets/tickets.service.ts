@@ -90,6 +90,15 @@ async generateAndSendTicket(reg: Registration) {
   });
 }
 
+
+  async getTicketData(registrationId: string) {
+    return this.registrationModel
+      .findById(registrationId)
+      .populate('eventId')
+      .lean();
+  }
+
+
   // =====================================================
   // REQUIRED BY CONTROLLER
   // =====================================================

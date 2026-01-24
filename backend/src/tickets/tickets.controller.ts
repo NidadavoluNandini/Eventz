@@ -19,6 +19,7 @@ import { VerifyQrDto } from './dto/verify-qr.dto';
 import { JwtAuthGuard } from '../common/guards/jwt.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
+import * as PDFDocument from 'pdfkit';
 
 @Controller('tickets')
 export class TicketsController {
@@ -49,21 +50,58 @@ export class TicketsController {
   getTickets(@Param('eventId') eventId: string) {
     return this.ticketsInventoryService.findByEvent(eventId);
   }
-    @Get('download/:registrationId')
-  async downloadTicket(
-    @Param('registrationId') registrationId: string,
-    @Res() res: Response,
-  ) {
-    const filePath =
-      await this.ticketsService.getTicketPdfPath(registrationId);
+@Get('download/:registrationId')
+async downloadTicket(
+  @Param('registrationId') registrationId: string,
+  @Res() res: Response,
+) {
+  const ticket: any =
+    await this.ticketsService.getTicketData(registrationId);
 
-    if (!filePath) {
-      throw new NotFoundException('Ticket not found');
-    }
-
-    return res.download(filePath);
+  if (!ticket) {
+    throw new NotFoundException('Ticket not found');
   }
 
+  const doc = new PDFDocument({ size: 'A4' });
+
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader(
+    'Content-Disposition',
+    'attachment; filename=ticket.pdf',
+  );
+
+  doc.pipe(res);
+
+  doc.fontSize(22).text('🎟 EVENT TICKET', {
+    align: 'center',
+  });
+
+  doc.moveDown();
+
+  doc.fontSize(14).text(`Name: ${ticket.userName}`);
+  doc.text(`Email: ${ticket.userEmail}`);
+
+  // ✅ CAST HERE
+  doc.text(
+    `Event: ${(ticket.eventId as any)?.title}`,
+  );
+
+  doc.text(`Ticket Type: ${ticket.ticketType}`);
+  doc.text(
+    `Registration No: ${ticket.registrationNumber}`,
+  );
+
+  doc.moveDown(2);
+
+  doc
+    .fontSize(12)
+    .text(
+      'Please show this ticket at the event entrance.',
+      { align: 'center' },
+    );
+
+  doc.end();
+}
 
   // 🔐 Organizer update ticket
   @Put(':ticketId')
