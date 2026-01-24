@@ -7,22 +7,28 @@ export default function PaymentProcessing() {
   const { registrationId } = useParams();
   const navigate = useNavigate();
 
-  useEffect(() => {
-    const interval = setInterval(async () => {
-      try {
-        const res = await api.get(
-          `/api/registrations/${registrationId}`
-        );
+ useEffect(() => {
+  const interval = setInterval(async () => {
+    try {
+      const res = await api.get(
+        `/api/registrations/${registrationId}`
+      );
 
-        if (res.data?.paymentStatus === "SUCCESS") {
-          clearInterval(interval);
-          navigate(`/ticket-success/${registrationId}`);
-        }
-      } catch {}
-    }, 2500);
+    if (
+  res.data?.status === "COMPLETED" &&
+  res.data?.paymentStatus === "PAID"
+) {
+  navigate(`/ticket-success/${registrationId}`);
+}
 
-    return () => clearInterval(interval);
-  }, []);
+    } catch (err) {
+      console.error(err);
+    }
+  }, 2500);
+
+  return () => clearInterval(interval);
+}, [registrationId]);
+
 
   return (
     <PublicLayout>
