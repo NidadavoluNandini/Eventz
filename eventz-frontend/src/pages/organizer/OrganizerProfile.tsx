@@ -121,7 +121,6 @@ export default function OrganizerProfile() {
           }
           className="w-full border px-3 py-2 rounded"
         />
-
         <button
           onClick={saveProfile}
           className="bg-indigo-600 text-white px-5 py-2 rounded"

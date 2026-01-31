@@ -1,26 +1,25 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
 
 const slides = [
   {
     image: "/images/carousel1.jpg",
-    title: "Discover Amazing Events",
-    subtitle: "Find conferences, workshops and meetups near U",
+    title: "Your Next Event Awaits",
+    subtitle: "Discover conferences, workshops & networking events",
   },
   {
     image: "/images/carousel2.jpg",
-    title: "Create & Host Events",
-    subtitle: "Organize events and manage registrations with ease",
+    title: "Host Events with Ease",
+    subtitle: "Complete event management from creation to ticketing",
   },
   {
     image: "/images/carousel3.webp",
-    title: "Seamless Ticketing",
-    subtitle: "Register, pay, and receive tickets instantly",
+    title: "Book Tickets Instantly",
+    subtitle: "Secure registration with instant confirmation",
   },
   {
     image: "/images/carousel4.jpg",
-    title: "Join Communities",
-    subtitle: "Connect with like-minded people at great events",
+    title: "Connect & Network",
+    subtitle: "Meet professionals and enthusiasts in your field",
   },
 ];
 
@@ -30,74 +29,102 @@ export default function HeroCarousel() {
   useEffect(() => {
     const id = setInterval(() => {
       setIndex((prev) => (prev + 1) % slides.length);
-    }, 3000);
+    }, 4000);
 
     return () => clearInterval(id);
   }, []);
 
   return (
-    <section className="w-full">
-      {/* CENTERED HERO CONTAINER */}
-      <div className="max-w-6xl mx-auto px-6 mt-8">
-        <div className="relative h-[380px] overflow-hidden rounded-3xl shadow-lg group">
+    <section className="w-full bg-gradient-to-b from-slate-50 to-white">
+      {/* COMPACT HERO CONTAINER */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-6 pb-8">
+        <div className="relative h-[280px] sm:h-[320px] overflow-hidden rounded-2xl shadow-2xl group">
           {/* Slides */}
           {slides.map((slide, i) => (
-            <img
+            <div
               key={i}
-              src={slide.image}
-              alt={slide.title}
-              className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-1000 ${
+              className={`absolute inset-0 transition-opacity duration-1000 ${
                 i === index ? "opacity-100" : "opacity-0"
               }`}
-            />
+            >
+              <img
+                src={slide.image}
+                alt={slide.title}
+                className="absolute inset-0 h-full w-full object-cover"
+              />
+              {/* Gradient Overlay */}
+              <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/50 to-transparent"></div>
+            </div>
           ))}
 
-          {/* Overlay */}
-          <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/40 to-black/30 flex items-center justify-center text-center px-4">
-            <div className="max-w-3xl">
-              <h1 className="text-white text-3xl md:text-4xl font-extrabold mb-3">
+          {/* Content - Centered Text Only */}
+          <div className="absolute inset-0 flex items-center justify-center px-6 sm:px-12">
+            <div className="max-w-3xl text-center">
+              <h1 className="text-white text-3xl sm:text-4xl md:text-5xl font-bold mb-3 leading-tight">
                 {slides[index].title}
               </h1>
 
-              <p className="text-white/90 text-base md:text-lg mb-6">
+              <p className="text-white/95 text-lg sm:text-xl">
                 {slides[index].subtitle}
               </p>
-
-              <Link
-                to="/"
-                className="inline-block bg-white text-indigo-600 px-8 py-3 rounded-full font-semibold shadow hover:bg-gray-100 transition"
-              >
-                Explore Events
-              </Link>
             </div>
           </div>
 
-          {/* Arrows */}
+          {/* Arrows - Hidden on mobile */}
           <button
             onClick={() =>
               setIndex(index === 0 ? slides.length - 1 : index - 1)
             }
-            className="absolute left-4 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-black/70 text-white w-10 h-10 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition"
+            className="hidden sm:flex absolute left-4 top-1/2 -translate-y-1/2 bg-white/20 backdrop-blur-sm hover:bg-white/30 text-white w-12 h-12 rounded-full items-center justify-center opacity-0 group-hover:opacity-100 transition-all shadow-lg"
+            aria-label="Previous slide"
           >
-            ❮
+            <svg
+              className="w-6 h-6"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M15 19l-7-7 7-7"
+              />
+            </svg>
           </button>
 
           <button
             onClick={() => setIndex((index + 1) % slides.length)}
-            className="absolute right-4 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-black/70 text-white w-10 h-10 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition"
+            className="hidden sm:flex absolute right-4 top-1/2 -translate-y-1/2 bg-white/20 backdrop-blur-sm hover:bg-white/30 text-white w-12 h-12 rounded-full items-center justify-center opacity-0 group-hover:opacity-100 transition-all shadow-lg"
+            aria-label="Next slide"
           >
-            ❯
+            <svg
+              className="w-6 h-6"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M9 5l7 7-7 7"
+              />
+            </svg>
           </button>
 
-          {/* Dots */}
+          {/* Dots Navigation */}
           <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
             {slides.map((_, i) => (
               <button
                 key={i}
                 onClick={() => setIndex(i)}
-                className={`w-2.5 h-2.5 rounded-full ${
-                  i === index ? "bg-white" : "bg-white/50"
+                className={`transition-all ${
+                  i === index
+                    ? "w-8 h-2.5 bg-white rounded-full"
+                    : "w-2.5 h-2.5 bg-white/60 hover:bg-white/80 rounded-full"
                 }`}
+                aria-label={`Go to slide ${i + 1}`}
               />
             ))}
           </div>
