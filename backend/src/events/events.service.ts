@@ -5,6 +5,7 @@ import { Event, EventStatus } from './schemas/event.schema';
 import { CreateEventDto } from './dto/create-event.dto';
 import { UpdateEventDto } from './dto/update-event.dto';
 import { MailService } from '../email/mail.service';
+
 @Injectable()
 export class EventsService {
   constructor(
@@ -13,141 +14,132 @@ export class EventsService {
     private readonly mailService: MailService,
   ) {}
 
-  // Organizer creates event
   async create(dto: CreateEventDto, organizerId: string) {
-    // Initialize tickets with available count
-    const tickets = dto.tickets.map((ticket) => ({
-      ...ticket,
-      available: ticket.quantity,
-    }));
-
-    const event = await this.eventModel.create({
+    return this.eventModel.create({
       ...dto,
-      tickets,
       organizerId: new Types.ObjectId(organizerId),
+      registrationOpen: true,
       status: EventStatus.DRAFT,
     });
-
-    return event;
   }
 
-  // Public - list all published events
-  async findAll(filters?: {
-    status?: EventStatus;
-    category?: string;
-    city?: string;
-  }) {
-    const query: any = {};
+async findAll(filters?: {
+  status?: EventStatus;
+  category?: string;
+  city?: string;
+}) {
+  const query: any = {};
 
-    // Default to published events for public access
-    if (!filters?.status) {
-      query.status = EventStatus.PUBLISHED;
-    } else if (filters.status) {
-      query.status = filters.status;
-    }
-
-    if (filters?.category) {
-      query.category = filters.category;
-    }
-
-    if (filters?.city) {
-      query.city = filters.city;
-    }
-
-    return this.eventModel
-      .find(query)
-      .sort({ startDate: 1, createdAt: -1 })
-      .select('-__v');
+  // ✅ Show both published & unpublished to users
+  if (filters?.status) {
+    query.status = filters.status;
+  } else {
+    query.status = {
+      $in: [EventStatus.PUBLISHED, EventStatus.UNPUBLISHED],
+    };
   }
 
-  // Public - single event
+  if (filters?.category) query.category = filters.category;
+  if (filters?.city) query.city = filters.city;
+
+  return this.eventModel.find(query).sort({ startDate: 1 });
+}
+
   async findById(id: string) {
     const event = await this.eventModel.findById(id);
-    if (!event) {
-      throw new NotFoundException('Event not found');
-    }
+    if (!event) throw new NotFoundException('Event not found');
     return event;
   }
 
-  // UPDATE BY EVENT ID
   async update(id: string, dto: UpdateEventDto) {
     const event = await this.eventModel.findById(id);
-
-    if (!event) {
-      throw new NotFoundException('Event not found');
-    }
-
-    // If updating tickets, recalculate available counts
-    if (dto.tickets) {
-      dto.tickets = dto.tickets.map((ticket) => ({
-        ...ticket,
-        available: ticket.available || ticket.quantity,
-      })) as any;
-    }
+    if (!event) throw new NotFoundException('Event not found');
 
     Object.assign(event, dto);
-    await event.save();
-
-    return event;
+    return event.save();
   }
 
-  // DELETE BY EVENT ID
+  async moveToDraft(id: string) {
+    return this.eventModel.findByIdAndUpdate(
+      id,
+      {
+        status: EventStatus.DRAFT,
+        registrationOpen: false,
+      },
+      { new: true },
+    );
+  }
+
   async delete(id: string) {
     const event = await this.eventModel.findByIdAndDelete(id);
-
-    if (!event) {
-      throw new NotFoundException('Event not found');
-    }
-
+    if (!event) throw new NotFoundException('Event not found');
     return { message: 'Event deleted successfully' };
   }
 
-  // Organizer events
-  findByOrganizer(organizerId: string) {
-    return this.eventModel
-      .find({
-        organizerId: new Types.ObjectId(organizerId),
-      })
-      .sort({ createdAt: -1 });
-  }
-
-  // Publish event
   async publishEvent(id: string) {
-    const event = await this.eventModel.findById(id);
-    if (!event) {
-      throw new NotFoundException('Event not found');
-    }
-
-    event.status = EventStatus.PUBLISHED;
-    await event.save();
-
-    return { message: 'Event published successfully', event };
+    return this.eventModel.findByIdAndUpdate(
+      id,
+      {
+        status: EventStatus.PUBLISHED,
+        registrationOpen: true,
+      },
+      { new: true },
+    );
   }
 
-  // Unpublish event
   async unpublishEvent(id: string) {
-    const event = await this.eventModel.findById(id);
-    if (!event) {
-      throw new NotFoundException('Event not found');
-    }
-
-    event.status = EventStatus.UNPUBLISHED;
-    await event.save();
-
-    return { message: 'Event unpublished successfully', event };
+    return this.eventModel.findByIdAndUpdate(
+      id,
+      {
+        status: EventStatus.UNPUBLISHED,
+        registrationOpen: false,
+      },
+      { new: true },
+    );
   }
 
-  // Mark event as completed
   async markCompleted(id: string) {
     const event = await this.eventModel.findById(id);
-    if (!event) {
-      throw new NotFoundException('Event not found');
-    }
+    if (!event) throw new NotFoundException('Event not found');
 
     event.status = EventStatus.COMPLETED;
-    await event.save();
+    event.registrationOpen = false;
+    return event.save();
+  }
 
-    return { message: 'Event marked as completed', event };
+  async closeRegistration(eventId: string, organizerId: string) {
+    const event = await this.eventModel.findOne({
+      _id: eventId,
+      organizerId: new Types.ObjectId(organizerId),
+    });
+
+    if (!event) throw new NotFoundException('Event not found');
+
+    event.registrationOpen = false;
+    return event.save();
+  }
+
+  async autoCompleteEvents() {
+    const now = new Date();
+
+    await this.eventModel.updateMany(
+      {
+        status: { $ne: EventStatus.COMPLETED },
+        endDate: { $lt: now },
+      },
+      {
+        status: EventStatus.COMPLETED,
+        registrationOpen: false,
+      },
+    );
+  }
+
+  async findByOrganizer(organizerId: string) {
+    await this.autoCompleteEvents();
+
+    return this.eventModel.find({
+      organizerId: new Types.ObjectId(organizerId),
+    });
   }
 }
 

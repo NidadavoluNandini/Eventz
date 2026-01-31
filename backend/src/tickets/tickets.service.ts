@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 
@@ -29,79 +33,105 @@ export class TicketsService {
   ) {}
 
   // =====================================================
-  // 🎟 GENERATE + EMAIL TICKET (NO STORAGE)
+  // 🎟 GENERATE + EMAIL TICKET
   // =====================================================
-  async generateAndSendTicket(reg: Registration) {
-    if (reg.ticketSent) return;
+async generateAndSendTicket(reg: Registration) {
+  if (reg.ticketSent) return;
 
-    if (reg.status !== RegistrationStatus.COMPLETED) {
-      throw new Error('Ticket generation allowed only after completion');
-    }
-
-    // ✅ ALWAYS LOAD EVENT
-    const event = await this.eventModel.findById(reg.eventId);
-
-    if (!event) {
-      throw new Error('Event not found');
-    }
-
-    // =============================
-    // QR CODE
-    // =============================
-    const qrCode = await this.qrService.generateQr({
-      registrationId: reg._id.toString(),
-      registrationNumber: reg.registrationNumber!,
-      eventId: event._id.toString(),
-    });
-
-    // =============================
-    // PDF BUFFER (IN MEMORY)
-    // =============================
-    const pdfBuffer =
-      await this.pdfService.generateTicketPdfBuffer({
-        userName: reg.userName,
-        eventTitle: event.title,
-        venue: event.location,
-        eventDate: event.startDate,
-        registrationNumber: reg.registrationNumber!,
-        ticketType: reg.ticketType,
-        qrCode,
-        amount: reg.ticketPrice * reg.quantity,
-      });
-
-    // =============================
-    // EMAIL HTML
-    // =============================
-    const html = ticketConfirmationTemplate({
-      userName: reg.userName,
-      eventTitle: event.title,
-      eventDate: event.startDate.toDateString(),
-      venue: event.location,
-      ticketType: reg.ticketType,
-      registrationNumber: reg.registrationNumber!,
-    });
-
-    // =============================
-    // SEND EMAIL
-    // =============================
-    await this.emailService.sendTicketEmail({
-      to: reg.userEmail,
-      subject: `🎟 Your Ticket for ${event.title}`,
-      html,
-      pdfBuffer,
-    });
-
-    // =============================
-    // MARK AS SENT
-    // =============================
-    await this.registrationModel.findByIdAndUpdate(reg._id, {
-      qrCode,
-      ticketSent: true,
-    });
+  if (reg.status !== RegistrationStatus.COMPLETED) {
+    throw new BadRequestException(
+      'Ticket can be generated only after completion',
+    );
   }
 
+  const event = await this.eventModel.findById(reg.eventId);
+  if (!event) {
+    throw new NotFoundException('Event not found');
+  }
+
+  // ===============================
+  // 🔳 QR CODE
+  // ===============================
+  const qrCode = await this.qrService.generateQr({
+    registrationId: reg._id.toString(),
+    registrationNumber: reg.registrationNumber!,
+    eventId: event._id.toString(),
+  });
+
+  // ===============================
+  // 💰 READ STORED VALUES (NO MATH)
+  // ===============================
+  const {
+    ticketName,
+    basePricePerTicket,
+    quantity,
+    gstRate,
+    gstAmount,
+    totalAmount,
+  } = reg;
+
+  if (
+    basePricePerTicket == null ||
+    quantity == null ||
+    gstRate == null ||
+    gstAmount == null ||
+    totalAmount == null
+  ) {
+    throw new BadRequestException(
+      'Invoice data missing in registration',
+    );
+  }
+
+  // ===============================
+  // 📄 PDF — DISPLAY ONLY
+  // ===============================
+  const pdfBuffer =
+    await this.pdfService.generateTicketPdfBuffer({
+      userName: reg.userName,
+      eventTitle: event.title,
+      venue: event.location,
+      eventDate: event.startDate,
+      registrationNumber: reg.registrationNumber!,
+
+      ticketName,
+      basePricePerTicket,
+      quantity,
+      gstRate,
+      gstAmount,
+      totalAmount,
+
+      qrCode,
+    });
+
+  // ===============================
+  // 📧 EMAIL
+  // ===============================
+  const html = ticketConfirmationTemplate({
+    userName: reg.userName,
+    eventTitle: event.title,
+    eventDate: event.startDate.toDateString(),
+    venue: event.location,
+    ticketName,
+    quantity,
+    totalAmount,
+    registrationNumber: reg.registrationNumber!,
+  });
+
+  await this.emailService.sendTicketEmail({
+    to: reg.userEmail,
+    subject: `🎟 Your Ticket for ${event.title}`,
+    html,
+    pdfBuffer,
+  });
+
+  await this.registrationModel.findByIdAndUpdate(reg._id, {
+    ticketSent: true,
+  });
+}
+
+
   // =====================================================
-  // 🎫 GET TICKET FOR DOWNLOAD PAGE
+  // 🎫 GET TICKET (DOWNLOAD PAGE)
   // =====================================================
   async getTicket(registrationId: string) {
     const reg = await this.registrationModel
@@ -116,7 +146,7 @@ export class TicketsService {
     return {
       userName: reg.userName,
       userEmail: reg.userEmail,
-      ticketType: reg.ticketType,
+      ticketName: reg.ticketName,
       registrationNumber: reg.registrationNumber,
       eventTitle: event.title,
       venue: event.location,
@@ -150,92 +180,133 @@ export class TicketsService {
       valid: true,
       userName: reg.userName,
       eventTitle: event.title,
-      ticketType: reg.ticketType,
+      ticketName: reg.ticketName,
       registrationNumber: reg.registrationNumber,
     };
   }
+
+  // =====================================================
+  // 🔁 RESEND TICKET EMAIL
+  // =====================================================
   async resendTicketEmail(registrationId: string) {
-  const reg = await this.registrationModel
-    .findById(registrationId)
-    .populate('eventId');
+    const reg = await this.registrationModel
+      .findById(registrationId)
+      .populate('eventId');
 
-  if (!reg) {
-    throw new NotFoundException('Registration not found');
-  }
+    if (!reg) {
+      throw new NotFoundException('Registration not found');
+    }
 
-  if (reg.status !== RegistrationStatus.COMPLETED) {
-    throw new BadRequestException(
-      'Ticket not available before payment completion',
-    );
-  }
+    if (reg.status !== RegistrationStatus.COMPLETED) {
+      throw new BadRequestException(
+        'Ticket not available before payment completion',
+      );
+    }
 
-  const event =
-    reg.eventId instanceof Types.ObjectId
-      ? null
-      : (reg.eventId as Event);
+    const event =
+      reg.eventId instanceof Types.ObjectId
+        ? null
+        : (reg.eventId as Event);
 
-  if (!event) {
-    throw new BadRequestException('Event not found');
-  }
+    if (!event) {
+      throw new BadRequestException('Event not found');
+    }
 
-  // 🔳 regenerate QR
-  const qrCode = await this.qrService.generateQr({
-    registrationId: reg._id.toString(),
-    registrationNumber: reg.registrationNumber!,
-    eventId: event._id.toString(),
-  });
-
-  // 📄 regenerate PDF (buffer only)
-  const pdfBuffer =
-    await this.pdfService.generateTicketPdfBuffer({
-      userName: reg.userName,
-      eventTitle: event.title,
-      venue: event.location,
-      eventDate: event.startDate,
+    const qrCode = await this.qrService.generateQr({
+      registrationId: reg._id.toString(),
       registrationNumber: reg.registrationNumber!,
-      ticketType: reg.ticketType,
-      qrCode,
-      amount: reg.ticketPrice * reg.quantity,
+      eventId: event._id.toString(),
     });
 
-  const html = ticketConfirmationTemplate({
+   // inside generateAndSendTicket()
+
+const basePricePerTicket = reg.ticketPrice; // base price (without GST)
+const quantity = reg.quantity ?? 1;
+
+// 🔥 GST is already stored in EVENT ticket, so read it
+const ticket = event.tickets.find(
+  (t: any) => t.name === reg.ticketName,
+);
+
+const gstRate = ticket?.gst ?? 0;
+const baseTotal = basePricePerTicket * quantity;
+const gstAmount = Math.round((baseTotal * gstRate) / 100);
+const totalAmount = baseTotal + gstAmount;
+
+const pdfBuffer =
+  await this.pdfService.generateTicketPdfBuffer({
     userName: reg.userName,
     eventTitle: event.title,
-    eventDate: event.startDate.toDateString(),
     venue: event.location,
-    ticketType: reg.ticketType,
+    eventDate: event.startDate,
     registrationNumber: reg.registrationNumber!,
+
+    ticketName: reg.ticketName,
+    basePricePerTicket,
+    quantity,
+    gstRate,
+    gstAmount,
+    totalAmount,
+
+    qrCode,
   });
 
-  await this.emailService.sendTicketEmail({
-    to: reg.userEmail,
-    subject: `🎟 Your Ticket for ${event.title}`,
-    html,
-    pdfBuffer,
-  });
 
-  return {
-    success: true,
-    message: 'Ticket email resent successfully',
-  };
-}
-async generateQrForDownload(registrationId: string) {
-  const reg = await this.registrationModel
-    .findById(registrationId)
-    .populate('eventId');
+    const html = ticketConfirmationTemplate({
+  userName: reg.userName,
+  eventTitle: event.title,
+  eventDate: event.startDate.toDateString(),
+  venue: event.location,
+  ticketName: reg.ticketName,
+  registrationNumber: reg.registrationNumber!,
+  quantity: reg.quantity ?? 1,
+  totalAmount: reg.totalAmount!,
+});
 
-  if (!reg) {
-    throw new NotFoundException('Registration not found');
+
+    await this.emailService.sendTicketEmail({
+      to: reg.userEmail,
+      subject: `🎟 Your Ticket for ${event.title}`,
+      html,
+      pdfBuffer,
+    });
+
+    return {
+      success: true,
+      message: 'Ticket email resent successfully',
+    };
   }
- if (!reg.registrationNumber) {
-    throw new BadRequestException('Registration incomplete');
-  }
-  return this.qrService.generateQr({
-    registrationId: reg._id.toString(),
- registrationNumber:
-      reg.registrationNumber ?? reg._id.toString(),   
-       eventId: (reg.eventId as any)._id.toString(),
-  });
+async getRegistrationsByEvent(eventId: string) {
+  return this.registrationModel
+    .find({
+      eventId: new Types.ObjectId(eventId),
+      status: RegistrationStatus.COMPLETED, // ✅ ticket exists
+    })
+    .sort({ createdAt: -1 })
+    .lean();
 }
 
+
+  // =====================================================
+  // 🔳 QR FOR DOWNLOAD
+  // =====================================================
+  async generateQrForDownload(registrationId: string) {
+    const reg = await this.registrationModel
+      .findById(registrationId)
+      .populate('eventId');
+
+    if (!reg) {
+      throw new NotFoundException('Registration not found');
+    }
+
+    if (!reg.registrationNumber) {
+      throw new BadRequestException('Registration incomplete');
+    }
+
+    return this.qrService.generateQr({
+      registrationId: reg._id.toString(),
+      registrationNumber: reg.registrationNumber,
+      eventId: (reg.eventId as any)._id.toString(),
+    });
+  }
 }

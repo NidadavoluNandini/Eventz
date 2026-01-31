@@ -11,13 +11,12 @@ export default function EventsList() {
   const [events, setEvents] = useState<any[]>([]);
   const [filter, setFilter] = useState("ALL");
   const [loading, setLoading] = useState(true);
-  const [, tick] = useState(0); // 🔄 auto refresh
+  const [, tick] = useState(0); // 🔄 auto refresh every minute
 
-  // ✅ FETCH EVENTS (FIXED)
+  /* ================= FETCH EVENTS ================= */
   useEffect(() => {
     getAllEvents()
       .then((res) => {
-        // 🛡️ Handle all possible backend response shapes safely
         const list = Array.isArray(res.data)
           ? res.data
           : res.data?.data || res.data?.events || [];
@@ -30,35 +29,47 @@ export default function EventsList() {
       .finally(() => setLoading(false));
   }, []);
 
-  // 🔄 re-evaluate status every minute
+  /* ================= AUTO TIME RE-EVALUATION ================= */
   useEffect(() => {
     const i = setInterval(() => tick((v) => v + 1), 60000);
     return () => clearInterval(i);
   }, []);
 
-  const enriched = events
+  /* ================= MERGE BACKEND + TIME STATUS ================= */
+  const enrichedEvents = events
     .map((e) => ({
       ...e,
-      status: getEventStatus(
+      timeStatus: getEventStatus(
         e.startDate,
         e.startTime,
         e.endDate,
         e.endTime
       ),
     }))
-    .filter((e) => e.status !== "ENDED"); // ❌ hide ended events
+    // ❌ Hide ended events
+    // ❌ Hide drafts
+    // ✅ Show PUBLISHED + UNPUBLISHED
+    .filter(
+      (e) =>
+        e.timeStatus !== "ENDED" &&
+        (e.status === "PUBLISHED" || e.status === "UNPUBLISHED")
+    );
 
-  const liveEvents = enriched.filter(
+  /* ================= SECTIONS ================= */
+
+  const liveEvents = enrichedEvents.filter(
     (e) =>
-      e.status === "LIVE" &&
+      e.timeStatus === "LIVE" &&
       (filter === "ALL" || e.category === filter)
   );
 
-  const upcomingEvents = enriched.filter(
+  const upcomingEvents = enrichedEvents.filter(
     (e) =>
-      e.status === "UPCOMING" &&
+      e.timeStatus === "UPCOMING" &&
       (filter === "ALL" || e.category === filter)
   );
+
+  /* ================= UI ================= */
 
   return (
     <PublicLayout>
@@ -70,6 +81,7 @@ export default function EventsList() {
           <p className="text-center text-gray-500">Loading events…</p>
         )}
 
+        {/* 🔴 LIVE EVENTS */}
         {liveEvents.length > 0 && (
           <section>
             <h2 className="text-2xl font-bold mb-6 text-red-600">
@@ -83,6 +95,7 @@ export default function EventsList() {
           </section>
         )}
 
+        {/* 🔵 UPCOMING EVENTS */}
         {upcomingEvents.length > 0 && (
           <section>
             <h2 className="text-2xl font-bold mb-6">
@@ -96,6 +109,7 @@ export default function EventsList() {
           </section>
         )}
 
+        {/* ❌ NO EVENTS */}
         {!loading &&
           liveEvents.length === 0 &&
           upcomingEvents.length === 0 && (

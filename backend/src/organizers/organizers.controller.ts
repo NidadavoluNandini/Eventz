@@ -7,68 +7,75 @@ import {
   Body,
   Req,
   UseGuards,
+  UseInterceptors,
+  UploadedFile,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 
 import { OrganizersService } from './organizer.service';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { JwtAuthGuard } from '../common/guards/jwt.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
-import { UpdateOrganizerDto } from './dto/update-organizer.dto';
 
 @Controller('organizers')
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles('ORGANIZER')
 export class OrganizersController {
-  constructor(
-    private readonly organizersService: OrganizersService,
-  ) {}
+  constructor(private readonly organizersService: OrganizersService) {}
 
-  // ✅ GET MY PROFILE
+  // =======================
+  // GET MY PROFILE
+  // =======================
   @Get('me')
   getProfile(@Req() req) {
-    return this.organizersService.findById(
-      req.user.userId,
-    );
+    return this.organizersService.findById(req.user.userId);
   }
+
+  // =======================
+  // UPDATE PROFILE (WITH IMAGE)
+  // =======================
 @Put('me')
 updateProfile(
   @Req() req,
-  @Body() dto: UpdateOrganizerDto,
+  @Body() body,
 ) {
-  return this.organizersService.update(
-    req.user.userId,
-    dto,
-  );
-}
-  // ✅ UPDATE PROFILE
-@Put('change-password')
-changePassword(
-  @Req() req,
-  @Body() dto: ChangePasswordDto,
-) {
-  return this.organizersService.changePassword(
-    req.user.userId,
-    dto,
-  );
+  return this.organizersService.update(req.user.userId, {
+    name: body.name,
+    email: body.email,
+    photo: body.photo, // JUST URL
+  });
 }
 
-  // ✅ DELETE ACCOUNT
-  @Delete('me')
-  deleteAccount(@Req() req) {
-    return this.organizersService.delete(
+  // =======================
+  // CHANGE PASSWORD
+  // =======================
+  @Put('change-password')
+  changePassword(
+    @Req() req,
+    @Body() dto: ChangePasswordDto,
+  ) {
+    return this.organizersService.changePassword(
       req.user.userId,
+      dto,
     );
   }
 
-  // ✅ LOGOUT
+  // =======================
+  // DELETE MY ACCOUNT ✅ (CORRECT)
+  // =======================
+  @Delete('me')
+  deleteAccount(@Req() req) {
+    return this.organizersService.delete(req.user.userId);
+  }
+
+  // =======================
+  // LOGOUT
+  // =======================
   @Post('logout')
   logout() {
     return {
-      message:
-        'Logout successful (client must delete token)',
+      message: 'Logout successful (client deletes token)',
     };
   }
 }
-
-

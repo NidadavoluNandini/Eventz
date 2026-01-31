@@ -4,28 +4,25 @@ import {
   NotFoundException,
   ConflictException,
   ForbiddenException,
-  Inject,
-  forwardRef,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
-import { ModuleRef } from '@nestjs/core';
 
 import {
   Registration,
   RegistrationStatus,
   PaymentStatus,
 } from './schemas/registration.schema';
+
 import { Event } from '../events/schemas/event.schema';
+
 import { EmailService } from '../notifications/email.service';
 import { SmsService } from '../notifications/sms.service';
-import { InvoiceService } from '../payments/invoice.service';
 import { TicketsService } from '../tickets/tickets.service';
-import { TicketType } from '../events/schemas/event.schema';
+import { InvoiceService } from '../payments/invoice.service';
 
 @Injectable()
 export class RegistrationsService {
-
   constructor(
     @InjectModel(Registration.name)
     private readonly registrationModel: Model<Registration>,
@@ -35,25 +32,19 @@ export class RegistrationsService {
 
     private readonly emailService: EmailService,
     private readonly smsService: SmsService,
-
-    @Inject(forwardRef(() => InvoiceService))
+    private readonly ticketsService: TicketsService,
     private readonly invoiceService: InvoiceService,
-  @Inject(forwardRef(() => TicketsService))
-  private readonly ticketsService: TicketsService,
-
-    private readonly moduleRef: ModuleRef,
   ) {}
 
-
- // =====================================================
-// STEP 1: INITIATE REGISTRATION
-// =====================================================
+  // =====================================================
+  // STEP 1: INITIATE REGISTRATION (SEND OTP)
+  // =====================================================
 async initiateRegistration(dto: {
   eventId: string;
   userName: string;
   userEmail: string;
   userPhone: string;
-  ticketType: string;
+  ticketName: string;
   quantity: number;
 }) {
   const event = await this.eventModel.findById(dto.eventId);
@@ -63,14 +54,29 @@ async initiateRegistration(dto: {
     throw new BadRequestException('Event not open for registration');
   }
 
-  const ticket = event.tickets.find(t => t.type === dto.ticketType);
-  if (!ticket) throw new BadRequestException('Invalid ticket type');
+  const ticket = event.tickets.find(
+    (t) => t.name === dto.ticketName,
+  );
 
-  if (ticket.available < dto.quantity) {
-    throw new BadRequestException('Tickets sold out');
+  if (!ticket) {
+    throw new BadRequestException('Invalid ticket selected');
   }
 
-  // block only COMPLETED registrations
+  const quantity = dto.quantity || 1;
+
+  // ===============================
+  // 💰 PRICE CALCULATION (ONCE ONLY)
+  // ===============================
+  const basePricePerTicket = ticket.price; // ✅ FIXED
+  const gstRate = ticket.gst || 0;              // 18
+
+  const baseTotal = basePricePerTicket * quantity;     // 2000
+  const gstAmount = Math.round((baseTotal * gstRate) / 100); // 360
+  const totalAmount = baseTotal + gstAmount;           // 2360
+
+  // ===============================
+  // 🚫 BLOCK DUPLICATES
+  // ===============================
   const completed = await this.registrationModel.findOne({
     eventId: new Types.ObjectId(dto.eventId),
     status: RegistrationStatus.COMPLETED,
@@ -81,14 +87,12 @@ async initiateRegistration(dto: {
     throw new ConflictException('You have already registered');
   }
 
-  // 🔐 OTP
   const otp = Math.floor(100000 + Math.random() * 900000);
   const otpExpiresAt = new Date(Date.now() + 5 * 60 * 1000);
 
-  // ⏳ registration expiry (24h)
-  const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
-
-  // reuse incomplete registration
+  // ===============================
+  // ♻️ REUSE PENDING REGISTRATION
+  // ===============================
   const existingPending = await this.registrationModel.findOne({
     eventId: new Types.ObjectId(dto.eventId),
     status: { $ne: RegistrationStatus.COMPLETED },
@@ -96,29 +100,26 @@ async initiateRegistration(dto: {
   });
 
   if (existingPending) {
-    existingPending.ticketType = dto.ticketType as TicketType;
-    existingPending.quantity = dto.quantity;
-    existingPending.ticketPrice = ticket.price;
+    existingPending.ticketName = dto.ticketName;
+    existingPending.basePricePerTicket = basePricePerTicket;
+    existingPending.quantity = quantity;
+    existingPending.gstRate = gstRate;
+    existingPending.gstAmount = gstAmount;
+    existingPending.totalAmount = totalAmount;
+
+    // ⚠️ backward compatibility
+    existingPending.ticketPrice = totalAmount;
 
     existingPending.otp = otp;
     existingPending.otpExpiresAt = otpExpiresAt;
-    existingPending.expiresAt = expiresAt; // ✅ IMPORTANT
-
     existingPending.status = RegistrationStatus.PENDING_OTP;
     existingPending.paymentStatus =
-      ticket.price === 0
+      totalAmount === 0
         ? PaymentStatus.NOT_REQUIRED
         : PaymentStatus.PENDING;
 
     await existingPending.save();
-
-    await this.emailService.sendEmail(
-      dto.userEmail,
-      'Your OTP for Event Registration',
-      `OTP: ${otp}`,
-    );
-
-    await this.smsService.sendSms(dto.userPhone, `OTP: ${otp}`);
+    await this.sendOtp(dto.userEmail, dto.userPhone, otp);
 
     return {
       status: 'OTP_SENT',
@@ -127,37 +128,42 @@ async initiateRegistration(dto: {
     };
   }
 
-  // create new registration
+  // ===============================
+  // 🆕 CREATE REGISTRATION
+  // ===============================
   const registration = await this.registrationModel.create({
     eventId: new Types.ObjectId(dto.eventId),
     userName: dto.userName,
     userEmail: dto.userEmail,
     userPhone: dto.userPhone,
-    ticketType: dto.ticketType as TicketType,
-    ticketPrice: ticket.price,
-    quantity: dto.quantity,
+
+    ticketName: dto.ticketName,
+    basePricePerTicket,
+    quantity,
+    gstRate,
+    gstAmount,
+    totalAmount,
+
+    // ⚠️ keep old field for payments
+    ticketPrice: totalAmount,
+
     status: RegistrationStatus.PENDING_OTP,
     paymentStatus:
-      ticket.price === 0
+      totalAmount === 0
         ? PaymentStatus.NOT_REQUIRED
         : PaymentStatus.PENDING,
+
     otp,
     otpExpiresAt,
-    expiresAt, // ✅ IMPORTANT
   });
 
-  await this.emailService.sendEmail(
-    dto.userEmail,
-    'Your OTP for Event Registration',
-    `OTP: ${otp}`,
-  );
+  await this.sendOtp(dto.userEmail, dto.userPhone, otp);
 
-  await this.smsService.sendSms(dto.userPhone, `OTP: ${otp}`);
-
-  return { status: 'OTP_SENT', registrationId: registration._id };
+  return {
+    status: 'OTP_SENT',
+    registrationId: registration._id,
+  };
 }
-
-
   // =====================================================
   // STEP 2: VERIFY OTP
   // =====================================================
@@ -166,17 +172,20 @@ async initiateRegistration(dto: {
       .findById(registrationId)
       .populate('eventId');
 
-    if (!registration) throw new NotFoundException('Registration not found');
-if (
-  !registration.otpExpiresAt ||
-  registration.otpExpiresAt < new Date()
-) {
-  throw new BadRequestException('OTP expired');
-}
+    if (!registration) {
+      throw new NotFoundException('Registration not found');
+    }
 
-if (registration.otp !== otp) {
-  throw new BadRequestException('Invalid OTP');
-}
+    if (
+      !registration.otpExpiresAt ||
+      registration.otpExpiresAt < new Date()
+    ) {
+      throw new BadRequestException('OTP expired');
+    }
+
+    if (registration.otp !== otp) {
+      throw new BadRequestException('Invalid OTP');
+    }
 
     registration.otpVerified = true;
 
@@ -184,14 +193,10 @@ if (registration.otp !== otp) {
       registration.status = RegistrationStatus.COMPLETED;
       registration.paymentStatus = PaymentStatus.NOT_REQUIRED;
       registration.registrationNumber = `REG-${Date.now()}`;
+      registration.otp = undefined;
+      registration.otpExpiresAt = undefined;
 
       await registration.save();
-
-      await this.decrementTicketAvailability(
-        registration.eventId as Types.ObjectId,
-        registration.ticketType,
-        registration.quantity,
-      );
 
       await this.ticketsService.generateAndSendTicket(registration);
 
@@ -202,154 +207,58 @@ if (registration.otp !== otp) {
     }
 
     registration.status = RegistrationStatus.PENDING_PAYMENT;
-    registration.paymentStatus = PaymentStatus.PENDING; // 🔥 MISSING
+    registration.paymentStatus = PaymentStatus.PENDING;
     registration.otp = undefined;
     registration.otpExpiresAt = undefined;
+
     await registration.save();
 
     return {
       requiresPayment: true,
-      amount: registration.ticketPrice * registration.quantity,
+      amount: registration.ticketPrice,
     };
   }
 
   // =====================================================
   // STEP 3: COMPLETE REGISTRATION (PAID)
   // =====================================================
-async completeRegistration(
-  registrationId: string,
-  payment?: {
-    razorpayPaymentId?: string;
-    razorpayOrderId?: string;
-  },
-) {
-  const registration = await this.registrationModel
-    .findById(registrationId)
-    .populate('eventId');
+  async completeRegistration(
+    registrationId: string,
+    payment?: {
+      razorpayPaymentId?: string;
+      razorpayOrderId?: string;
+    },
+  ) {
+    const registration = await this.registrationModel
+      .findById(registrationId)
+      .populate('eventId');
 
-  if (!registration) {
-    throw new NotFoundException('Registration not found');
-  }
+    if (!registration) {
+      throw new NotFoundException('Registration not found');
+    }
 
-  // already processed
-  if (registration.ticketSent) {
-    return registration;
-  }
+    if (registration.ticketSent) {
+      return registration;
+    }
 
-  // ✅ FINAL STATE UPDATE FIRST
-  registration.status = RegistrationStatus.COMPLETED;
-  registration.paymentStatus = PaymentStatus.PAID;
-  registration.registrationNumber = `REG-${Date.now()}`;
-  registration.razorpayPaymentId = payment?.razorpayPaymentId;
-  registration.razorpayOrderId = payment?.razorpayOrderId;
+    registration.status = RegistrationStatus.COMPLETED;
+    registration.paymentStatus = PaymentStatus.PAID;
+    registration.registrationNumber = `REG-${Date.now()}`;
+    registration.razorpayPaymentId = payment?.razorpayPaymentId;
+    registration.razorpayOrderId = payment?.razorpayOrderId;
 
-  await registration.save(); // 🔥 MUST COMPLETE BEFORE ANY EMAIL
+    await registration.save();
 
-  // ✅ decrement tickets AFTER payment success
-  await this.decrementTicketAvailability(
-    registration.eventId as Types.ObjectId,
-    registration.ticketType,
-    registration.quantity,
-  );
-
-  // ✅ generate ticket (non-blocking safety)
-  try {
     await this.ticketsService.generateAndSendTicket(registration);
 
     registration.ticketSent = true;
     await registration.save();
-  } catch (err) {
-    console.error('Ticket generation failed:', err);
-    // payment succeeded — do not rollback
+
+    return registration;
   }
 
-  // ✅ invoice email must never break registration
-  try {
-    const invoiceBuffer =
-      await this.invoiceService.generateInvoicePdfBuffer({
-        registrationId: registration._id.toString(),
-        eventTitle: (registration.eventId as any).title,
-        userName: registration.userName,
-        userEmail: registration.userEmail,
-        quantity: registration.quantity,
-        unitPrice: registration.ticketPrice,
-      });
-
-    await this.emailService.sendTicketEmail({
-  to: registration.userEmail,
-  subject: '🎟️ Payment Successful – Your Event Ticket',
-  html: `
-    <h2>Payment Successful 🎉</h2>
-
-    <p>Hi <b>${registration.userName}</b>,</p>
-
-    <p>Your registration for the event has been successfully completed.</p>
-
-    <hr />
-
-    <h3>📌 Registration Details</h3>
-
-    <table cellpadding="6">
-      <tr>
-        <td><b>Event</b></td>
-        <td>${(registration.eventId as any).title}</td>
-      </tr>
-
-      <tr>
-        <td><b>Ticket Type</b></td>
-        <td>${registration.ticketType}</td>
-      </tr>
-
-      <tr>
-        <td><b>No. of Members</b></td>
-        <td>${registration.quantity}</td>
-      </tr>
-
-      <tr>
-        <td><b>Price per Ticket</b></td>
-        <td>₹${registration.ticketPrice}</td>
-      </tr>
-
-      <tr>
-        <td><b>Total Paid</b></td>
-        <td>
-          <b>₹${registration.ticketPrice * registration.quantity}</b>
-        </td>
-      </tr>
-
-      <tr>
-        <td><b>Registration No</b></td>
-        <td>${registration.registrationNumber}</td>
-      </tr>
-    </table>
-
-    <br />
-
-    <p>
-      🎫 Your ticket is attached to this email as a PDF.
-    </p>
-
-    <p>
-      Please carry the QR code during event entry.
-    </p>
-
-    <br />
-
-    <p>
-      — Team <b>Eventz</b>
-    </p>
-  `,
-  pdfBuffer: invoiceBuffer,
-});
-
-  } catch (err) {
-    console.error('Invoice email failed:', err);
-  }
-
-  return registration;
-}
   // =====================================================
-  // EXTRA METHODS REQUIRED BY CONTROLLER
+  // EXTRA METHODS
   // =====================================================
   async resendOtp(registrationId: string) {
     const reg = await this.registrationModel.findById(registrationId);
@@ -360,11 +269,7 @@ async completeRegistration(
     reg.otpExpiresAt = new Date(Date.now() + 5 * 60 * 1000);
     await reg.save();
 
-    await this.emailService.sendEmail(
-      reg.userEmail,
-      'OTP Resent',
-      `Your OTP is ${otp}`,
-    );
+    await this.sendOtp(reg.userEmail, reg.userPhone, otp);
 
     return { message: 'OTP resent successfully' };
   }
@@ -399,21 +304,31 @@ async completeRegistration(
       status: RegistrationStatus.PENDING_PAYMENT,
     });
   }
-
-  private async decrementTicketAvailability(
-    eventId: Types.ObjectId,
-    ticketType: string,
-    quantity: number,
-  ) {
-    const updated = await this.eventModel.findOneAndUpdate(
-      {
-        _id: eventId,
-        'tickets.type': ticketType,
-        'tickets.available': { $gte: quantity },
-      },
-      { $inc: { 'tickets.$.available': -quantity } },
-    );
-
-    if (!updated) throw new BadRequestException('Tickets sold out');
+async getAttendeesByEvent(eventId: string) {
+    return this.registrationModel
+      .find({
+        eventId,
+        status: "COMPLETED",
+        paymentStatus: "PAID",
+      })
+      .select(
+        "registrationNumber userName userEmail userPhone ticketName basePricePerTicket quantity gstRate gstAmount totalAmount createdAt"
+      )
+      .sort({ createdAt: -1 })
+      .lean();
   }
+  // =====================================================
+  // HELPERS
+  // =====================================================
+  private async sendOtp(email: string, phone: string, otp: number) {
+    await this.emailService.sendEmail(
+      email,
+      'Your OTP for Event Registration',
+      `OTP: ${otp}`,
+    );
+    await this.smsService.sendSms(phone, `OTP: ${otp}`);
+  }
+
+
+
 }

@@ -25,6 +25,9 @@ export const getRegistration = (id: string) => {
 };
 
 // ORGANIZER – attendees list
-export const getEventRegistrations = (eventId: string) => {
-  return api.get(`/registrations/event/${eventId}`);
-};
+
+
+
+// ✅ CORRECT endpoint
+export const getEventRegistrations = (eventId: string) =>
+  api.get(`/api/tickets/event/${eventId}`);

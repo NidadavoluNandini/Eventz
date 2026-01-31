@@ -8,14 +8,21 @@ import { AuthController } from './auth.controller';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { OrganizersModule } from '../organizers/organizer.module';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { MongooseModule } from '@nestjs/mongoose';
+import { Organizer, OrganizerSchema } from '../organizers/schemas/organizer.schema';
+import { Otp, OtpSchema } from './dto/otp.schema';
 
 @Module({
   imports: [
     OrganizersModule,
-    
     NotificationsModule,
 
-    PassportModule.register({ defaultStrategy: 'jwt' }), // 🔥 REQUIRED
+    MongooseModule.forFeature([
+      { name: Organizer.name, schema: OrganizerSchema },
+      { name: Otp.name, schema: OtpSchema },
+    ]),
+
+    PassportModule.register({ defaultStrategy: 'jwt' }),
 
     JwtModule.registerAsync({
       inject: [ConfigService],
@@ -25,14 +32,17 @@ import { NotificationsModule } from '../notifications/notifications.module';
       }),
     }),
   ],
-  controllers: [AuthController],
+  controllers: [
+    AuthController, // 🔥 THIS WAS MISSING
+  ],
   providers: [
-    AuthService,
-    JwtStrategy, // 🔥 REQUIRED
+    AuthService,    // 🔥 THIS WAS MISSING
+    JwtStrategy,    // 🔥 THIS WAS MISSING
   ],
   exports: [
     PassportModule,
     JwtModule,
   ],
 })
+
 export class AuthModule {}

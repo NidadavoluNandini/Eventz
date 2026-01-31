@@ -19,23 +19,23 @@ export class RegistrationsController {
   ) {}
 
   // =====================================================
-  // PUBLIC – INITIATE REGISTRATION (SEND OTP)
+  // PUBLIC – INITIATE REGISTRATION
   // =====================================================
-  @Post('initiate')
-  initiateRegistration(
-    @Body()
-    dto: {
-      eventId: string;
-      userName: string;
-      userEmail: string;
-      userPhone: string;
-      ticketType: string;
-      quantity: number;
-    },
-  ) {
-    
-    return this.registrationsService.initiateRegistration(dto);
-  }
+@Post('initiate')
+initiateRegistration(
+  @Body()
+  dto: {
+    eventId: string;
+    userName: string;
+    userEmail: string;
+    userPhone: string;
+    ticketName: string;
+    quantity: number; // ✅ ADD THIS
+  },
+) {
+  return this.registrationsService.initiateRegistration(dto);
+}
+
 
   // =====================================================
   // PUBLIC – VERIFY OTP
@@ -48,30 +48,19 @@ export class RegistrationsController {
       otp: number;
     },
   ) {
-    console.log("INITIATE OTP for", dto.registrationId);
-
     return this.registrationsService.verifyOtp(
       dto.registrationId,
       dto.otp,
     );
   }
 
-  // =====================================================
-  // PUBLIC – RESEND OTP
-  // =====================================================
   @Post('resend-otp')
-  resendOtp(
-    @Body()
-    dto: {
-      registrationId: string;
-    },
-  ) {
-    return this.registrationsService.resendOtp(dto.registrationId);
+  resendOtp(@Body('registrationId') registrationId: string) {
+    return this.registrationsService.resendOtp(registrationId);
   }
 
   // =====================================================
-  // ORGANIZER – GET ATTENDEES OF AN EVENT
-  // (USER MANAGEMENT PAGE)
+  // ORGANIZER – EVENT REGISTRATIONS
   // =====================================================
   @Get('event/:eventId')
   @UseGuards(JwtAuthGuard, RolesGuard)
@@ -87,8 +76,7 @@ export class RegistrationsController {
   }
 
   // =====================================================
-  // PUBLIC – GET ALL REGISTRATIONS OF A USER
-  // (MY TICKETS PAGE)
+  // PUBLIC – USER REGISTRATIONS
   // =====================================================
   @Get('user/:phone')
   getUserRegistrations(@Param('phone') phone: string) {
@@ -96,17 +84,14 @@ export class RegistrationsController {
   }
 
   // =====================================================
-  // PUBLIC – COMPLETE REGISTRATION (AFTER PAYMENT)
+  // PAYMENT COMPLETE
   // =====================================================
   @Post('complete')
-  completeRegistration(
-    @Body()
-    dto: {
-      registrationId: string;
-      razorpayOrderId?: string;
-      razorpayPaymentId?: string;
-    },
-  ) {
+  completeRegistration(@Body() dto: {
+    registrationId: string;
+    razorpayOrderId?: string;
+    razorpayPaymentId?: string;
+  }) {
     return this.registrationsService.completeRegistration(
       dto.registrationId,
       {
@@ -116,20 +101,22 @@ export class RegistrationsController {
     );
   }
 
-  // =====================================================
-  // PUBLIC – GET REGISTRATION BY ID
-  // =====================================================
+  @Post('payment-cancelled')
+  markPaymentCancelled(
+    @Body('registrationId') registrationId: string,
+  ) {
+    return this.registrationsService.markPaymentCancelled(
+      registrationId,
+    );
+  }
+
   @Get(':id')
   getRegistration(@Param('id') id: string) {
     return this.registrationsService.findById(id);
   }
-  @Post('payment-cancelled')
-markPaymentCancelled(
-  @Body('registrationId') registrationId: string,
-) {
-  return this.registrationsService.markPaymentCancelled(
-    registrationId,
-  );
-}
 
+   @Get("events/:eventId/attendees")
+  async getEventAttendees(@Param("eventId") eventId: string) {
+    return this.registrationsService.getAttendeesByEvent(eventId);
+  }
 }

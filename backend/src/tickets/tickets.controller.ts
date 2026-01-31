@@ -68,7 +68,7 @@ async downloadTicket(
   res.setHeader('Content-Type', 'application/pdf');
   res.setHeader(
     'Content-Disposition',
-    'attachment; filename=event-ticket.pdf',
+  `attachment; filename=ticket-${registrationId}.pdf`,
   );
 
   doc.pipe(res);
@@ -101,7 +101,8 @@ async downloadTicket(
   doc.fontSize(14);
   doc.text(`Name: ${ticket.userName}`);
   doc.text(`Email: ${ticket.userEmail}`);
-  doc.text(`Ticket Type: ${ticket.ticketType}`);
+  doc.text(`Ticket: ${ticket.ticketName}`);
+
   doc.text(`Registration No: ${ticket.registrationNumber}`);
 
   // =========================
@@ -134,4 +135,11 @@ async downloadTicket(
 
   doc.end();
 }
+
+
+@Get('event/:eventId')
+async getRegistrationsByEvent(@Param('eventId') eventId: string) {
+  return this.ticketsService.getRegistrationsByEvent(eventId);
+}
+
 }

@@ -1,61 +1,64 @@
+import React, { useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { useState } from "react";
 import api from "../../utils/axios";
+
+type Step = "email" | "otp" | "details";
 
 export default function Register() {
   const navigate = useNavigate();
+
+  // IMPORTANT: Change these to your backend routes
+ const ENDPOINTS = useMemo(
+  () => ({
+    sendOtp: "/api/auth/organizer/send-otp",
+    verifyOtp: "/api/auth/organizer/verify-otp",
+    register: "/api/auth/organizer/register",
+  }),
+  []
+);
+
+
+  const [step, setStep] = useState<Step>("email");
+
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [otp, setOtp] = useState("");
+  const [password, setPassword] = useState("");
+
+  const [verificationId, setVerificationId] = useState<string | null>(null);
+
   const [success, setSuccess] = useState("");
   const [error, setError] = useState("");
+
+  const [emailError, setEmailError] = useState("");
+  const [otpError, setOtpError] = useState("");
+  const [passwordError, setPasswordError] = useState("");
+
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [emailError, setEmailError] = useState("");
 
-  // Advanced email validation function
-  const validateEmail = (email: string): { isValid: boolean; error: string } => {
-    // Remove whitespace
-    email = email.trim();
+  // Advanced email validation function (same logic style you used)
+  const validateEmail = (value: string): { isValid: boolean; error: string } => {
+    value = value.trim();
 
-    // Check if email is empty
-    if (!email) {
-      return { isValid: false, error: "Email is required" };
-    }
+    if (!value) return { isValid: false, error: "Email is required" };
 
-    // Basic email regex pattern
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      return { isValid: false, error: "Invalid email format" };
-    }
+    if (!emailRegex.test(value)) return { isValid: false, error: "Invalid email format" };
 
-    // Split email into local and domain parts
-    const [localPart, domainPart] = email.split("@");
+    const [localPart, domainPart] = value.split("@");
+    if (value.includes("..")) return { isValid: false, error: "Email cannot contain consecutive dots (..)" };
 
-    // Check for double dots (..)
-    if (email.includes("..")) {
-      return { isValid: false, error: "Email cannot contain consecutive dots (..)" };
-    }
-
-    // Check if domain has multiple dots at the end (e.g., .com.com, .in.in)
     const domainParts = domainPart.split(".");
-    const lastTwoParts = domainParts.slice(-2).join(".");
-    
-    // Common duplicate TLD patterns
-    const duplicateTLDs = [
-      ".com.com", ".org.org", ".net.net", ".edu.edu", 
-      ".in.in", ".uk.uk", ".us.us", ".io.io"
-    ];
-    
-    if (duplicateTLDs.some(dup => domainPart.endsWith(dup))) {
+    const duplicateTLDs = [".com.com", ".org.org", ".net.net", ".edu.edu", ".in.in", ".uk.uk", ".us.us", ".io.io"];
+    if (duplicateTLDs.some((dup) => domainPart.endsWith(dup))) {
       return { isValid: false, error: "Invalid domain - duplicate extension detected" };
     }
 
-    // Check for valid TLD length (2-6 characters is typical)
     const tld = domainParts[domainParts.length - 1];
-    if (tld.length < 2 || tld.length > 6) {
-      return { isValid: false, error: "Invalid domain extension" };
-    }
+    if (tld.length < 2 || tld.length > 6) return { isValid: false, error: "Invalid domain extension" };
 
-    // Check for common typos in popular domains
-    const commonDomains: { [key: string]: string } = {
+    const commonDomains: Record<string, string> = {
       "gmial.com": "gmail.com",
       "gmai.com": "gmail.com",
       "gmil.com": "gmail.com",
@@ -64,117 +67,151 @@ export default function Register() {
       "hotmial.com": "hotmail.com",
       "outlok.com": "outlook.com",
     };
-
     if (commonDomains[domainPart.toLowerCase()]) {
-      return { 
-        isValid: false, 
-        error: `Did you mean ${commonDomains[domainPart.toLowerCase()]}?` 
-      };
+      return { isValid: false, error: `Did you mean ${commonDomains[domainPart.toLowerCase()]}?` };
     }
 
-    // Check for spaces in email
-    if (email.includes(" ")) {
-      return { isValid: false, error: "Email cannot contain spaces" };
-    }
+    if (value.includes(" ")) return { isValid: false, error: "Email cannot contain spaces" };
 
-    // Check for valid characters in local part
     const validLocalRegex = /^[a-zA-Z0-9._+-]+$/;
-    if (!validLocalRegex.test(localPart)) {
-      return { isValid: false, error: "Email contains invalid characters" };
-    }
+    if (!validLocalRegex.test(localPart)) return { isValid: false, error: "Email contains invalid characters" };
 
-    // Check if local part starts or ends with a dot
     if (localPart.startsWith(".") || localPart.endsWith(".")) {
       return { isValid: false, error: "Email cannot start or end with a dot" };
     }
 
-    // Check minimum domain length
-    if (domainParts.length < 2) {
-      return { isValid: false, error: "Invalid domain format" };
-    }
-
-    // Check for numbers-only domain (suspicious)
-    if (/^\d+$/.test(domainParts[0])) {
-      return { isValid: false, error: "Invalid domain name" };
-    }
+    if (domainParts.length < 2) return { isValid: false, error: "Invalid domain format" };
+    if (/^\d+$/.test(domainParts[0])) return { isValid: false, error: "Invalid domain name" };
 
     return { isValid: true, error: "" };
   };
 
-  const handleEmailBlur = (e: React.FocusEvent<HTMLInputElement>) => {
-    const email = e.target.value;
-    const validation = validateEmail(email);
-    
-    if (!validation.isValid && email) {
-      setEmailError(validation.error);
-    } else {
-      setEmailError("");
-    }
-  };
-
-  const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    // Clear email error when user starts typing
-    if (emailError) {
-      setEmailError("");
-    }
-  };
-
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
+  const resetMessages = () => {
+    setSuccess("");
     setError("");
-    setIsLoading(true);
+  };
 
-    const formData = new FormData(e.currentTarget);
-    const email = formData.get("email") as string;
+  const handleEmailBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    const validation = validateEmail(val);
+    if (!validation.isValid && val) setEmailError(validation.error);
+    else setEmailError("");
+  };
 
-    // Validate email before submission
+  const sendOtp = async () => {
+    resetMessages();
+    setOtpError("");
+
     const validation = validateEmail(email);
     if (!validation.isValid) {
       setEmailError(validation.error);
-      setIsLoading(false);
       return;
     }
 
-    const payload = {
-      name: formData.get("name"),
-      email: email,
-      password: formData.get("password"),
-    };
-
+    setIsLoading(true);
     try {
-      await api.post("/api/auth/organizer/register", payload);
+      const res = await api.post(ENDPOINTS.sendOtp, { email });
 
-      setSuccess("Registration successful. Please login.");
-      setTimeout(() => navigate("/organizer/login"), 1500);
+      // If your backend returns a verificationId/sessionId, store it (optional).
+      const vId = res.data?.verificationId || res.data?.verification_id || res.data?.id || null;
+      setVerificationId(vId);
+
+      setSuccess("OTP sent to your email. Please check your inbox.");
+      setStep("otp");
     } catch (err: any) {
+      // Your requested message when OTP can't be sent / email invalid/unverified
       setError(
-        err.response?.data?.message || "Registration failed. Please try again."
+        err.response?.data?.message ||
+          "Email not found / not verified. OTP was not sent. Please provide a valid email."
       );
     } finally {
       setIsLoading(false);
     }
   };
 
+  const verifyOtp = async () => {
+    resetMessages();
+    setOtpError("");
+
+    if (!otp.trim()) {
+      setOtpError("OTP is required");
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      await api.post(ENDPOINTS.verifyOtp, {
+        email,
+        otp,
+        verificationId, // optional, if your backend uses it
+      });
+
+      setSuccess("Email verified successfully. You can now create your account.");
+      setStep("details");
+    } catch (err: any) {
+      setOtpError(err.response?.data?.message || "Invalid OTP. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleCreateAccount = async (e: React.FormEvent) => {
+    e.preventDefault();
+    resetMessages();
+    setPasswordError("");
+
+    if (step !== "details") {
+      setError("Please verify your email first.");
+      return;
+    }
+
+    if (!name.trim()) {
+      setError("Full name is required.");
+      return;
+    }
+
+    if (password.trim().length < 8) {
+      setPasswordError("Password must be at least 8 characters long");
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      await api.post(ENDPOINTS.register, {
+        name,
+        email,
+        password,
+        otp, // include OTP so backend can cross-validate
+        verificationId, // optional
+      });
+
+      setSuccess("Registration successful. Redirecting to login...");
+      setTimeout(() => navigate("/organizer/login"), 1200);
+    } catch (err: any) {
+      setError(err.response?.data?.message || "Registration failed. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const changeEmail = () => {
+    resetMessages();
+    setOtp("");
+    setVerificationId(null);
+    setStep("email");
+  };
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
-      {/* Registration Card */}
+    <div className="h-svh overflow-hidden bg-slate-50 px-4 py-3 flex items-center justify-center">
       <div className="w-full max-w-md">
-        {/* Main Card */}
-        <div className="bg-white rounded-3xl shadow-2xl p-8 border border-slate-200 relative overflow-hidden">
-          {/* Subtle decorative element */}
-          <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-50 rounded-full blur-3xl opacity-50 -z-0"></div>
+        <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 relative overflow-hidden px-6 py-5">
+          <div className="absolute top-0 right-0 w-24 h-24 bg-indigo-50 rounded-full blur-3xl opacity-50 -z-0" />
 
           <div className="relative z-10">
-            {/* Header Icon with Animation */}
-            <div className="text-center mb-8">
-              <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-indigo-500 via-indigo-600 to-purple-600 rounded-2xl mb-4 shadow-2xl shadow-indigo-500/50 relative group">
-                <div className="absolute inset-0 bg-gradient-to-br from-indigo-400 to-purple-500 rounded-2xl blur opacity-70 group-hover:opacity-100 transition-opacity"></div>
-                <svg
-                  className="w-10 h-10 text-white relative z-10 transform group-hover:scale-110 transition-transform"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
+            {/* Header (compact) */}
+            <div className="text-center mb-4">
+              <div className="inline-flex items-center justify-center w-14 h-14 bg-gradient-to-br from-indigo-500 via-indigo-600 to-purple-600 rounded-2xl mb-2 shadow-xl shadow-indigo-500/40 relative">
+                <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
@@ -183,403 +220,311 @@ export default function Register() {
                   />
                 </svg>
               </div>
-              <h1 className="text-4xl font-extrabold text-slate-900 mb-2">
+
+              <h1 className="text-2xl font-extrabold text-slate-900 leading-tight">
                 Create Account
               </h1>
               <p className="text-slate-600 text-sm font-medium">
-                Join us as an organizer today
+                Verify email → then register
               </p>
+
+              {/* Step pills */}
+<div className="mt-3 flex items-center justify-center gap-1">
+  {/* Line */}
+  <div className="flex-1 h-1 bg-gradient-to-r from-slate-200 to-slate-200 rounded-full" />
+
+  {/* Steps */}
+  <div className="flex items-center gap-3">
+    <div
+      className={`relative flex flex-col items-center gap-1 p-2 transition-all duration-300 ${
+        step === "email"
+          ? "text-indigo-700"
+          : step === "otp"
+          ? "text-indigo-500"
+          : "text-slate-500"
+      }`}
+    >
+      <div
+        className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold border-2 transition-all duration-300 ${
+          step === "email"
+            ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/25 scale-105"
+            : step === "otp"
+            ? "bg-indigo-50 border-indigo-300"
+            : "bg-slate-50 border-slate-300"
+        }`}
+      >
+        {step === "email" ? "✓" : "1"}
+      </div>
+      <span className="text-xs font-medium leading-tight">Email</span>
+    </div>
+
+    <div
+      className={`w-10 h-1 transition-all duration-300 ${
+        step === "email" ? "bg-indigo-200" : step === "otp" ? "bg-indigo-300" : "bg-slate-200"
+      }`}
+    />
+
+    <div
+      className={`relative flex flex-col items-center gap-1 p-2 transition-all duration-300 ${
+        step === "otp"
+          ? "text-indigo-700"
+          : step === "details"
+          ? "text-indigo-500"
+          : "text-slate-500"
+      }`}
+    >
+      <div
+        className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold border-2 transition-all duration-300 ${
+          step === "otp"
+            ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/25 scale-105"
+            : step === "details"
+            ? "bg-indigo-50 border-indigo-300"
+            : "bg-slate-50 border-slate-300"
+        }`}
+      >
+        {step === "otp" ? "✓" : "2"}
+      </div>
+      <span className="text-xs font-medium leading-tight">OTP</span>
+    </div>
+
+    <div
+      className={`w-10 h-1 transition-all duration-300 ${
+        step === "otp" ? "bg-indigo-200" : step === "details" ? "bg-indigo-300" : "bg-slate-200"
+      }`}
+    />
+
+    <div
+      className={`relative flex flex-col items-center gap-1 p-2 transition-all duration-300 ${
+        step === "details" ? "text-indigo-700" : "text-slate-500"
+      }`}
+    >
+      <div
+        className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold border-2 transition-all duration-300 ${
+          step === "details"
+            ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/25 scale-105"
+            : "bg-slate-50 border-slate-300"
+        }`}
+      >
+        {step === "details" ? "✓" : "3"}
+      </div>
+      <span className="text-xs font-medium leading-tight">Details</span>
+    </div>
+  </div>
+
+  {/* Right line */}
+  <div className="flex-1 h-1 bg-gradient-to-r from-slate-200 to-slate-200 rounded-full" />
+</div>
             </div>
 
-            {/* Success Message with Animation */}
+            {/* Success / Error */}
             {success && (
-              <div className="mb-6 p-4 bg-green-50 border-l-4 border-green-500 rounded-xl flex items-start gap-3 animate-in fade-in slide-in-from-top duration-300">
-                <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center flex-shrink-0">
-                  <svg
-                    className="w-4 h-4 text-white"
-                    fill="currentColor"
-                    viewBox="0 0 20 20"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                </div>
-                <p className="text-sm text-green-700 font-medium">{success}</p>
+              <div className="mb-3 p-3 bg-green-50 border-l-4 border-green-500 rounded-xl text-sm text-green-700 font-medium">
+                {success}
               </div>
             )}
-
-            {/* Error Message with Animation */}
             {error && (
-              <div className="mb-6 p-4 bg-red-50 border-l-4 border-red-500 rounded-xl flex items-start gap-3 animate-in fade-in slide-in-from-top duration-300">
-                <div className="w-6 h-6 bg-red-500 rounded-full flex items-center justify-center flex-shrink-0">
-                  <svg
-                    className="w-4 h-4 text-white"
-                    fill="currentColor"
-                    viewBox="0 0 20 20"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                </div>
-                <p className="text-sm text-red-700 font-medium">{error}</p>
+              <div className="mb-3 p-3 bg-red-50 border-l-4 border-red-500 rounded-xl text-sm text-red-700 font-medium">
+                {error}
               </div>
             )}
 
-            {/* Form */}
-            <form onSubmit={handleSubmit} className="space-y-5">
-              {/* Name Input */}
-              <div className="group">
-                <label
-                  htmlFor="name"
-                  className="block text-sm font-semibold text-slate-700 mb-2"
-                >
-                  Full Name
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                    <svg
-                      className="h-5 w-5 text-slate-400 group-focus-within:text-indigo-500 transition-colors"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                      />
-                    </svg>
+            {/* STEP 1: Email */}
+            {step === "email" && (
+              <div className="space-y-3">
+                <div className="group">
+                  <label htmlFor="email" className="block text-sm font-semibold text-slate-700 mb-1">
+                    Email Address
+                  </label>
+
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                      <svg className={`h-5 w-5 ${emailError ? "text-red-500" : "text-slate-400"}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                      </svg>
+                    </div>
+
+                    <input
+                      id="email"
+                      name="email"
+                      type="email"
+                      placeholder="john@example.com"
+                      value={email}
+                      onChange={(e) => {
+                        setEmail(e.target.value);
+                        if (emailError) setEmailError("");
+                        if (error) setError("");
+                      }}
+                      onBlur={handleEmailBlur}
+                      disabled={isLoading}
+                      className={`w-full pl-12 pr-4 py-2.5 bg-slate-50 border rounded-xl text-slate-900 placeholder-slate-400 focus:ring-2 focus:border-transparent focus:bg-white transition outline-none disabled:opacity-50 ${
+                        emailError ? "border-red-500 focus:ring-red-500" : "border-slate-300 focus:ring-indigo-500"
+                      }`}
+                    />
                   </div>
+
+                  {emailError && <p className="mt-1.5 text-sm text-red-600">{emailError}</p>}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={sendOtp}
+                  disabled={isLoading || !!emailError}
+                  className="w-full bg-gradient-to-r from-indigo-600 via-indigo-700 to-purple-700 text-white py-3 rounded-xl font-bold shadow-xl shadow-indigo-500/35 hover:shadow-indigo-500/55 transition disabled:opacity-70 disabled:cursor-not-allowed"
+                >
+                  {isLoading ? "Sending OTP..." : "Send OTP"}
+                </button>
+
+                <Link
+                  to="/organizer/login"
+                  className="w-full inline-flex items-center justify-center py-2.5 rounded-xl font-bold border border-slate-200 text-slate-700 hover:bg-slate-50 transition"
+                >
+                  Already have an account? Login
+                </Link>
+              </div>
+            )}
+
+            {/* STEP 2: OTP */}
+            {step === "otp" && (
+              <div className="space-y-3">
+                <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-sm text-slate-700">
+                  OTP sent to: <span className="font-semibold">{email}</span>
+                </div>
+
+                <div className="group">
+                  <label htmlFor="otp" className="block text-sm font-semibold text-slate-700 mb-1">
+                    Enter OTP
+                  </label>
+
+                  <input
+                    id="otp"
+                    type="text"
+                    inputMode="numeric"
+                    placeholder="6-digit code"
+                    value={otp}
+                    onChange={(e) => {
+                      setOtp(e.target.value);
+                      if (otpError) setOtpError("");
+                      if (error) setError("");
+                    }}
+                    disabled={isLoading}
+                    className={`w-full px-4 py-2.5 bg-slate-50 border rounded-xl text-slate-900 placeholder-slate-400 focus:ring-2 focus:border-transparent focus:bg-white transition outline-none disabled:opacity-50 ${
+                      otpError ? "border-red-500 focus:ring-red-500" : "border-slate-300 focus:ring-indigo-500"
+                    }`}
+                  />
+
+                  {otpError && <p className="mt-1.5 text-sm text-red-600">{otpError}</p>}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={verifyOtp}
+                  disabled={isLoading}
+                  className="w-full bg-gradient-to-r from-indigo-600 via-indigo-700 to-purple-700 text-white py-3 rounded-xl font-bold shadow-xl shadow-indigo-500/35 hover:shadow-indigo-500/55 transition disabled:opacity-70 disabled:cursor-not-allowed"
+                >
+                  {isLoading ? "Verifying..." : "Verify OTP"}
+                </button>
+
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={sendOtp}
+                    disabled={isLoading}
+                    className="w-full py-2.5 rounded-xl font-bold border border-slate-200 text-slate-700 hover:bg-slate-50 transition disabled:opacity-70"
+                  >
+                    Resend OTP
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={changeEmail}
+                    disabled={isLoading}
+                    className="w-full py-2.5 rounded-xl font-bold border border-slate-200 text-slate-700 hover:bg-slate-50 transition disabled:opacity-70"
+                  >
+                    Change email
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* STEP 3: Details */}
+            {step === "details" && (
+              <form onSubmit={handleCreateAccount} className="space-y-3">
+                <div className="p-3 bg-green-50 rounded-xl border border-green-200 text-sm text-green-800">
+                  Email verified: <span className="font-semibold">{email}</span>
+                </div>
+
+                <div className="group">
+                  <label htmlFor="name" className="block text-sm font-semibold text-slate-700 mb-1">
+                    Full Name
+                  </label>
                   <input
                     id="name"
                     name="name"
                     type="text"
                     placeholder="John Doe"
-                    required
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
                     disabled={isLoading}
-                    className="w-full pl-12 pr-4 py-3.5 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 placeholder-slate-400 focus:ring-2 focus:ring-indigo-500 focus:border-transparent focus:bg-white transition duration-200 outline-none disabled:opacity-50 disabled:cursor-not-allowed hover:border-slate-400"
+                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 placeholder-slate-400 focus:ring-2 focus:ring-indigo-500 focus:border-transparent focus:bg-white transition outline-none disabled:opacity-50"
+                    required
                   />
                 </div>
-              </div>
 
-              {/* Email Input with Validation */}
-              <div className="group">
-                <label
-                  htmlFor="email"
-                  className="block text-sm font-semibold text-slate-700 mb-2"
-                >
-                  Email Address
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                    <svg
-                      className={`h-5 w-5 transition-colors ${
-                        emailError
-                          ? "text-red-500"
-                          : "text-slate-400 group-focus-within:text-indigo-500"
+                <div className="group">
+                  <label htmlFor="password" className="block text-sm font-semibold text-slate-700 mb-1">
+                    Password
+                  </label>
+
+                  <div className="relative">
+                    <input
+                      id="password"
+                      name="password"
+                      type={showPassword ? "text" : "password"}
+                      placeholder="••••••••"
+                      value={password}
+                      onChange={(e) => {
+                        setPassword(e.target.value);
+                        if (passwordError) setPasswordError("");
+                      }}
+                      disabled={isLoading}
+                      className={`w-full pl-4 pr-12 py-2.5 bg-slate-50 border rounded-xl text-slate-900 placeholder-slate-400 focus:ring-2 focus:border-transparent focus:bg-white transition outline-none disabled:opacity-50 ${
+                        passwordError ? "border-red-500 focus:ring-red-500" : "border-slate-300 focus:ring-indigo-500"
                       }`}
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-                      />
-                    </svg>
-                  </div>
-                  <input
-                    id="email"
-                    name="email"
-                    type="email"
-                    placeholder="john@example.com"
-                    required
-                    disabled={isLoading}
-                    onBlur={handleEmailBlur}
-                    onChange={handleEmailChange}
-                    className={`w-full pl-12 pr-4 py-3.5 bg-slate-50 border rounded-xl text-slate-900 placeholder-slate-400 focus:ring-2 focus:border-transparent focus:bg-white transition duration-200 outline-none disabled:opacity-50 disabled:cursor-not-allowed hover:border-slate-400 ${
-                      emailError
-                        ? "border-red-500 focus:ring-red-500"
-                        : "border-slate-300 focus:ring-indigo-500"
-                    }`}
-                  />
-                  {emailError && (
-                    <div className="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none">
-                      <svg
-                        className="h-5 w-5 text-red-500"
-                        fill="currentColor"
-                        viewBox="0 0 20 20"
-                      >
-                        <path
-                          fillRule="evenodd"
-                          d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
-                          clipRule="evenodd"
-                        />
-                      </svg>
-                    </div>
-                  )}
-                </div>
-                {emailError && (
-                  <p className="mt-2 text-sm text-red-600 flex items-start gap-1.5 animate-in fade-in slide-in-from-top duration-200">
-                    <svg
-                      className="w-4 h-4 mt-0.5 flex-shrink-0"
-                      fill="currentColor"
-                      viewBox="0 0 20 20"
-                    >
-                      <path
-                        fillRule="evenodd"
-                        d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-                    <span>{emailError}</span>
-                  </p>
-                )}
-              </div>
-
-              {/* Password Input */}
-              <div className="group">
-                <label
-                  htmlFor="password"
-                  className="block text-sm font-semibold text-slate-700 mb-2"
-                >
-                  Password
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                    <svg
-                      className="h-5 w-5 text-slate-400 group-focus-within:text-indigo-500 transition-colors"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-                      />
-                    </svg>
-                  </div>
-                  <input
-                    id="password"
-                    name="password"
-                    type={showPassword ? "text" : "password"}
-                    placeholder="••••••••"
-                    required
-                    disabled={isLoading}
-                    className="w-full pl-12 pr-12 py-3.5 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 placeholder-slate-400 focus:ring-2 focus:ring-indigo-500 focus:border-transparent focus:bg-white transition duration-200 outline-none disabled:opacity-50 disabled:cursor-not-allowed hover:border-slate-400"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400 hover:text-indigo-500 transition-colors disabled:opacity-50"
-                    disabled={isLoading}
-                  >
-                    {showPassword ? (
-                      <svg
-                        className="h-5 w-5"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"
-                        />
-                      </svg>
-                    ) : (
-                      <svg
-                        className="h-5 w-5"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                        />
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                        />
-                      </svg>
-                    )}
-                  </button>
-                </div>
-                <p className="mt-2 text-xs text-slate-500 flex items-center gap-1">
-                  <svg
-                    className="w-3.5 h-3.5"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                      required
                     />
-                  </svg>
-                  Must be at least 8 characters long
-                </p>
-              </div>
 
-              {/* Terms Checkbox */}
-              <div className="flex items-start p-4 bg-slate-50 rounded-xl border border-slate-200">
-                <input
-                  id="terms"
-                  type="checkbox"
-                  required
-                  disabled={isLoading}
-                  className="w-4 h-4 mt-1 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500 cursor-pointer"
-                />
-                <label
-                  htmlFor="terms"
-                  className="ml-3 text-sm text-slate-600 cursor-pointer"
-                >
-                  I agree to the{" "}
-                  <a
-                    href="#"
-                    className="text-indigo-600 hover:text-indigo-700 font-semibold transition-colors"
-                  >
-                    Terms of Service
-                  </a>{" "}
-                  and{" "}
-                  <a
-                    href="#"
-                    className="text-indigo-600 hover:text-indigo-700 font-semibold transition-colors"
-                  >
-                    Privacy Policy
-                  </a>
-                </label>
-              </div>
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword((s) => !s)}
+                      className="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400 hover:text-indigo-500 transition"
+                      disabled={isLoading}
+                    >
+                      {showPassword ? "Hide" : "Show"}
+                    </button>
+                  </div>
 
-              {/* Submit Button */}
-              <button
-                type="submit"
-                disabled={isLoading || !!emailError}
-                className="group relative w-full bg-gradient-to-r from-indigo-600 via-indigo-700 to-purple-700 text-white py-4 rounded-xl font-bold shadow-2xl shadow-indigo-500/50 hover:shadow-indigo-500/70 hover:scale-[1.02] transition-all duration-300 disabled:opacity-70 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center gap-2 overflow-hidden"
-              >
-                {/* Shimmer Effect */}
-                <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-200%] group-hover:translate-x-[200%] transition-transform duration-1000"></span>
-
-                <span className="relative flex items-center justify-center gap-2">
-                  {isLoading ? (
-                    <>
-                      <svg
-                        className="animate-spin h-5 w-5 text-white"
-                        xmlns="http://www.w3.org/2000/svg"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                      >
-                        <circle
-                          className="opacity-25"
-                          cx="12"
-                          cy="12"
-                          r="10"
-                          stroke="currentColor"
-                          strokeWidth="4"
-                        ></circle>
-                        <path
-                          className="opacity-75"
-                          fill="currentColor"
-                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                        ></path>
-                      </svg>
-                      <span>Creating account...</span>
-                    </>
-                  ) : (
-                    <>
-                      <span>Create Account</span>
-                      <svg
-                        className="w-5 h-5 group-hover:translate-x-1 transition-transform"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M13 7l5 5m0 0l-5 5m5-5H6"
-                        />
-                      </svg>
-                    </>
+                  {passwordError && <p className="mt-1.5 text-sm text-red-600">{passwordError}</p>}
+                  {!passwordError && (
+                    <p className="mt-1 text-xs text-slate-500">Must be at least 8 characters long</p>
                   )}
-                </span>
-              </button>
-            </form>
+                </div>
 
-            {/* Divider */}
-            <div className="relative my-8">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-slate-200"></div>
-              </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="px-4 bg-white text-slate-500 font-medium">
-                  Already have an account?
-                </span>
-              </div>
-            </div>
-
-            {/* Footer */}
-            <div className="text-center">
-              <Link
-                to="/organizer/login"
-                className="inline-flex items-center gap-2 text-sm text-slate-600 hover:text-slate-900 font-semibold transition-colors group"
-              >
-                <svg
-                  className="w-4 h-4 group-hover:-translate-x-1 transition-transform"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
+                <button
+                  type="submit"
+                  disabled={isLoading}
+                  className="w-full bg-gradient-to-r from-indigo-600 via-indigo-700 to-purple-700 text-white py-3 rounded-xl font-bold shadow-xl shadow-indigo-500/35 hover:shadow-indigo-500/55 transition disabled:opacity-70 disabled:cursor-not-allowed"
                 >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M11 17l-5-5m0 0l5-5m-5 5h12"
-                  />
-                </svg>
-                <span>Sign in instead</span>
-              </Link>
-            </div>
-          </div>
-        </div>
+                  {isLoading ? "Creating account..." : "Create Account"}
+                </button>
 
-        {/* Security Badge */}
-        <div className="mt-8 text-center">
-          <div className="inline-flex items-center gap-2 px-4 py-2 bg-white rounded-full border border-slate-200 shadow-sm">
-            <svg
-              className="w-4 h-4 text-green-500"
-              fill="currentColor"
-              viewBox="0 0 20 20"
-            >
-              <path
-                fillRule="evenodd"
-                d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                clipRule="evenodd"
-              />
-            </svg>
-            <span className="text-xs text-slate-600 font-medium">
-              256-bit SSL Encrypted and Secure
-            </span>
+                <Link
+                  to="/organizer/login"
+                  className="w-full inline-flex items-center justify-center py-2.5 rounded-xl font-bold border border-slate-200 text-slate-700 hover:bg-slate-50 transition"
+                >
+                  Login instead
+                </Link>
+              </form>
+            )}
           </div>
         </div>
       </div>

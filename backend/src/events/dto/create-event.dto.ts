@@ -4,28 +4,22 @@ import {
   IsArray,
   ValidateNested,
   IsNumber,
-  IsEnum,
   IsOptional,
 } from 'class-validator';
 import { Type } from 'class-transformer';
-import { TicketType } from '../schemas/event.schema';
 
 class TicketDto {
-  @IsEnum(TicketType)
-  type: TicketType;
-
   @IsString()
-  name: string;
+  name: string; // FREE / EARLY BIRD / STUDENT PASS / etc.
 
   @IsNumber()
-  price: number;
+  price: number; // base price
 
   @IsNumber()
-  quantity: number;
+  gst: number; // GST amount in ₹
 
-  @IsOptional()
   @IsNumber()
-  available?: number;
+  finalPrice: number; // price + gst
 
   @IsOptional()
   @IsString()
@@ -62,13 +56,13 @@ export class CreateEventDto {
 
   @IsArray()
   @IsString({ each: true })
-  mediaUrls: string[]; // ✅ NEW
-
-  @IsNumber()
-  capacity: number;
+  mediaUrls: string[];
 
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => TicketDto)
   tickets: TicketDto[];
+
+  @IsOptional()
+  registrationOpen?: boolean;
 }

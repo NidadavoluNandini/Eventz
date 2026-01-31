@@ -1,18 +1,10 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
 
-export enum TicketType {
-  FREE = 'FREE',
-  EARLY_BIRD = 'EARLY_BIRD',
-  REGULAR = 'REGULAR',
-  VIP = 'VIP',
-}
-
 export enum EventStatus {
   DRAFT = 'DRAFT',
   PUBLISHED = 'PUBLISHED',
   UNPUBLISHED = 'UNPUBLISHED',
-  ONGOING = 'ONGOING',
   COMPLETED = 'COMPLETED',
 }
 
@@ -45,41 +37,34 @@ export class Event extends Document {
   @Prop({ required: true })
   category: string;
 
-  // 🎥 Multimedia (images, videos, gifs)
   @Prop({ type: [String], default: [] })
   mediaUrls: string[];
 
-  // 👥 Max members / attendees
-  @Prop({ required: true })
-  capacity: number;
-
-  // 🎟 Ticket allocations
+  // 🎟 Flexible ticket types with GST
   @Prop({
     type: [
       {
-        type: {
-          type: String,
-          enum: Object.values(TicketType),
-        },
         name: String,
         price: Number,
-        quantity: Number,
-        available: Number,
+        gst: Number,
+        finalPrice: Number,
         description: String,
       },
     ],
     default: [],
   })
   tickets: {
-    type: TicketType;
     name: string;
     price: number;
-    quantity: number;
-    available: number;
+    gst: number;
+    finalPrice: number;
     description?: string;
   }[];
 
-  // 📌 Event status
+  // 🔓 Manual registration control
+  @Prop({ default: true })
+  registrationOpen: boolean;
+
   @Prop({
     type: String,
     enum: Object.values(EventStatus),
@@ -87,7 +72,6 @@ export class Event extends Document {
   })
   status: EventStatus;
 
-  // 🧑‍💼 Organizer
   @Prop({ type: Types.ObjectId, ref: 'Organizer', required: true })
   organizerId: Types.ObjectId;
 

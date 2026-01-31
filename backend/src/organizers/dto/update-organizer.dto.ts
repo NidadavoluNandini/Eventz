@@ -1,7 +1,6 @@
-import { IsEmail, IsOptional, IsString, MinLength } from 'class-validator';
+import { IsOptional, IsString, IsEmail } from 'class-validator';
 
 export class UpdateOrganizerDto {
-
   @IsOptional()
   @IsString()
   name?: string;
@@ -12,10 +11,5 @@ export class UpdateOrganizerDto {
 
   @IsOptional()
   @IsString()
-  photoUrl?: string;
-
-  // optional if you want update password separately
-  @IsOptional()
-  @MinLength(6)
-  password?: string;
+  photo?: string; // ✅ REQUIRED
 }

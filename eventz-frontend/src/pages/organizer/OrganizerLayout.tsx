@@ -55,7 +55,7 @@ useEffect(() => {
     if (!doubleCheck) return;
 
     try {
-      await api.post("/auth/organizer/delete-account");
+      await api.delete("/api/organizers/me");
 
       // Clear token
       localStorage.removeItem("organizerToken");
@@ -264,9 +264,17 @@ useEffect(() => {
               </button>
 
               <div>
-                <h1 className="text-xl sm:text-2xl font-bold text-slate-900">
-                  Welcome Back! 👋
-                </h1>
+              <h1 className="text-xl sm:text-2xl font-bold text-slate-900">
+                  Welcome{" "}
+                  {organizer?.name?.trim()
+                    ? organizer.name
+                    : organizer?.email
+                    ? organizer.email.split("@")[0]
+                    : "Organizer"}
+                  </h1>
+
+
+
                 <p className="text-sm text-slate-600 hidden sm:block">
                   Manage your events and grow your audience
                 </p>
@@ -289,8 +297,13 @@ useEffect(() => {
     />
 
     <span className="text-sm font-semibold text-slate-700 hidden sm:block">
-      {organizer?.name || "Organizer"}
-    </span>
+  {organizer?.name?.trim()
+    ? organizer.name
+    : organizer?.email
+    ? organizer.email.split("@")[0]
+    : "Organizer"}
+</span>
+
   </div>
 
   {/* Notifications */}

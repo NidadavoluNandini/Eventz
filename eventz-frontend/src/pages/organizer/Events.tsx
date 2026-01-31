@@ -4,102 +4,38 @@ import {
   publishEvent,
   unpublishEvent,
   deleteEvent,
+  moveToDraft,
 } from "../../api/events.api";
-
-const CATEGORIES = [
-  "technology",
-  "arts",
-  "sports",
-  "science",
-  "industry",
-  "health",
-  "entertainment",
-  "business",
-];
-
 
 export default function Events() {
   const [events, setEvents] = useState<any[]>([]);
-  const [category, setCategory] = useState("ALL");
-  const [status, setStatus] = useState("ALL");
+  const [loading, setLoading] = useState(true);
 
-  const load = () => {
-    getOrganizerEvents().then((res) => setEvents(res.data));
+  const load = async () => {
+    setLoading(true);
+    const res = await getOrganizerEvents();
+    setEvents(res.data || []);
+    setLoading(false);
   };
 
   useEffect(() => {
     load();
   }, []);
 
-  const filteredEvents = events.filter((e) => {
-    if (category !== "ALL" && e.category !== category) return false;
-    if (status !== "ALL" && e.status !== status) return false;
-    return true;
-  });
+  if (loading) {
+    return <p className="p-6 text-center text-gray-500">Loading events...</p>;
+  }
 
   return (
     <div>
-      {/* HEADER */}
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">My Events</h1>
-      </div>
+      <h1 className="text-2xl font-bold mb-6">My Events</h1>
 
-      {/* FILTER BAR */}
-      <div className="bg-white rounded-xl shadow p-4 flex flex-wrap gap-4 mb-6">
-        {/* CATEGORY FILTER */}
-       <div className="flex flex-wrap gap-2 mb-4">
- {["ALL", ...CATEGORIES].map((c) => (
-  <button
-    key={c}
-    onClick={() => setCategory(c)}
-    className={`px-4 py-2 rounded-full border text-sm
-      ${
-        category === c
-          ? "bg-indigo-600 text-white"
-          : "bg-white hover:bg-gray-100"
-      }`}
-  >
-    {c.charAt(0).toUpperCase() + c.slice(1)}
-  </button>
-))}
-
-</div>
-
-
-        {/* STATUS FILTER */}
-       <div className="flex flex-wrap gap-2 mb-6">
-  {[
-    "ALL",
-    "DRAFT",
-    "PUBLISHED",
-    "UNPUBLISHED",
-    "ONGOING",
-    "COMPLETED",
-  ].map((s) => (
-    <button
-      key={s}
-      onClick={() => setStatus(s)}
-      className={`px-4 py-2 rounded-full text-sm transition
-        ${
-          status === s
-            ? "bg-blue-600 text-white"
-            : "bg-white border hover:bg-gray-100"
-        }`}
-    >
-      {s}
-    </button>
-  ))}
-</div>
-
-      </div>
-
-      {/* EVENTS LIST */}
       <div className="space-y-4">
-        {filteredEvents.length === 0 && (
+        {events.length === 0 && (
           <p className="text-gray-500">No events found.</p>
         )}
 
-        {filteredEvents.map((e) => (
+        {events.map((e) => (
           <div
             key={e._id}
             className="bg-white rounded-2xl shadow p-6 flex justify-between items-start"
@@ -108,26 +44,32 @@ export default function Events() {
             <div>
               <h2 className="text-lg font-bold">{e.title}</h2>
 
-              <div className="flex gap-3 mt-2 text-sm">
-                <span className="px-3 py-1 rounded-full bg-gray-100">
-                  {e.category}
-                </span>
+              {/* STATUS BADGE */}
+              <div className="mt-2 flex gap-2 flex-wrap text-sm">
+                {e.status === "DRAFT" && (
+                  <span className="px-3 py-1 rounded-full bg-gray-400 text-white">
+                    Draft
+                  </span>
+                )}
 
-                <span
-                  className={`px-3 py-1 rounded-full text-white ${
-                    e.status === "PUBLISHED"
-                      ? "bg-green-600"
-                      : e.status === "DRAFT"
-                      ? "bg-gray-500"
-                      : e.status === "UNPUBLISHED"
-                      ? "bg-yellow-500"
-                      : e.status === "ONGOING"
-                      ? "bg-blue-600"
-                      : "bg-red-600"
-                  }`}
-                >
-                  {e.status}
-                </span>
+                {e.status === "PUBLISHED" && e.registrationOpen && (
+                  <span className="px-3 py-1 rounded-full bg-green-600 text-white">
+                    Published · Registration Open
+                  </span>
+                )}
+
+                {(e.status === "UNPUBLISHED" ||
+                  (e.status === "PUBLISHED" && !e.registrationOpen)) && (
+                  <span className="px-3 py-1 rounded-full bg-yellow-500 text-white">
+                    Registration Closed
+                  </span>
+                )}
+
+                {e.status === "COMPLETED" && (
+                  <span className="px-3 py-1 rounded-full bg-blue-600 text-white">
+                    Completed
+                  </span>
+                )}
               </div>
 
               <p className="text-sm text-gray-500 mt-2">
@@ -136,33 +78,53 @@ export default function Events() {
               </p>
             </div>
 
-            {/* ACTIONS */}
-            <div className="flex gap-3">
-              {e.status !== "PUBLISHED" && (
-                <button
-                  onClick={() => publishEvent(e._id).then(load)}
-                  className="px-4 py-2 rounded-lg bg-green-600 text-white text-sm hover:bg-green-700"
-                >
-                  Publish
-                </button>
-              )}
+            {/* ACTION BUTTONS */}
+{/* ACTION BUTTONS */}
+<div className="flex gap-2 flex-wrap">
 
-              {e.status === "PUBLISHED" && (
-                <button
-                  onClick={() => unpublishEvent(e._id).then(load)}
-                  className="px-4 py-2 rounded-lg bg-yellow-500 text-white text-sm hover:bg-yellow-600"
-                >
-                  Unpublish
-                </button>
-              )}
+  {/* PUBLISH */}
+  {(e.status === "DRAFT" || e.status === "UNPUBLISHED") && (
+    <button
+      onClick={() => publishEvent(e._id).then(load)}
+      disabled={e.status === "COMPLETED"}
+      className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm disabled:opacity-50"
+    >
+      Publish
+    </button>
+  )}
 
-              <button
-                onClick={() => deleteEvent(e._id).then(load)}
-                className="px-4 py-2 rounded-lg bg-red-600 text-white text-sm hover:bg-red-700"
-              >
-                Delete
-              </button>
-            </div>
+  {/* CLOSE REGISTRATION (UNPUBLISH) */}
+  {e.status === "PUBLISHED" && e.registrationOpen && (
+    <button
+      onClick={() => unpublishEvent(e._id).then(load)}
+      className="px-4 py-2 bg-yellow-500 text-white rounded-lg text-sm"
+    >
+      Close Registration
+    </button>
+  )}
+
+  {/* MOVE TO DRAFT */}
+  {e.status !== "COMPLETED" && (
+    <button
+      onClick={() => moveToDraft(e._id).then(load)}
+      className="px-4 py-2 bg-gray-500 text-white rounded-lg text-sm"
+    >
+      Move to Draft
+    </button>
+  )}
+
+  {/* DELETE */}
+  <button
+    onClick={() => {
+      if (confirm("Delete this event permanently?")) {
+        deleteEvent(e._id).then(load);
+      }
+    }}
+    className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm"
+  >
+    Delete
+  </button>
+</div>
           </div>
         ))}
       </div>

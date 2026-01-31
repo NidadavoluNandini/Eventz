@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import React, { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import api from "../../utils/axios";
 
 export default function OrganizerLogin() {
@@ -14,48 +14,45 @@ export default function OrganizerLogin() {
 
   // Advanced email validation function
   const validateEmail = (email: string): { isValid: boolean; error: string } => {
-    // Remove whitespace
     email = email.trim();
 
-    // Check if email is empty
     if (!email) {
       return { isValid: false, error: "Email is required" };
     }
 
-    // Basic email regex pattern
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       return { isValid: false, error: "Invalid email format" };
     }
 
-    // Split email into local and domain parts
     const [localPart, domainPart] = email.split("@");
 
-    // Check for double dots (..)
     if (email.includes("..")) {
       return { isValid: false, error: "Email cannot contain consecutive dots (..)" };
     }
 
-    // Check if domain has multiple dots at the end (e.g., .com.com, .in.in)
     const domainParts = domainPart.split(".");
-    
-    // Common duplicate TLD patterns
+
     const duplicateTLDs = [
-      ".com.com", ".org.org", ".net.net", ".edu.edu", 
-      ".in.in", ".uk.uk", ".us.us", ".io.io"
+      ".com.com",
+      ".org.org",
+      ".net.net",
+      ".edu.edu",
+      ".in.in",
+      ".uk.uk",
+      ".us.us",
+      ".io.io",
     ];
-    
-    if (duplicateTLDs.some(dup => domainPart.endsWith(dup))) {
+
+    if (duplicateTLDs.some((dup) => domainPart.endsWith(dup))) {
       return { isValid: false, error: "Invalid domain - duplicate extension detected" };
     }
 
-    // Check for valid TLD length (2-6 characters is typical)
     const tld = domainParts[domainParts.length - 1];
     if (tld.length < 2 || tld.length > 6) {
       return { isValid: false, error: "Invalid domain extension" };
     }
 
-    // Check for common typos in popular domains
     const commonDomains: Record<string, string> = {
       "gmial.com": "gmail.com",
       "gmai.com": "gmail.com",
@@ -67,34 +64,29 @@ export default function OrganizerLogin() {
     };
 
     if (commonDomains[domainPart.toLowerCase()]) {
-      return { 
-        isValid: false, 
-        error: `Did you mean ${commonDomains[domainPart.toLowerCase()]}?` 
+      return {
+        isValid: false,
+        error: `Did you mean ${commonDomains[domainPart.toLowerCase()]}?`,
       };
     }
 
-    // Check for spaces in email
     if (email.includes(" ")) {
       return { isValid: false, error: "Email cannot contain spaces" };
     }
 
-    // Check for valid characters in local part
     const validLocalRegex = /^[a-zA-Z0-9._+-]+$/;
     if (!validLocalRegex.test(localPart)) {
       return { isValid: false, error: "Email contains invalid characters" };
     }
 
-    // Check if local part starts or ends with a dot
     if (localPart.startsWith(".") || localPart.endsWith(".")) {
       return { isValid: false, error: "Email cannot start or end with a dot" };
     }
 
-    // Check minimum domain length
     if (domainParts.length < 2) {
       return { isValid: false, error: "Invalid domain format" };
     }
 
-    // Check for numbers-only domain (suspicious)
     if (/^\d+$/.test(domainParts[0])) {
       return { isValid: false, error: "Invalid domain name" };
     }
@@ -105,20 +97,14 @@ export default function OrganizerLogin() {
   const handleEmailBlur = (e: React.FocusEvent<HTMLInputElement>) => {
     const emailValue = e.target.value;
     const validation = validateEmail(emailValue);
-    
-    if (!validation.isValid && emailValue) {
-      setEmailError(validation.error);
-    } else {
-      setEmailError("");
-    }
+
+    if (!validation.isValid && emailValue) setEmailError(validation.error);
+    else setEmailError("");
   };
 
   const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setEmail(e.target.value);
-    // Clear email error when user starts typing
-    if (emailError) {
-      setEmailError("");
-    }
+    if (emailError) setEmailError("");
   };
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -126,7 +112,6 @@ export default function OrganizerLogin() {
     setError("");
     setIsLoading(true);
 
-    // Validate email before submission
     const validation = validateEmail(email);
     if (!validation.isValid) {
       setEmailError(validation.error);
@@ -140,10 +125,7 @@ export default function OrganizerLogin() {
         password,
       });
 
-      const token =
-        res.data.access_token ||
-        res.data.accessToken ||
-        res.data.token;
+      const token = res.data.access_token || res.data.accessToken || res.data.token;
 
       if (!token) {
         setError("Authentication failed. Please try again.");
@@ -151,33 +133,29 @@ export default function OrganizerLogin() {
       }
 
       localStorage.setItem("organizerToken", token);
+      localStorage.setItem("organizer", JSON.stringify(res.data.organizer));
+
       navigate("/organizer/dashboard");
     } catch (err: any) {
-      setError(
-        err.response?.data?.message ||
-          "Invalid credentials. Please try again."
-      );
+      setError(err.response?.data?.message || "Invalid credentials. Please try again.");
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
-      {/* Login Card */}
+    <div className="h-svh overflow-hidden bg-slate-50 px-4 py-3 flex items-center justify-center">
       <div className="w-full max-w-md">
-        {/* Main Card */}
-        <div className="bg-white rounded-3xl shadow-2xl p-8 border border-slate-200 relative overflow-hidden">
-          {/* Subtle decorative element */}
-          <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-50 rounded-full blur-3xl opacity-50 -z-0"></div>
+        <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 relative overflow-hidden px-6 py-5">
+          <div className="absolute top-0 right-0 w-24 h-24 bg-indigo-50 rounded-full blur-3xl opacity-50 -z-0" />
 
           <div className="relative z-10">
-            {/* Header Icon with Animation */}
-            <div className="text-center mb-8">
-              <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-indigo-500 via-indigo-600 to-purple-600 rounded-2xl mb-4 shadow-2xl shadow-indigo-500/50 relative group">
-                <div className="absolute inset-0 bg-gradient-to-br from-indigo-400 to-purple-500 rounded-2xl blur opacity-70 group-hover:opacity-100 transition-opacity"></div>
+            {/* Header (tight to avoid scroll) */}
+            <div className="text-center mb-4">
+              <div className="inline-flex items-center justify-center w-14 h-14 bg-gradient-to-br from-indigo-500 via-indigo-600 to-purple-600 rounded-2xl mb-2 shadow-xl shadow-indigo-500/40 relative group">
+                <div className="absolute inset-0 bg-gradient-to-br from-indigo-400 to-purple-500 rounded-2xl blur opacity-60 group-hover:opacity-100 transition-opacity" />
                 <svg
-                  className="w-10 h-10 text-white relative z-10 transform group-hover:scale-110 transition-transform"
+                  className="w-7 h-7 text-white relative z-10 transform group-hover:scale-110 transition-transform"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -190,7 +168,8 @@ export default function OrganizerLogin() {
                   />
                 </svg>
               </div>
-              <h1 className="text-4xl font-extrabold text-slate-900 mb-2">
+
+              <h1 className="text-2xl font-extrabold text-slate-900 leading-tight">
                 Welcome Back
               </h1>
               <p className="text-slate-600 text-sm font-medium">
@@ -198,15 +177,11 @@ export default function OrganizerLogin() {
               </p>
             </div>
 
-            {/* Error Message with Animation */}
+            {/* Error */}
             {error && (
-              <div className="mb-6 p-4 bg-red-50 border-l-4 border-red-500 rounded-xl flex items-start gap-3 animate-in fade-in slide-in-from-top duration-300">
+              <div className="mb-3 p-3 bg-red-50 border-l-4 border-red-500 rounded-xl flex items-start gap-3 animate-in fade-in slide-in-from-top duration-300">
                 <div className="w-6 h-6 bg-red-500 rounded-full flex items-center justify-center flex-shrink-0">
-                  <svg
-                    className="w-4 h-4 text-white"
-                    fill="currentColor"
-                    viewBox="0 0 20 20"
-                  >
+                  <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
                     <path
                       fillRule="evenodd"
                       d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
@@ -219,15 +194,13 @@ export default function OrganizerLogin() {
             )}
 
             {/* Form */}
-            <form onSubmit={handleLogin} className="space-y-5">
-              {/* Email Input with Validation */}
+            <form onSubmit={handleLogin} className="space-y-3">
+              {/* Email */}
               <div className="group">
-                <label
-                  htmlFor="email"
-                  className="block text-sm font-semibold text-slate-700 mb-2"
-                >
+                <label htmlFor="email" className="block text-sm font-semibold text-slate-700 mb-1">
                   Email Address
                 </label>
+
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                     <svg
@@ -248,11 +221,12 @@ export default function OrganizerLogin() {
                       />
                     </svg>
                   </div>
+
                   <input
                     id="email"
                     type="email"
                     placeholder="organizer@example.com"
-                    className={`w-full pl-12 pr-4 py-3.5 bg-slate-50 border rounded-xl text-slate-900 placeholder-slate-400 focus:ring-2 focus:border-transparent focus:bg-white transition duration-200 outline-none disabled:opacity-50 disabled:cursor-not-allowed hover:border-slate-400 ${
+                    className={`w-full pl-12 pr-4 py-2.5 bg-slate-50 border rounded-xl text-slate-900 placeholder-slate-400 focus:ring-2 focus:border-transparent focus:bg-white transition duration-200 outline-none disabled:opacity-50 disabled:cursor-not-allowed hover:border-slate-400 ${
                       emailError
                         ? "border-red-500 focus:ring-red-500"
                         : "border-slate-300 focus:ring-indigo-500"
@@ -263,13 +237,10 @@ export default function OrganizerLogin() {
                     required
                     disabled={isLoading}
                   />
+
                   {emailError && (
                     <div className="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none">
-                      <svg
-                        className="h-5 w-5 text-red-500"
-                        fill="currentColor"
-                        viewBox="0 0 20 20"
-                      >
+                      <svg className="h-5 w-5 text-red-500" fill="currentColor" viewBox="0 0 20 20">
                         <path
                           fillRule="evenodd"
                           d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
@@ -279,13 +250,10 @@ export default function OrganizerLogin() {
                     </div>
                   )}
                 </div>
+
                 {emailError && (
-                  <p className="mt-2 text-sm text-red-600 flex items-start gap-1.5 animate-in fade-in slide-in-from-top duration-200">
-                    <svg
-                      className="w-4 h-4 mt-0.5 flex-shrink-0"
-                      fill="currentColor"
-                      viewBox="0 0 20 20"
-                    >
+                  <p className="mt-1.5 text-sm text-red-600 flex items-start gap-1.5 animate-in fade-in slide-in-from-top duration-200">
+                    <svg className="w-4 h-4 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                       <path
                         fillRule="evenodd"
                         d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
@@ -297,14 +265,15 @@ export default function OrganizerLogin() {
                 )}
               </div>
 
-              {/* Password Input */}
+              {/* Password */}
               <div className="group">
                 <label
                   htmlFor="password"
-                  className="block text-sm font-semibold text-slate-700 mb-2"
+                  className="block text-sm font-semibold text-slate-700 mb-1"
                 >
                   Password
                 </label>
+
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                     <svg
@@ -321,29 +290,27 @@ export default function OrganizerLogin() {
                       />
                     </svg>
                   </div>
+
                   <input
                     id="password"
                     type={showPassword ? "text" : "password"}
                     placeholder="••••••••"
-                    className="w-full pl-12 pr-12 py-3.5 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 placeholder-slate-400 focus:ring-2 focus:ring-indigo-500 focus:border-transparent focus:bg-white transition duration-200 outline-none disabled:opacity-50 disabled:cursor-not-allowed hover:border-slate-400"
+                    className="w-full pl-12 pr-12 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 placeholder-slate-400 focus:ring-2 focus:ring-indigo-500 focus:border-transparent focus:bg-white transition duration-200 outline-none disabled:opacity-50 disabled:cursor-not-allowed hover:border-slate-400"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
                     disabled={isLoading}
                   />
+
                   <button
                     type="button"
-                    onClick={() => setShowPassword(!showPassword)}
+                    onClick={() => setShowPassword((s) => !s)}
                     className="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400 hover:text-indigo-500 transition-colors disabled:opacity-50"
                     disabled={isLoading}
+                    aria-label={showPassword ? "Hide password" : "Show password"}
                   >
                     {showPassword ? (
-                      <svg
-                        className="h-5 w-5"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
+                      <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path
                           strokeLinecap="round"
                           strokeLinejoin="round"
@@ -352,12 +319,7 @@ export default function OrganizerLogin() {
                         />
                       </svg>
                     ) : (
-                      <svg
-                        className="h-5 w-5"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
+                      <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path
                           strokeLinecap="round"
                           strokeLinejoin="round"
@@ -376,17 +338,16 @@ export default function OrganizerLogin() {
                 </div>
               </div>
 
-              {/* Remember Me & Forgot Password */}
-              <div className="flex items-center justify-between text-sm">
-                <label className="flex items-center cursor-pointer group">
+              {/* Remember / Forgot */}
+              <div className="flex items-center justify-between text-xs">
+                <label className="flex items-center cursor-pointer">
                   <input
                     type="checkbox"
                     className="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500 cursor-pointer"
                   />
-                  <span className="ml-2 text-slate-600 group-hover:text-slate-900 transition-colors">
-                    Remember me
-                  </span>
+                  <span className="ml-2 text-slate-600">Remember me</span>
                 </label>
+
                 <Link
                   to="/organizer/forgot-password"
                   className="text-indigo-600 hover:text-indigo-700 font-semibold transition-colors"
@@ -395,118 +356,64 @@ export default function OrganizerLogin() {
                 </Link>
               </div>
 
-              {/* Submit Button */}
+              {/* Buttons: Sign In + Create Account */}
               <button
                 type="submit"
                 disabled={isLoading || !!emailError}
-                className="group relative w-full bg-gradient-to-r from-indigo-600 via-indigo-700 to-purple-700 text-white py-4 rounded-xl font-bold shadow-2xl shadow-indigo-500/50 hover:shadow-indigo-500/70 hover:scale-[1.02] transition-all duration-300 disabled:opacity-70 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center gap-2 overflow-hidden"
+                className="group relative w-full bg-gradient-to-r from-indigo-600 via-indigo-700 to-purple-700 text-white py-3 rounded-xl font-bold shadow-xl shadow-indigo-500/35 hover:shadow-indigo-500/55 hover:scale-[1.01] transition-all duration-300 disabled:opacity-70 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center gap-2 overflow-hidden"
               >
-                {/* Shimmer Effect */}
-                <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-200%] group-hover:translate-x-[200%] transition-transform duration-1000"></span>
-
+                <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-200%] group-hover:translate-x-[200%] transition-transform duration-1000" />
                 <span className="relative flex items-center justify-center gap-2">
                   {isLoading ? (
                     <>
-                      <svg
-                        className="animate-spin h-5 w-5 text-white"
-                        xmlns="http://www.w3.org/2000/svg"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                      >
-                        <circle
-                          className="opacity-25"
-                          cx="12"
-                          cy="12"
-                          r="10"
-                          stroke="currentColor"
-                          strokeWidth="4"
-                        ></circle>
+                      <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                         <path
                           className="opacity-75"
                           fill="currentColor"
                           d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                        ></path>
+                        />
                       </svg>
                       <span>Signing in...</span>
                     </>
                   ) : (
                     <>
                       <span>Sign In</span>
-                      <svg
-                        className="w-5 h-5 group-hover:translate-x-1 transition-transform"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M14 5l7 7m0 0l-7 7m7-7H3"
-                        />
+                      <svg className="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
                       </svg>
                     </>
                   )}
                 </span>
               </button>
-            </form>
 
-            {/* Divider */}
-            <div className="relative my-8">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-slate-200"></div>
-              </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="px-4 bg-white text-slate-500 font-medium">
-                  New to the platform?
-                </span>
-              </div>
-            </div>
-
-            {/* Footer */}
-            <div className="text-center">
               <Link
                 to="/organizer/register"
-                className="inline-flex items-center gap-2 text-sm text-slate-600 hover:text-slate-900 font-semibold transition-colors group"
+                className="w-full inline-flex items-center justify-center py-2.5 rounded-xl font-bold border border-slate-200 text-slate-700 hover:bg-slate-50 hover:border-slate-300 transition-colors"
               >
-                <span>Create an account</span>
-                <svg
-                  className="w-4 h-4 group-hover:translate-x-1 transition-transform"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M13 7l5 5m0 0l-5 5m5-5H6"
-                  />
-                </svg>
+                Create account
               </Link>
-            </div>
+
+              {/* Security badge inside card (no extra page height) */}
+              <div className="pt-1 text-center">
+                <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-slate-50 rounded-full border border-slate-200">
+                  <svg className="w-4 h-4 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                    <path
+                      fillRule="evenodd"
+                      d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                  <span className="text-[11px] text-slate-600 font-medium">
+                    256-bit SSL Encrypted and Secure
+                  </span>
+                </div>
+              </div>
+            </form>
           </div>
         </div>
 
-        {/* Security Badge */}
-        <div className="mt-8 text-center">
-          <div className="inline-flex items-center gap-2 px-4 py-2 bg-white rounded-full border border-slate-200 shadow-sm">
-            <svg
-              className="w-4 h-4 text-green-500"
-              fill="currentColor"
-              viewBox="0 0 20 20"
-            >
-              <path
-                fillRule="evenodd"
-                d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                clipRule="evenodd"
-              />
-            </svg>
-            <span className="text-xs text-slate-600 font-medium">
-              256-bit SSL Encrypted and  Secure
-            </span>
-          </div>
-        </div>
+        {/* Optional: if you still see scroll, remove this whole block (kept empty by default) */}
       </div>
     </div>
   );

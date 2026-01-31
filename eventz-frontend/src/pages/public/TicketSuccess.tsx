@@ -2,6 +2,7 @@ import { useParams, Link } from "react-router-dom";
 import { useEffect, useState } from "react";
 import PublicLayout from "../../layouts/PublicLayout";
 import api from "../../utils/axios";
+import axios from "axios";
 
 export default function TicketSuccess() {
   const { id } = useParams<{ id: string }>();
@@ -99,29 +100,13 @@ export default function TicketSuccess() {
             </div>
 
             {/* DOWNLOAD TICKET */}
-            <button
-  onClick={async () => {
-    try {
-      const res = await api.get(
-        `/api/tickets/download/${id}`,
-        { responseType: "blob" }
-      );
-
-      const blob = new Blob([res.data], {
-        type: "application/pdf",
-      });
-
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = "event-ticket.pdf";
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.URL.revokeObjectURL(url);
-    } catch (err) {
-      alert("Failed to download ticket");
-    }
+<button
+  onClick={() => {
+    // Let the browser handle the download directly
+    window.open(
+      `${import.meta.env.VITE_API_URL}/api/tickets/download/${id}`,
+      "_blank"
+    );
   }}
   className="block w-full bg-black text-white py-3 rounded-xl font-semibold hover:bg-gray-800 transition"
 >

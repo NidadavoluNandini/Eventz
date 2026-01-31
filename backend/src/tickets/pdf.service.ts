@@ -9,46 +9,74 @@ export class PdfService {
     venue: string;
     eventDate: Date;
     registrationNumber: string;
-    ticketType: string;
+
+    ticketName: string;
+    basePricePerTicket: number;
+    quantity: number;
+    gstRate: number;
+    gstAmount: number;
+    totalAmount: number;
+
     qrCode: string;
-    amount?: number;
   }): Promise<Buffer> {
     return new Promise((resolve, reject) => {
       const doc = new PDFDocument({ size: 'A4', margin: 50 });
-
       const buffers: Buffer[] = [];
 
       doc.on('data', buffers.push.bind(buffers));
-      doc.on('end', () => {
-        resolve(Buffer.concat(buffers));
-      });
-
+      doc.on('end', () => resolve(Buffer.concat(buffers)));
       doc.on('error', reject);
 
-      /* ===== PDF CONTENT ===== */
+      // ===============================
+      // HEADER
+      // ===============================
+      doc.fontSize(22).text('EVENT TICKET', { align: 'center' });
+      doc.moveDown(1);
 
-      doc.fontSize(24).text('EVENT TICKET', { align: 'center' });
-      doc.moveDown();
       doc.fontSize(16).text(data.eventTitle, { align: 'center' });
-      doc.moveDown();
+      doc.moveDown(2);
 
+      // ===============================
+      // USER DETAILS
+      // ===============================
+      doc.fontSize(12);
       doc.text(`Name: ${data.userName}`);
-      doc.text(`Ticket Type: ${data.ticketType}`);
-      doc.text(`Date: ${new Date(data.eventDate).toDateString()}`);
       doc.text(`Venue: ${data.venue}`);
-      doc.text(`Registration: ${data.registrationNumber}`);
+      doc.text(`Date: ${data.eventDate.toDateString()}`);
+      doc.text(`Registration No: ${data.registrationNumber}`);
 
-      if (data.amount !== undefined) {
-        doc.text(`Amount Paid: ₹${data.amount}`);
-      }
+      doc.moveDown(1.5);
 
-      doc.moveDown();
+      // ===============================
+      // TICKET + GST BREAKUP (DISPLAY ONLY)
+      // ===============================
+      doc.fontSize(14).text('Ticket Details', { underline: true });
+      doc.moveDown(0.5);
 
+      doc.fontSize(12);
+      doc.text(`Ticket Type: ${data.ticketName}`);
+      doc.text(
+        `Base Price (per ticket): ₹${data.basePricePerTicket}`,
+      );
+      doc.text(`Quantity: ${data.quantity}`);
+      doc.text(`GST (${data.gstRate}%): ₹${data.gstAmount}`);
+
+      doc.moveDown(0.5);
+      doc.fontSize(14).text(
+        `Total Paid: ₹${data.totalAmount}`,
+        { bold: true },
+      );
+
+      doc.moveDown(2);
+
+      // ===============================
+      // QR CODE
+      // ===============================
       const qrBase64 = data.qrCode.split(',')[1];
       const qrBuffer = Buffer.from(qrBase64, 'base64');
 
       doc.image(qrBuffer, {
-        fit: [200, 200],
+        fit: [150, 150],
         align: 'center',
       });
 

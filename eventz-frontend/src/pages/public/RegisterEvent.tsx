@@ -4,7 +4,6 @@ import api from "../../utils/axios";
 import PublicLayout from "../../layouts/PublicLayout";
 import { getEventById } from "../../api/events.api";
 
-
 export default function RegisterEvent() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -18,69 +17,65 @@ export default function RegisterEvent() {
     lastName: "",
     email: "",
     phone: "",
-    ticketType: "",
+    ticketName: "", // ✅ IMPORTANT (matches backend)
     quantity: 1,
   });
 
+  /* ================= LOAD EVENT ================= */
   useEffect(() => {
-    if (id) {
-      getEventById(id).then(res => setEvent(res.data));
-    }
+    if (!id) return;
+    getEventById(id).then((res) => setEvent(res.data));
   }, [id]);
 
+  /* ================= SELECTED TICKET ================= */
   const selectedTicket = event?.tickets.find(
-    (t: any) => t.type === form.ticketType
+    (t: any) => t.name === form.ticketName
   );
 
-  const totalPrice =
-    selectedTicket ? selectedTicket.price * form.quantity : 0;
+  /* ================= GST CALCULATION ================= */
+  const basePerTicket = selectedTicket?.price ?? 0;
+  const gstRate = selectedTicket?.gst ?? 0;
 
+  const baseTotal = basePerTicket * form.quantity;
+  const gstAmount = Math.round((baseTotal * gstRate) / 100);
+  const totalPayable = baseTotal + gstAmount;
+
+  /* ================= FORM VALIDATION ================= */
   const isValid =
-    form.firstName &&
-    form.lastName &&
-    form.email &&
-    form.phone &&
-    form.ticketType &&
+    form.firstName.trim() &&
+    form.lastName.trim() &&
+    form.email.trim() &&
+    form.phone.trim() &&
+    form.ticketName &&
     form.quantity > 0;
 
- const sendOtp = async () => {
-  try {
-    setLoading(true);
-    setError("");
-const res = await api.post(
-  "/api/registrations/initiate",
-  {
-    eventId: id,
-    userName: `${form.firstName} ${form.lastName}`,
-    userEmail: form.email,
-    userPhone: form.phone,
-    ticketType: form.ticketType,
-    quantity: form.quantity,
-  }
-);
+  /* ================= SEND OTP ================= */
+  const sendOtp = async () => {
+    try {
+      setLoading(true);
+      setError("");
 
-    
+      const res = await api.post("/api/registrations/initiate", {
+        eventId: id,
+        userName: `${form.firstName} ${form.lastName}`,
+        userEmail: form.email,
+        userPhone: form.phone,
+        ticketName: form.ticketName, // ✅ MATCHES BACKEND
+        quantity: form.quantity,
+      });
 
-    if (res.data.resumePayment === true) {
-      navigate(`/payment/${res.data.registrationId}`);
-      return;
+      sessionStorage.setItem(
+        "otpSession",
+        JSON.stringify({ registrationId: res.data.registrationId })
+      );
+
+      navigate("/verify-otp");
+    } catch (err: any) {
+      setError(err.response?.data?.message || "Failed to start registration");
+    } finally {
+      setLoading(false);
     }
-
-    sessionStorage.setItem(
-      "otpSession",
-      JSON.stringify({ registrationId: res.data.registrationId })
-    );
-
-    navigate("/verify-otp");
-  } catch (err: any) {
-    console.error("OTP ERROR:", err.response?.data || err);
-    setError(err.response?.data?.message || "Failed to start registration");
-    setLoading(false); // 🔴 THIS WAS MISSING
-  } finally {
-    setLoading(false);
-  }
-};
-
+  };
 
   if (!event) {
     return (
@@ -92,49 +87,12 @@ const res = await api.post(
     );
   }
 
-  /* ✅ SAFE META CONFIG (WITH FALLBACK) */
-  const metaConfig: Record<string, any> = {
-    VIP: {
-      icon: "⭐",
-      badge: "VIP Access",
-      badgeClass: "bg-yellow-400 text-black",
-      border: "border-yellow-400",
-    },
-    EARLY_BIRD: {
-      icon: "🔥",
-      badge: "Best Value",
-      badgeClass: "bg-green-500 text-white",
-      border: "border-green-500",
-    },
-    FREE: {
-      icon: "🎁",
-      badge: "Free Pass",
-      badgeClass: "bg-blue-100 text-blue-700",
-      border: "border-blue-400",
-    },
-    REGULAR: {
-      icon: "🎟️",
-      badge: "Regular",
-      badgeClass: "bg-gray-200 text-gray-800",
-      border: "border-gray-400",
-    },
-  };
-
-  const defaultMeta = {
-    icon: "🎫",
-    badge: "Ticket",
-    badgeClass: "bg-gray-100 text-gray-700",
-    border: "border-gray-300",
-  };
-
   return (
     <PublicLayout>
       <div className="min-h-screen bg-gray-50 flex justify-center py-14 px-4">
         <div className="w-full max-w-xl bg-white rounded-3xl shadow-xl p-8">
           <h1 className="text-2xl font-bold mb-1">{event.title}</h1>
-          <p className="text-gray-600 mb-6">
-            Choose your ticket & continue
-          </p>
+          <p className="text-gray-600 mb-6">Choose your ticket & continue</p>
 
           {error && (
             <div className="mb-4 bg-red-50 text-red-700 p-3 rounded-lg text-sm">
@@ -142,58 +100,38 @@ const res = await api.post(
             </div>
           )}
 
-          {/* 🎟️ TICKET SELECTION */}
+          {/* ================= TICKETS ================= */}
           <div className="space-y-4 mb-8">
             {event.tickets.map((t: any) => {
-              const meta = metaConfig[t.type] || defaultMeta;
-              const isSelected = form.ticketType === t.type;
-              const isSoldOut = t.available <= 0;
+              const isSelected = form.ticketName === t.name;
 
               return (
                 <label
-                  key={t.type}
-                  className={`flex items-center justify-between rounded-2xl border p-5 transition-all
-                    ${
-                      isSoldOut
-                        ? "opacity-50 cursor-not-allowed"
-                        : "cursor-pointer"
-                    }
+                  key={t.name}
+                  className={`flex items-center justify-between rounded-2xl border p-5 cursor-pointer transition
                     ${
                       isSelected
-                        ? `${meta.border} bg-gray-50 ring-2 ring-black`
-                        : "border-gray-200 hover:border-gray-400"
-                    }`}
+                        ? "border-black ring-2 ring-black"
+                        : "border-gray-200"
+                    }
+                  `}
                 >
-                  <div className="flex gap-4">
-                    <div className="text-2xl">{meta.icon}</div>
-
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <h3 className="font-semibold text-lg">{t.name}</h3>
-                        <span
-                          className={`text-xs px-2 py-0.5 rounded-full ${meta.badgeClass}`}
-                        >
-                          {meta.badge}
-                        </span>
-                      </div>
-                      <p className="text-sm text-gray-500">
-                        {isSoldOut
-                          ? "Sold out"
-                          : `${t.available} seats available`}
-                      </p>
-                    </div>
+                  <div>
+                    <h3 className="font-semibold text-lg">{t.name}</h3>
+                    <p className="text-xs text-gray-500">
+                      GST {t.gst}% applicable
+                    </p>
                   </div>
 
                   <div className="flex items-center gap-4">
                     <span className="font-bold text-lg">
-                      {t.price === 0 ? "FREE" : `₹${t.price}`}
+                      ₹{Math.round(t.price + (t.price * t.gst) / 100)}
                     </span>
                     <input
                       type="radio"
-                      disabled={isSoldOut}
                       checked={isSelected}
                       onChange={() =>
-                        setForm({ ...form, ticketType: t.type })
+                        setForm({ ...form, ticketName: t.name })
                       }
                       className="h-5 w-5 accent-black"
                     />
@@ -203,19 +141,19 @@ const res = await api.post(
             })}
           </div>
 
-          {/* 👤 USER DETAILS */}
+          {/* ================= USER DETAILS ================= */}
           <div className="grid grid-cols-2 gap-3 mb-3">
             <Input
               placeholder="First name"
               value={form.firstName}
-              onChange={e =>
+              onChange={(e) =>
                 setForm({ ...form, firstName: e.target.value })
               }
             />
             <Input
               placeholder="Last name"
               value={form.lastName}
-              onChange={e =>
+              onChange={(e) =>
                 setForm({ ...form, lastName: e.target.value })
               }
             />
@@ -225,7 +163,7 @@ const res = await api.post(
             placeholder="Email address"
             type="email"
             value={form.email}
-            onChange={e =>
+            onChange={(e) =>
               setForm({ ...form, email: e.target.value })
             }
             className="mb-3"
@@ -235,13 +173,13 @@ const res = await api.post(
             placeholder="Phone number"
             type="tel"
             value={form.phone}
-            onChange={e =>
+            onChange={(e) =>
               setForm({ ...form, phone: e.target.value })
             }
             className="mb-4"
           />
 
-          {/* 👥 QUANTITY */}
+          {/* ================= QUANTITY ================= */}
           <div className="mb-4">
             <label className="text-sm font-medium text-gray-700">
               Number of attendees
@@ -249,31 +187,37 @@ const res = await api.post(
             <Input
               type="number"
               min={1}
-              max={selectedTicket?.available || 1}
               value={form.quantity}
-              onChange={e =>
+              onChange={(e) =>
                 setForm({
                   ...form,
                   quantity: Number(e.target.value),
                 })
               }
-              className="mt-1 w-full border rounded-lg px-4 py-2 focus:ring-2 focus:ring-black"
             />
           </div>
 
-          {/* 💰 TOTAL */}
+          {/* ================= PRICE BREAKUP ================= */}
           {selectedTicket && (
-            <div className="mb-6 bg-gray-100 p-4 rounded-xl flex justify-between">
-              <span className="font-medium text-gray-700">
-                Total payable
-              </span>
-              <span className="font-bold text-lg">
-                {totalPrice === 0 ? "FREE" : `₹${totalPrice}`}
-              </span>
+            <div className="mb-6 bg-gray-100 p-4 rounded-xl space-y-1">
+              <div className="flex justify-between text-sm">
+                <span>Base price total</span>
+                <span>₹{baseTotal}</span>
+              </div>
+
+              <div className="flex justify-between text-sm">
+                <span>GST total ({gstRate}%)</span>
+                <span>₹{gstAmount}</span>
+              </div>
+
+              <div className="flex justify-between font-bold text-lg pt-2 border-t">
+                <span>Total payable</span>
+                <span>₹{totalPayable}</span>
+              </div>
             </div>
           )}
 
-          {/* CONTINUE */}
+          {/* ================= CONTINUE ================= */}
           <button
             disabled={!isValid || loading}
             onClick={sendOtp}
@@ -288,7 +232,7 @@ const res = await api.post(
           </button>
 
           <p className="text-xs text-center text-gray-500 mt-3">
-            OTP will be expired in 5 minutes.
+            OTP will expire in 5 minutes.
           </p>
         </div>
       </div>

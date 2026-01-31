@@ -1,5 +1,3 @@
-// src/pages/public/Payment.tsx
-
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import api from "../../utils/axios";
@@ -39,7 +37,7 @@ export default function Payment() {
       setLoading(true);
       setError("");
 
-      // 🔹 create Razorpay order
+      // 🔹 CREATE RAZORPAY ORDER
       const res = await api.post(
         "/api/payments/registration/create-order",
         {
@@ -54,53 +52,48 @@ export default function Payment() {
         key,
       } = res.data;
 
-     const options = {
-  key,
-  amount,
-  currency,
-  name: "Eventz",
-  description: "Event Ticket Payment",
-  order_id: razorpayOrderId,
+      const options = {
+        key,
+        amount,
+        currency,
+        name: "Eventz",
+        description: "Event Ticket Payment",
+        order_id: razorpayOrderId,
 
-  handler: async (response: any) => {
-    try {
-      await api.post(
-        "/api/payments/registration/verify",
-        {
-          registrationId: finalRegistrationId,
-          razorpay_order_id: response.razorpay_order_id,
-          razorpay_payment_id: response.razorpay_payment_id,
-          razorpay_signature: response.razorpay_signature,
-        }
-      );
-    } catch (err) {
-      console.warn("Webhook will complete verification");
-    }
-
-    sessionStorage.removeItem("paymentSession");
-
-    // ✅ move user immediately
-    navigate(`/payment-processing/${finalRegistrationId}`);
-  },
-
-  modal: {
-    ondismiss: async () => {
-      try {
-        await api.post(
-          "/api/payments/registration/failed",
-          {
-            registrationId: finalRegistrationId,
+        handler: async (response: any) => {
+          try {
+            await api.post(
+              "/api/payments/registration/verify",
+              {
+                registrationId: finalRegistrationId,
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature,
+              }
+            );
+          } catch {
+            // webhook will complete verification
           }
-        );
-      } catch {}
 
-      navigate(`/payment-cancelled/${finalRegistrationId}`);
-    },
-  },
+          sessionStorage.removeItem("paymentSession");
+          navigate(`/payment-processing/${finalRegistrationId}`);
+        },
 
-  theme: { color: "#000000" },
-};
-;
+        modal: {
+          ondismiss: async () => {
+            try {
+              // ✅ FIXED ENDPOINT
+              await api.post(
+                `/api/payments/registration/fail/${finalRegistrationId}`
+              );
+            } catch {}
+
+            navigate(`/payment-cancelled/${finalRegistrationId}`);
+          },
+        },
+
+        theme: { color: "#000000" },
+      };
 
       const rzp = new window.Razorpay(options);
       rzp.open();

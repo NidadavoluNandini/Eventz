@@ -9,13 +9,13 @@ type EventsFilterProps = {
 
 const categories = [
   { label: "ALL", value: "ALL" },
-  { label: "Technology", value: "technology" },
-  { label: "Science", value: "science" },
-  { label: "Arts", value: "arts" },
-  { label: "Business", value: "business" },
-  { label: "Sports", value: "sports" },
-  { label: "Entertainment", value: "entertainment" },
-  { label: "Industry" , value:"industry"},
+  { label: "Technology", value: "Technology" },
+  { label: "Science", value: "Science" },
+  { label: "Arts", value: "Arts" },
+  { label: "Business", value: "Business" },
+  { label: "Sports", value: "Sports" },
+  { label: "Entertainment", value: "Entertainment" },
+  { label: "Industry" , value:"Industry"},
 ];
 
 export default function EventsFilter({

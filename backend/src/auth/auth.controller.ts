@@ -15,14 +15,6 @@ import { JwtAuthGuard } from '../common/guards/jwt.guard';
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
-
-
-
-
-  // =======================
-  // ORGANIZER – PASSWORD AUTH
-  // =======================
-
   @Post('organizer/register')
   registerOrganizer(@Body() dto: RegisterOrganiserDto) {
     return this.authService.registerOrganizer(dto);
@@ -33,51 +25,37 @@ export class AuthController {
     return this.authService.loginOrganizer(dto);
   }
 
-  // =======================
-// ORGANIZER – ACCOUNT MGMT
-// =======================
+  @Post('organizer/send-otp')
+  sendOrganizerOtp(@Body('email') email: string) {
+    return this.authService.sendOrganizerOtp(email);
+  }
 
-@Post('organizer/forgot-password')
-forgotPassword(@Body('email') email: string) {
-  return this.authService.organizerForgotPassword(email);
-}
+  @Post('organizer/verify-otp')
+  verifyOrganizerOtp(
+    @Body('email') email: string,
+    @Body('otp') otp: string,
+  ) {
+    return this.authService.verifyOrganizerOtp(email, otp);
+  }
 
-@Post('organizer/reset-password')
-resetPassword(
-  @Body('email') email: string,
-  @Body('newPassword') newPassword: string,
-) {
-  return this.authService.organizerResetPasswordDirect(
-    email,
-    newPassword,
-  );
-}
+  @Post('organizer/forgot-password')
+  forgotPassword(@Body('email') email: string) {
+    return this.authService.organizerForgotPassword(email);
+  }
 
+  @Post('organizer/reset-password')
+  resetPassword(
+    @Body('email') email: string,
+    @Body('newPassword') newPassword: string,
+  ) {
+    return this.authService.organizerResetPasswordDirect(
+      email,
+      newPassword,
+    );
+  }
 
-@Post('organizer/logout')
-logout() {
-  // JWT is stateless → frontend deletes token
-  return { message: 'Logged out successfully' };
-}
-
-@Post('organizer/delete-account')
-deleteAccount(@Body('organizerId') organizerId: string) {
-  return this.authService.deleteOrganizerAccount(organizerId);
-}
-@UseGuards(JwtAuthGuard)
-@Post('organizer/change-password')
-changePassword(
-  @Req() req,
-  @Body() body: {
-    currentPassword: string;
-    newPassword: string;
-  },
-) {
-  return this.authService.changeOrganizerPassword(
-    req.user.sub,
-    body.currentPassword,
-    body.newPassword,
-  );
-}
-
+  @Post('organizer/logout')
+  logout() {
+    return { message: 'Logged out successfully' };
+  }
 }

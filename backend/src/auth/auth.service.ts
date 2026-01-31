@@ -7,16 +7,28 @@ import {
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 
+import { Organizer } from '../organizers/schemas/organizer.schema';
 import { OrganizersService } from '../organizers/organizer.service';
 import { EmailService } from '../notifications/email.service';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
+import { Otp } from './dto/otp.schema';
 
 @Injectable()
 export class AuthService {
   constructor(
-    private readonly jwtService: JwtService,
-    private readonly organizersService: OrganizersService,
-    private readonly emailService: EmailService,
-  ) {}
+  private readonly jwtService: JwtService,
+  private readonly emailService: EmailService,
+  private readonly organizersService: OrganizersService,
+
+  @InjectModel(Organizer.name)
+  private readonly organizerModel: Model<Organizer>,
+
+  @InjectModel(Otp.name)
+  private readonly otpModel: Model<Otp>,
+) {}
+
+
 
   // ============================
   // ORGANIZER REGISTER
@@ -50,6 +62,45 @@ export class AuthService {
       },
     };
   }
+async sendOrganizerOtp(email: string) {
+  const existing = await this.organizerModel.findOne({ email });
+  if (existing) {
+    throw new BadRequestException('Email already registered');
+  }
+
+  const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
+  await this.otpModel.findOneAndUpdate(
+    { email },
+    {
+      otp,
+      expiresAt: Date.now() + 5 * 60 * 1000, // 5 mins
+    },
+    { upsert: true }
+  );
+
+await this.emailService.sendOtpEmail(email, otp);
+
+  return { message: 'OTP sent successfully' };
+}
+async verifyOrganizerOtp(email: string, otp: string) {
+  const record = await this.otpModel.findOne({ email });
+
+  if (!record || record.otp !== otp) {
+    throw new BadRequestException('Invalid OTP');
+  }
+
+  if (record.expiresAt < Date.now()) {
+    throw new BadRequestException('OTP expired');
+  }
+
+  await this.otpModel.deleteOne({ email });
+
+  return {
+    verified: true,
+    message: 'Email verified successfully',
+  };
+}
 
   // ============================
   // ORGANIZER LOGIN

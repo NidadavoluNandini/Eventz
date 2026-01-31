@@ -9,7 +9,7 @@ export default function Home() {
   useEffect(() => {
     getAllEvents().then((res) => setEvents(res.data));
   }, []);
-
+ 
   return (
     <PublicLayout>
       <Hero />

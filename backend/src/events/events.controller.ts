@@ -23,7 +23,7 @@ import { EventStatus } from './schemas/event.schema';
 export class EventsController {
   constructor(private readonly eventsService: EventsService) {}
 
-  // ✅ PUBLIC – list all published events (with filters)
+  // 🌍 Public
   @Get()
   getAllEvents(
     @Query('status') status?: EventStatus,
@@ -33,40 +33,7 @@ export class EventsController {
     return this.eventsService.findAll({ status, category, city });
   }
 
-  // ✅ PUBLIC – get event by ID
-  @Get(':id')
-  getEvent(@Param('id') id: string) {
-    return this.eventsService.findById(id);
-  }
-
-  // 🔐 ORGANIZER – create event
-  @Post()
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('ORGANIZER')
-  createEvent(@Body() dto: CreateEventDto, @Req() req) {
-    return this.eventsService.create(dto, req.user.userId);
-  }
-
-  // 🔐 ORGANIZER – update event
-  @Put(':id')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('ORGANIZER')
-  updateEvent(
-    @Param('id') id: string,
-    @Body() dto: UpdateEventDto,
-  ) {
-    return this.eventsService.update(id, dto);
-  }
-
-  // 🔐 ORGANIZER – delete event
-  @Delete(':id')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('ORGANIZER')
-  deleteEvent(@Param('id') id: string) {
-    return this.eventsService.delete(id);
-  }
-
-  // 🔐 ORGANIZER – get my events
+  // 👤 Organizer (STATIC ROUTE FIRST ✅)
   @Get('organizer/me')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ORGANIZER')
@@ -74,7 +41,34 @@ export class EventsController {
     return this.eventsService.findByOrganizer(req.user.userId);
   }
 
-  // 🔐 ORGANIZER – publish event
+  // 🔍 Event by ID (DYNAMIC ROUTE LAST ✅)
+  @Get(':id')
+  getEvent(@Param('id') id: string) {
+    return this.eventsService.findById(id);
+  }
+
+  // 👤 Organizer Actions
+  @Post()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ORGANIZER')
+  createEvent(@Body() dto: CreateEventDto, @Req() req) {
+    return this.eventsService.create(dto, req.user.userId);
+  }
+
+  @Put(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ORGANIZER')
+  updateEvent(@Param('id') id: string, @Body() dto: UpdateEventDto) {
+    return this.eventsService.update(id, dto);
+  }
+
+  @Delete(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ORGANIZER')
+  deleteEvent(@Param('id') id: string) {
+    return this.eventsService.delete(id);
+  }
+
   @Patch(':id/publish')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ORGANIZER')
@@ -82,7 +76,6 @@ export class EventsController {
     return this.eventsService.publishEvent(id);
   }
 
-  // 🔐 ORGANIZER – unpublish event
   @Patch(':id/unpublish')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ORGANIZER')
@@ -90,12 +83,24 @@ export class EventsController {
     return this.eventsService.unpublishEvent(id);
   }
 
-  // 🔐 ORGANIZER – mark event as completed
   @Patch(':id/complete')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ORGANIZER')
   completeEvent(@Param('id') id: string) {
     return this.eventsService.markCompleted(id);
   }
-}
 
+  @Patch(':id/close-registration')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ORGANIZER')
+  closeRegistration(@Param('id') id: string, @Req() req) {
+    return this.eventsService.closeRegistration(id, req.user.userId);
+  }
+
+  @Patch(':id/draft')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ORGANIZER')
+  moveToDraft(@Param('id') id: string) {
+    return this.eventsService.moveToDraft(id);
+  }
+}

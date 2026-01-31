@@ -4,6 +4,7 @@ import { EventsService } from './events.service';
 import { EventsController } from './events.controller';
 import { Event, EventSchema } from './schemas/event.schema';
 import { MailModule } from '../email/mail.module';
+
 @Module({
   imports: [
     MongooseModule.forFeature([
@@ -13,5 +14,6 @@ import { MailModule } from '../email/mail.module';
   ],
   controllers: [EventsController],
   providers: [EventsService],
+  exports: [EventsService],
 })
 export class EventsModule {}

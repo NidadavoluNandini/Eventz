@@ -1,11 +1,15 @@
 import api from "../utils/axios";
 
-// PUBLIC
-export const getAllEvents = () => api.get("/api/events");
+// ================= PUBLIC =================
+
+export const getAllEvents = () =>
+  api.get("/api/events");
+
 export const getEventById = (id: string) =>
   api.get(`/api/events/${id}`);
 
-// ORGANIZER
+// ================= ORGANIZER =================
+
 export const createEvent = (data: any) =>
   api.post("/api/events", data);
 
@@ -21,5 +25,14 @@ export const unpublishEvent = (id: string) =>
 export const completeEvent = (id: string) =>
   api.patch(`/api/events/${id}/complete`);
 
+export const moveToDraft = (id: string) =>
+  api.patch(`/api/events/${id}/draft`);
+
 export const deleteEvent = (id: string) =>
   api.delete(`/api/events/${id}`);
+
+// ================= REGISTRATIONS / ATTENDEES =================
+
+// ✅ THIS IS THE CRITICAL FIX
+export const getEventAttendees = (eventId: string) =>
+  api.get(`/api/tickets/event/${eventId}`);

@@ -1,25 +1,25 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
-import { TicketType } from '../../events/schemas/event.schema';
 
 export enum RegistrationStatus {
   PENDING_OTP = 'PENDING_OTP',
-  OTP_VERIFIED = 'OTP_VERIFIED',
   PENDING_PAYMENT = 'PENDING_PAYMENT',
   COMPLETED = 'COMPLETED',
   CANCELLED = 'CANCELLED',
 }
 
 export enum PaymentStatus {
-  NOT_REQUIRED = 'NOT_REQUIRED',
   PENDING = 'PENDING',
   PAID = 'PAID',
+  NOT_REQUIRED = 'NOT_REQUIRED',
   FAILED = 'FAILED',
-  REFUNDED = 'REFUNDED',
 }
 
 @Schema({ timestamps: true })
 export class Registration extends Document {
+  // ===============================
+  // EVENT + USER
+  // ===============================
   @Prop({ type: Types.ObjectId, ref: 'Event', required: true })
   eventId: Types.ObjectId;
 
@@ -29,31 +29,37 @@ export class Registration extends Document {
   @Prop({ required: true })
   userEmail: string;
 
-  @Prop({ required: true })
+  @Prop()
   userPhone: string;
 
-  @Prop({ enum: Object.values(TicketType), required: true })
-  ticketType: TicketType;
+  // ===============================
+  // TICKET INFO
+  // ===============================
+  @Prop({ required: true })
+  ticketName: string; // Free, Early Bird, VIP
 
   @Prop({ required: true })
-  ticketPrice: number;
+  basePricePerTicket: number; // 👈 ₹200
 
-  @Prop({ default: 1 })
-  quantity: number;
+  @Prop({ required: true })
+  quantity: number; // 👈 10
 
-  @Prop({
-    enum: Object.values(RegistrationStatus),
-    default: RegistrationStatus.PENDING_OTP,
-  })
-  status: RegistrationStatus;
+  @Prop({ required: true })
+  gstRate: number; // 👈 18
 
-  @Prop({
-    enum: Object.values(PaymentStatus),
-    default: PaymentStatus.PENDING,
-  })
-  paymentStatus: PaymentStatus;
+  @Prop({ required: true })
+  gstAmount: number; // 👈 ₹360 (TOTAL GST)
 
-  // 🔐 OTP
+  @Prop({ required: true })
+  totalAmount: number; // 👈 ₹2360 (FINAL PAYABLE)
+
+  // ⚠️ KEEP for backward compatibility
+  @Prop({ required: true })
+  ticketPrice: number; // SAME as totalAmount (DO NOT recompute)
+
+  // ===============================
+  // OTP
+  // ===============================
   @Prop()
   otp?: number;
 
@@ -63,42 +69,41 @@ export class Registration extends Document {
   @Prop({ default: false })
   otpVerified: boolean;
 
-  // 💳 Payment
+  // ===============================
+  // STATUS
+  // ===============================
+  @Prop({
+    type: String,
+    enum: Object.values(RegistrationStatus),
+    default: RegistrationStatus.PENDING_OTP,
+  })
+  status: RegistrationStatus;
+
+  @Prop({
+    type: String,
+    enum: Object.values(PaymentStatus),
+    default: PaymentStatus.PENDING,
+  })
+  paymentStatus: PaymentStatus;
+
+  // ===============================
+  // PAYMENT
+  // ===============================
   @Prop()
-  razorpayOrderId?: string;
+  registrationNumber?: string;
 
   @Prop()
   razorpayPaymentId?: string;
 
-  // 🎟 Ticket
   @Prop()
-  qrCode?: string;
+  razorpayOrderId?: string;
 
-  @Prop({ unique: true, sparse: true })
-  registrationNumber?: string;
-
+  // ===============================
+  // TICKET DELIVERY
+  // ===============================
   @Prop({ default: false })
   ticketSent: boolean;
-
-  // 🔔 Payment reminders
-  @Prop({ default: 0 })
-  paymentReminderCount: number;
-
-  @Prop()
-  lastPaymentReminderAt?: Date;
-  @Prop()
-ticketUrl?: string;
-
-// ⏳ auto-expiry
-@Prop()
-expiresAt?: Date;
-
-
 }
 
 export const RegistrationSchema =
   SchemaFactory.createForClass(Registration);
-
-// Indexes
-RegistrationSchema.index({ eventId: 1, userEmail: 1 });
-RegistrationSchema.index({ eventId: 1, userPhone: 1 });

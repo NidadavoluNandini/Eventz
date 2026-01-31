@@ -42,14 +42,11 @@ export class PaymentsIntegrationService {
       registration.status !==
       RegistrationStatus.PENDING_PAYMENT
     ) {
-      throw new BadRequestException(
-        'Payment not required',
-      );
+      throw new BadRequestException('Payment not required');
     }
 
-    const totalAmount =
-      registration.ticketPrice *
-      registration.quantity;
+    // ✅ SINGLE TICKET
+    const totalAmount = registration.ticketPrice;
 
     const order = await this.razorpayService.createOrder(
       totalAmount,
@@ -90,7 +87,6 @@ export class PaymentsIntegrationService {
       );
     }
 
-    // ✅ single source of truth
     await this.registrationsService.completeRegistration(
       dto.registrationId,
       {
@@ -153,9 +149,7 @@ export class PaymentsIntegrationService {
   // ===============================
   async markPaymentFailed(registrationId: string) {
     const reg =
-      await this.registrationModel.findById(
-        registrationId,
-      );
+      await this.registrationModel.findById(registrationId);
 
     if (!reg) return;
 
@@ -173,8 +167,6 @@ Your payment attempt failed.
 
 👉 Retry here:
 ${process.env.FRONTEND_URL}/payment/${reg._id}
-
-Your tickets are still reserved.
 
 – Eventz Team
 `,

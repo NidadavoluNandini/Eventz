@@ -10,33 +10,47 @@ import {
 export default function EventCard({ event }: any) {
   const image = getCategoryImage(event.category, event._id);
 
-  const status = getEventStatus(
+  // 🔹 Backend publish status
+  const publishStatus = event.status; 
+  // DRAFT | PUBLISHED | UNPUBLISHED | COMPLETED
+
+  // ❌ Hide draft & completed events on home page
+  if (publishStatus === "DRAFT" || publishStatus === "COMPLETED") {
+    return null;
+  }
+
+  // 🔹 Time-based status
+  const timeStatus = getEventStatus(
     event.startDate,
     event.startTime,
     event.endDate,
     event.endTime
   );
 
-  const registrationOpen = isRegistrationOpen(
-    event.startDate,
-    event.startTime
-  );
+  // 🔒 Registration logic
+  const registrationOpen =
+    publishStatus === "PUBLISHED" &&
+    isRegistrationOpen(event.startDate, event.startTime);
 
   const [countdown, setCountdown] = useState<string | null>(
-    status === "UPCOMING"
+    publishStatus === "PUBLISHED" && timeStatus === "UPCOMING"
       ? getCountdown(event.startDate, event.startTime)
       : null
   );
 
   useEffect(() => {
-    if (status !== "UPCOMING") return;
+    if (publishStatus !== "PUBLISHED" || timeStatus !== "UPCOMING") return;
 
     const i = setInterval(() => {
       setCountdown(getCountdown(event.startDate, event.startTime));
     }, 60000);
 
     return () => clearInterval(i);
-  }, [status, event.startDate, event.startTime]);
+  }, [publishStatus, timeStatus, event.startDate, event.startTime]);
+
+  // 🔹 Badge status
+  const badgeStatus =
+    publishStatus === "UNPUBLISHED" ? "UNPUBLISHED" : timeStatus;
 
   return (
     <Link
@@ -51,28 +65,31 @@ export default function EventCard({ event }: any) {
         <span
           className={`absolute top-4 right-4 px-3 py-1 text-xs rounded-full font-semibold
             ${
-              status === "LIVE"
+              badgeStatus === "LIVE"
                 ? "bg-red-600 text-white"
-                : status === "UPCOMING"
+                : badgeStatus === "UPCOMING"
                 ? "bg-blue-600 text-white"
-                : "bg-gray-500 text-white"
+                : "bg-yellow-600 text-white"
             }
           `}
         >
-          {status === "LIVE" ? "LIVE NOW" : status}
+          {badgeStatus === "LIVE" ? "LIVE NOW" : badgeStatus}
         </span>
 
-        {/* COUNTDOWN */}
-        {status === "UPCOMING" && countdown && (
-          <span className="absolute bottom-4 right-4 bg-black/70 text-white px-3 py-1 text-xs rounded-full">
-            ⏳ {countdown}
-          </span>
-        )}
+        {/* COUNTDOWN (only for published upcoming) */}
+        {publishStatus === "PUBLISHED" &&
+          badgeStatus === "UPCOMING" &&
+          countdown && (
+            <span className="absolute bottom-4 right-4 bg-black/70 text-white px-3 py-1 text-xs rounded-full">
+              ⏳ {countdown}
+            </span>
+          )}
       </div>
 
       {/* CONTENT */}
       <div className="p-5 space-y-2">
         <h3 className="text-lg font-bold">{event.title}</h3>
+
         <p className="text-sm text-gray-600 line-clamp-2">
           {event.description}
         </p>
@@ -97,7 +114,7 @@ export default function EventCard({ event }: any) {
               }
             `}
           >
-            {registrationOpen ? "Register" : "Closed"}
+            {registrationOpen ? "Register" : "Registration Closed"}
           </button>
         </div>
       </div>

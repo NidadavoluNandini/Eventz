@@ -30,15 +30,17 @@ export class DashboardController {
   }
 
   // Get registered users for an event
-  @Get('events/:eventId/users')
-  getEventUsers(
-    @Param('eventId') eventId: string,
-    @Query('ticketType') ticketType?: string,
-    @Query('paymentStatus') paymentStatus?: string,
-  ) {
-    return this.dashboardService.getEventUsers(eventId, {
-      ticketType,
-      paymentStatus,
-    });
-  }
+@Get(':id/users')
+getEventUsers(
+  @Param('id') eventId: string,
+  @Query('ticketName') ticketName?: string,
+  @Query('paymentStatus') paymentStatus?: string,
+) {
+  return this.dashboardService.getEventUsers(eventId, {
+    ticketName,
+    paymentStatus,
+  });
+}
+
+
 }
