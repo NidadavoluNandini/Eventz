@@ -5,7 +5,7 @@ const slides = [
   {
     image: "/images/carousel1.jpg",
     title: "Discover Amazing Events",
-    subtitle: "Find conferences, workshops and meetups near you",
+    subtitle: "Find conferences, workshops and meetups near U",
   },
   {
     image: "/images/carousel2.jpg",
