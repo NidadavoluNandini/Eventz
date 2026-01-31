@@ -1,11 +1,11 @@
 import { ReactNode } from "react";
 import { Link } from "react-router-dom";
 
-export default function PublicLayout({
-  children,
-}: {
+interface PublicLayoutProps {
   children: ReactNode;
-}) {
+}
+
+export default function PublicLayout({ children }: PublicLayoutProps) {
   return (
     <div className="min-h-screen flex flex-col">
       {/* NAVBAR */}
@@ -40,10 +40,8 @@ export default function PublicLayout({
         </div>
       </nav>
 
-      {/* PAGE CONTENT (no padding here) */}
-      <main className="flex-1 w-full">
-        {children}
-      </main>
+      {/* PAGE CONTENT */}
+      <main className="flex-1 w-full">{children}</main>
 
       {/* FOOTER */}
       <footer className="border-t bg-gray-50">
