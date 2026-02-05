@@ -6,10 +6,13 @@ export const initiateRegistration = (data: {
   userName: string;
   userEmail: string;
   userPhone: string;
-  ticketType: string;
+  ticketName: string;
+  subTicketName?: string | null; // ✅ ADD THIS LINE
+  quantity: number;
 }) => {
-  return api.post("/registrations/initiate", data);
+  return api.post("/api/registrations/initiate", data);
 };
+
 
 // PUBLIC – verify OTP
 export const verifyOtp = (data: {
@@ -31,3 +34,10 @@ export const getRegistration = (id: string) => {
 // ✅ CORRECT endpoint
 export const getEventRegistrations = (eventId: string) =>
   api.get(`/api/tickets/event/${eventId}`);
+
+
+export const resendOtpApi = (registrationId: string) => {
+  return api.post("/api/registrations/resend-otp", {
+    registrationId,
+  });
+};

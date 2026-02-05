@@ -30,6 +30,8 @@ initiateRegistration(
     userEmail: string;
     userPhone: string;
     ticketName: string;
+    subTicketName?: string; // ✅ ADD THIS
+
     quantity: number; // ✅ ADD THIS
   },
 ) {

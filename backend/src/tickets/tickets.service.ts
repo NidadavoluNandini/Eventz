@@ -16,7 +16,7 @@ import {
   RegistrationStatus,
 } from '../registrations/schemas/registration.schema';
 
-import { Event } from '../events/schemas/event.schema';
+import { Event, EventDocument } from '../events/schemas/event.schema';
 
 @Injectable()
 export class TicketsService {
@@ -44,7 +44,10 @@ async generateAndSendTicket(reg: Registration) {
     );
   }
 
-  const event = await this.eventModel.findById(reg.eventId);
+  const event = await this.eventModel.findById(
+    reg.eventId,
+  ) as EventDocument | null;
+
   if (!event) {
     throw new NotFoundException('Event not found');
   }
@@ -83,7 +86,7 @@ async generateAndSendTicket(reg: Registration) {
   }
 
   // ===============================
-  // 📄 PDF — DISPLAY ONLY
+  // 📄 PDF (DISPLAY ONLY)
   // ===============================
   const pdfBuffer =
     await this.pdfService.generateTicketPdfBuffer({
@@ -104,30 +107,28 @@ async generateAndSendTicket(reg: Registration) {
     });
 
   // ===============================
-  // 📧 EMAIL
+  // 📧 EMAIL (DATA ONLY)
   // ===============================
-  const html = ticketConfirmationTemplate({
-    userName: reg.userName,
-    eventTitle: event.title,
-    eventDate: event.startDate.toDateString(),
-    venue: event.location,
-    ticketName,
-    quantity,
-    totalAmount,
-    registrationNumber: reg.registrationNumber!,
-  });
-
   await this.emailService.sendTicketEmail({
     to: reg.userEmail,
-    subject: `🎟 Your Ticket for ${event.title}`,
-    html,
+    eventName: event.title,
+    userName: reg.userName,
+    ticketType: ticketName,
+    registrationNumber: reg.registrationNumber!,
+    eventDate: event.startDate.toDateString(),
+    eventTime: `${event.startTime} - ${event.endTime}`,
+    eventLocation: event.location,
     pdfBuffer,
   });
 
+  // ===============================
+  // ✅ MARK SENT
+  // ===============================
   await this.registrationModel.findByIdAndUpdate(reg._id, {
     ticketSent: true,
   });
 }
+
 
 
   // =====================================================
@@ -203,10 +204,9 @@ async generateAndSendTicket(reg: Registration) {
       );
     }
 
-    const event =
-      reg.eventId instanceof Types.ObjectId
-        ? null
-        : (reg.eventId as Event);
+const event = await this.eventModel.findById(
+  reg.eventId,
+) as EventDocument | null;
 
     if (!event) {
       throw new BadRequestException('Event not found');
@@ -264,12 +264,7 @@ const pdfBuffer =
 });
 
 
-    await this.emailService.sendTicketEmail({
-      to: reg.userEmail,
-      subject: `🎟 Your Ticket for ${event.title}`,
-      html,
-      pdfBuffer,
-    });
+    
 
     return {
       success: true,

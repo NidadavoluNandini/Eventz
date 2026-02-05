@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
-import { useParams, Link, useLocation, useNavigate } from "react-router-dom";
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
-import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
-import { getEventById } from "../../api/events.api";
+import { useParams, useNavigate } from "react-router-dom";
+import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
+
 import PublicLayout from "../../layouts/PublicLayout";
+import { getEventById } from "../../api/events.api";
 import { getCategoryImage } from "../../utils/categoryImages";
 import {
   getEventStatus,
@@ -12,52 +13,66 @@ import {
   getCountdown,
 } from "../../utils/eventTime";
 
-// Fix Leaflet default marker icon
+/* ---------- LEAFLET ICON FIX ---------- */
 delete (L.Icon.Default.prototype as any)._getIconUrl;
 L.Icon.Default.mergeOptions({
-  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
-  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
-  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+  iconRetinaUrl:
+    "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png",
+  iconUrl:
+    "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png",
+  shadowUrl:
+    "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png",
 });
 
-/* ---------- IMAGE URL HELPER ---------- */
-const getImageUrl = (url: string): string => {
+/* ---------- HELPERS ---------- */
+const getImageUrl = (url: string) => {
   if (!url) return "";
-  if (url.startsWith("http://") || url.startsWith("https://")) return url;
-
-  const backendUrl = import.meta.env.VITE_API_URL;
-  const cleanUrl = url.startsWith("/") ? url.slice(1) : url;
-  return `${backendUrl}/${cleanUrl}`;
+  if (url.startsWith("http")) return url;
+  return `${import.meta.env.VITE_API_URL}/${url.replace(/^\/+/, "")}`;
 };
 
-// Geocode location using Nominatim
-const geocodeLocation = async (location: string, city: string): Promise<[number, number]> => {
+const geocodeLocation = async (
+  location: string,
+  city: string
+): Promise<[number, number]> => {
   try {
-    const query = encodeURIComponent(`${location}, ${city}`);
-    const response = await fetch(
-      `https://nominatim.openstreetmap.org/search?format=json&q=${query}&limit=1`
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
+        `${location}, ${city}`
+      )}&limit=1`
     );
-    const data = await response.json();
-    if (data && data.length > 0) {
-      const { lat, lon } = data[0];
-      return [parseFloat(lat), parseFloat(lon)];
+    const data = await res.json();
+    if (data?.length) {
+      return [parseFloat(data[0].lat), parseFloat(data[0].lon)];
     }
-  } catch (error) {
-    console.error("Geocoding error:", error);
-  }
+  } catch {}
   return [20.5937, 78.9629];
+};
+
+const hexToRgb = (hex: string) => {
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  return result
+    ? {
+        r: parseInt(result[1], 16),
+        g: parseInt(result[2], 16),
+        b: parseInt(result[3], 16),
+      }
+    : { r: 79, g: 70, b: 229 };
 };
 
 /* ---------- COMPONENT ---------- */
 export default function EventDetails() {
   const { id } = useParams();
-  const location = useLocation();
   const navigate = useNavigate();
 
   const [event, setEvent] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [countdown, setCountdown] = useState<string | null>(null);
   const [mapCenter, setMapCenter] = useState<[number, number]>([20.5937, 78.9629]);
+  const [activeTab, setActiveTab] = useState<"about" | "location" | "gallery">("about");
+  const [selectedTicket, setSelectedTicket] = useState<string | null>(null);
+  const [selectedSubTicket, setSelectedSubTicket] = useState<string | null>(null);
+  const [expandedTicket, setExpandedTicket] = useState<string | null>(null);
 
   useEffect(() => {
     if (!id) return;
@@ -80,53 +95,24 @@ export default function EventDetails() {
 
         setEvent(data);
 
-        // Geocode the location
         if (data.location && data.city) {
-          const coords = await geocodeLocation(data.location, data.city);
-          setMapCenter(coords);
+          setMapCenter(await geocodeLocation(data.location, data.city));
         }
 
         if (status === "UPCOMING") {
           setCountdown(getCountdown(data.startDate, data.startTime));
         }
       })
-      .catch(() => navigate("/events"))
       .finally(() => setLoading(false));
-  }, [id, location.key, navigate]);
-
-  useEffect(() => {
-    if (!event) return;
-
-    const i = setInterval(() => {
-      const status = getEventStatus(
-        event.startDate,
-        event.startTime,
-        event.endDate,
-        event.endTime
-      );
-
-      if (status === "ENDED") {
-        navigate("/events");
-        return;
-      }
-
-      if (status === "UPCOMING") {
-        setCountdown(getCountdown(event.startDate, event.startTime));
-      } else {
-        setCountdown(null);
-      }
-    }, 60000);
-
-    return () => clearInterval(i);
-  }, [event, navigate]);
+  }, [id, navigate]);
 
   if (loading) {
     return (
       <PublicLayout>
-        <div className="min-h-screen flex items-center justify-center">
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 via-white to-purple-50">
           <div className="text-center">
-            <div className="inline-block w-12 h-12 border-4 border-slate-300 border-t-slate-900 rounded-full animate-spin mb-4"></div>
-            <p className="text-lg font-semibold text-slate-700">Loading event details...</p>
+            <div className="w-16 h-16 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+            <p className="text-gray-600 font-medium">Loading event...</p>
           </div>
         </div>
       </PublicLayout>
@@ -135,271 +121,319 @@ export default function EventDetails() {
 
   if (!event) return null;
 
-  const status = getEventStatus(
-    event.startDate,
-    event.startTime,
-    event.endDate,
-    event.endTime
-  );
-
-  const registrationOpen = isRegistrationOpen(
-    event.startDate,
-    event.startTime
-  );
-
   const heroImage = getCategoryImage(event.category, event._id);
+  const themeColor = event.themeColor?.value || "#4F46E5";
+  const rgb = hexToRgb(themeColor);
+  const registrationOpen = isRegistrationOpen(event.startDate, event.startTime);
+  const status = getEventStatus(event.startDate, event.startTime, event.endDate, event.endTime);
 
-  const startDate = new Date(event.startDate);
-  const endDate = new Date(event.endDate);
+  // Find selected ticket object
+  const selectedTicketObj = event.tickets.find((t: any) => t.name === selectedTicket);
+  const hasSubTickets = selectedTicketObj?.subTickets?.length > 0;
+  const canRegister = selectedTicket && (!hasSubTickets || selectedSubTicket);
 
-  const displayDate =
-    startDate.toDateString() === endDate.toDateString()
-      ? startDate.toDateString()
-      : `${startDate.toDateString()} – ${endDate.toDateString()}`;
-
-  const getGoogleMapsSearchUrl = (location: string, city: string) => {
-    const query = encodeURIComponent(`${location}, ${city}`);
-    return `https://www.google.com/maps/search/?api=1&query=${query}`;
+  const handleRegister = () => {
+    if (!canRegister) return;
+    
+    const state: any = { ticketName: selectedTicket };
+    if (selectedSubTicket) {
+      state.subTicketName = selectedSubTicket;
+    }
+    navigate(`/events/${event._id}/register`, { state });
   };
 
   return (
     <PublicLayout>
-      <div className="min-h-screen bg-white">
+      <style>
+        {`
+          @keyframes slide-up {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+          }
+          .animate-slide-up {
+            animation: slide-up 0.4s ease-out;
+          }
+        `}
+      </style>
 
-        {/* HERO SECTION - COMPACT */}
-        <div className="relative h-[350px] bg-slate-900">
-          <img
-            src={heroImage}
-            alt={event.title}
-            className="absolute inset-0 w-full h-full object-cover opacity-50"
-          />
+      {/* THEME BACKGROUND */}
+      <div
+        className="min-h-screen"
+        style={{
+          background: `linear-gradient(135deg, rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.08) 0%, #ffffff 50%, rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.08) 100%)`,
+        }}
+      >
+        {/* HERO IMAGE */}
+        <div className="max-w-7xl mx-auto px-6 py-6">
+          <div className="relative h-56 overflow-hidden rounded-2xl shadow-2xl">
+            <img
+              src={heroImage}
+              alt={event.title}
+              className="absolute inset-0 w-full h-full object-cover"
+            />
+            <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/50 to-black/70" />
 
-          <div className="relative z-10 h-full flex items-end max-w-7xl mx-auto px-6 pb-8">
-            <div className="w-full">
-              <div className="flex items-center gap-2 mb-4">
-                <span className="px-3 py-1 bg-white text-slate-900 rounded-full text-xs font-bold uppercase">
-                  {event.category}
-                </span>
-                <StatusBadge status={status} />
-                {countdown && (
-                  <span className="px-3 py-1 bg-white/20 backdrop-blur-sm text-white rounded-full text-xs font-bold border border-white/30">
-                    Starts in {countdown}
+            <div className="relative z-10 h-full flex items-end px-6 pb-5">
+              <div className="w-full">
+                <div className="flex items-center gap-3 mb-2">
+                  <span
+                    className="px-3 py-1 rounded-full text-xs font-bold text-white uppercase"
+                    style={{ backgroundColor: themeColor }}
+                  >
+                    {event.category}
                   </span>
-                )}
+                  {status === "LIVE" && (
+                    <span className="px-3 py-1 bg-red-500 text-white rounded-full text-xs font-bold uppercase flex items-center gap-1">
+                      <span className="w-2 h-2 bg-white rounded-full animate-pulse"></span>
+                      LIVE
+                    </span>
+                  )}
+                </div>
+
+                <h1 className="text-3xl font-extrabold text-white mb-2 drop-shadow-lg">
+                  {event.title}
+                </h1>
+
+                <div className="flex flex-wrap items-center gap-4 text-gray-100 text-sm">
+                  <div className="flex items-center gap-1">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                    </svg>
+                    <span>{event.location}, {event.city}</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span>{event.startTime}</span>
+                  </div>
+                  {countdown && (
+                    <span className="px-2 py-1 bg-white/20 rounded text-xs font-semibold">
+                      🎉 Starts in {countdown}
+                    </span>
+                  )}
+                </div>
               </div>
-
-              <h1 className="text-4xl md:text-5xl font-bold text-white mb-6 leading-tight">
-                {event.title}
-              </h1>
-
-              <div className="flex flex-wrap gap-6 text-white text-sm mb-6">
-                <span><strong>Location:</strong> {event.location}, {event.city}</span>
-                <span><strong>Date:</strong> {displayDate}</span>
-                <span><strong>Time:</strong> {event.startTime} – {event.endTime}</span>
-              </div>
-
-              {registrationOpen && (
-                <Link
-                  to={`/events/${event._id}/register`}
-                  className="inline-block px-6 py-2.5 bg-white text-slate-900 rounded-lg font-bold text-sm hover:bg-slate-100 transition-colors"
-                >
-                  Register Now
-                </Link>
-              )}
             </div>
           </div>
         </div>
 
-        {/* MAIN CONTENT */}
-        <div className="max-w-7xl mx-auto px-6 py-12">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
-
-            {/* LEFT COLUMN */}
-            <div className="lg:col-span-2 space-y-10">
-
-              {/* ABOUT */}
-              <section>
-                <h2 className="text-2xl font-bold text-slate-900 mb-4 pb-3 border-b-2 border-slate-900">
-                  About This Event
-                </h2>
-                <p className="text-base text-slate-700 leading-relaxed whitespace-pre-line">
-                  {event.description}
-                </p>
-              </section>
-
-              {/* LOCATION MAP */}
-              <section>
-                <h2 className="text-2xl font-bold text-slate-900 mb-4 pb-3 border-b-2 border-slate-900">
-                  Event Location
-                </h2>
-                
-                <div className="space-y-3">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <p className="text-lg font-bold text-slate-900">{event.location}</p>
-                      <p className="text-sm text-slate-600">{event.city}</p>
-                    </div>
-                    <a
-                      href={getGoogleMapsSearchUrl(event.location, event.city)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="px-4 py-2 border-2 border-slate-900 text-slate-900 rounded-lg text-sm font-semibold hover:bg-slate-900 hover:text-white transition-colors"
+        {/* CONTENT - TWO COLUMN LAYOUT */}
+        <div className="max-w-7xl mx-auto px-6 py-0">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+            {/* LEFT - TABBED CONTENT */}
+            <div className="lg:col-span-2 animate-slide-up">
+              {/* TABS */}
+              <div className="bg-white rounded-t-2xl border-2 border-b-0 overflow-hidden" style={{ borderColor: `${themeColor}30` }}>
+                <div className="flex border-b" style={{ borderColor: `${themeColor}20` }}>
+                  <button
+                    onClick={() => setActiveTab("about")}
+                    className={`flex-1 py-3 px-4 font-semibold transition-all ${
+                      activeTab === "about" ? "text-white" : "text-gray-600 hover:bg-gray-50"
+                    }`}
+                    style={activeTab === "about" ? { backgroundColor: themeColor } : {}}
+                  >
+                    About
+                  </button>
+                  <button
+                    onClick={() => setActiveTab("location")}
+                    className={`flex-1 py-3 px-4 font-semibold transition-all ${
+                      activeTab === "location" ? "text-white" : "text-gray-600 hover:bg-gray-50"
+                    }`}
+                    style={activeTab === "location" ? { backgroundColor: themeColor } : {}}
+                  >
+                    Location
+                  </button>
+                  {event.mediaUrls?.length > 0 && (
+                    <button
+                      onClick={() => setActiveTab("gallery")}
+                      className={`flex-1 py-3 px-4 font-semibold transition-all ${
+                        activeTab === "gallery" ? "text-white" : "text-gray-600 hover:bg-gray-50"
+                      }`}
+                      style={activeTab === "gallery" ? { backgroundColor: themeColor } : {}}
                     >
-                      View on Google Maps
-                    </a>
-                  </div>
-
-                  <div className="border-2 border-slate-200 rounded-lg overflow-hidden">
-                    <MapContainer
-                      center={mapCenter}
-                      zoom={15}
-                      style={{ height: "300px", width: "100%" }}
-                      scrollWheelZoom={false}
-                    >
-                      <TileLayer
-                        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                      />
-                      <Marker position={mapCenter}>
-                        <Popup>
-                          <div className="text-center p-2">
-                            <strong className="text-sm font-bold">{event.location}</strong>
-                            <br />
-                            <span className="text-xs text-gray-600">{event.city}</span>
-                          </div>
-                        </Popup>
-                      </Marker>
-                    </MapContainer>
-                  </div>
-                </div>
-              </section>
-
-              {/* GALLERY */}
-              {Array.isArray(event.mediaUrls) && event.mediaUrls.length > 0 && (
-                <section>
-                  <h2 className="text-2xl font-bold text-slate-900 mb-4 pb-3 border-b-2 border-slate-900">
-                    Event Gallery
-                  </h2>
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                    {event.mediaUrls.map((url: string, i: number) => (
-                      <div key={i} className="border-2 border-slate-200 rounded-lg overflow-hidden hover:border-slate-900 transition-colors">
-                        <img
-                          src={getImageUrl(url)}
-                          alt={`Event media ${i + 1}`}
-                          className="w-full h-full object-cover aspect-video"
-                          onError={(e) => {
-                            (e.target as HTMLImageElement).src =
-                              "https://via.placeholder.com/400x225?text=Image+Not+Available";
-                          }}
-                        />
-                      </div>
-                    ))}
-                  </div>
-                </section>
-              )}
-            </div>
-
-            {/* RIGHT COLUMN - TICKETS */}
-            <div className="lg:sticky lg:top-6 h-fit">
-              <div className="border-2 border-slate-900 rounded-lg overflow-hidden">
-                
-                {/* Header */}
-                <div className="bg-slate-900 text-white p-4">
-                  <h3 className="text-xl font-bold">Available Tickets</h3>
-                </div>
-
-                {/* Tickets List */}
-                <div className="p-4 space-y-2">
-                  {event.tickets && event.tickets.length > 0 ? (
-                    event.tickets.map((ticket: any) => (
-                      <TicketCard 
-                        key={ticket._id} 
-                        ticket={ticket}
-                        eventId={event._id}
-                        registrationOpen={registrationOpen}
-                      />
-                    ))
-                  ) : (
-                    <p className="text-center text-slate-500 py-6 text-sm">No tickets available</p>
+                      Gallery
+                    </button>
                   )}
                 </div>
+              </div>
 
-                {/* Register Button */}
-                {event.tickets && event.tickets.length > 0 && (
-                  <div className="p-4 pt-0">
-                    <Link
-                      to={registrationOpen ? `/events/${event._id}/register` : "#"}
-                      onClick={(e) => !registrationOpen && e.preventDefault()}
-                      className={`block text-center py-2.5 rounded-lg font-bold text-sm transition-colors ${
-                        registrationOpen
-                          ? "bg-slate-900 text-white hover:bg-slate-800"
-                          : "bg-slate-200 text-slate-400 cursor-not-allowed"
-                      }`}
-                    >
-                      {registrationOpen ? "Register Now" : "Registrations Closed"}
-                    </Link>
+              {/* TAB CONTENT */}
+              <div className="bg-white rounded-b-2xl border-2 border-t-0 p-6 shadow-lg" style={{ borderColor: `${themeColor}30`, minHeight: "320px" }}>
+                {activeTab === "about" && (
+                  <div>
+                    <h2 className="text-xl font-bold mb-3 flex items-center gap-2">
+                      <svg className="w-5 h-5" style={{ color: themeColor }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      About This Event
+                    </h2>
+                    <p className="text-gray-700 leading-relaxed whitespace-pre-line">
+                      {event.description}
+                    </p>
+                  </div>
+                )}
+
+                {activeTab === "location" && (
+                  <div>
+                    <h2 className="text-xl font-bold mb-3 flex items-center gap-2">
+                      <svg className="w-5 h-5" style={{ color: themeColor }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                      </svg>
+                      Event Location
+                    </h2>
+                    <div className="mb-3 p-3 rounded-lg" style={{ backgroundColor: `${themeColor}10` }}>
+                      <p className="font-semibold text-gray-900">{event.location}</p>
+                      <p className="text-sm text-gray-600">{event.city}</p>
+                    </div>
+                    <div className="rounded-xl overflow-hidden border-2" style={{ borderColor: themeColor }}>
+                      <MapContainer
+                        center={mapCenter}
+                        zoom={15}
+                        style={{ height: "240px" }}
+                        scrollWheelZoom={false}
+                      >
+                        <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+                        <Marker position={mapCenter}>
+                          <Popup>{event.location}</Popup>
+                        </Marker>
+                      </MapContainer>
+                    </div>
+                  </div>
+                )}
+
+                {activeTab === "gallery" && event.mediaUrls?.length > 0 && (
+                  <div>
+                    <h2 className="text-xl font-bold mb-3 flex items-center gap-2">
+                      <svg className="w-5 h-5" style={{ color: themeColor }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                      Photo Gallery
+                    </h2>
+                    <div className="grid grid-cols-2 gap-4">
+                      {event.mediaUrls.map((url: string, i: number) => (
+                        <img
+                          key={i}
+                          src={getImageUrl(url)}
+                          alt={`Gallery ${i + 1}`}
+                          className="rounded-xl h-40 w-full object-cover hover:opacity-90 transition cursor-pointer shadow-lg hover:shadow-xl"
+                        />
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>
             </div>
 
+            {/* RIGHT - STICKY TICKETS */}
+            <div className="lg:sticky lg:top-6 h-fit animate-slide-up" style={{ animationDelay: "0.1s" }}>
+              <div className="bg-white rounded-2xl border-2 shadow-xl overflow-hidden" style={{ borderColor: `${themeColor}40` }}>
+                {/* Header */}
+                <div className="p-4 text-white font-bold" style={{ backgroundColor: themeColor }}>
+                  <div className="flex items-center gap-2">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
+                    </svg>
+                    <span>Get Tickets</span>
+                  </div>
+                  {!registrationOpen && (
+                    <p className="text-white/90 text-xs mt-1">⚠️ Registration closed</p>
+                  )}
+                </div>
+
+                {/* Tickets List - Selection Only */}
+                <div className="p-3 space-y-3 max-h-[340px] overflow-y-auto">
+                  {event.tickets.map((ticket: any) => {
+                    const isSelected = selectedTicket === ticket.name;
+                    const hasSubTickets = ticket.subTickets?.length > 0;
+                    const isExpanded = expandedTicket === ticket.name;
+
+                    return (
+                      <div key={ticket.name}>
+                        {/* Ticket Card */}
+                        <button
+                          onClick={() => {
+                            setSelectedTicket(ticket.name);
+                            setSelectedSubTicket(null);
+                            if (hasSubTickets) {
+                              setExpandedTicket(ticket.name);
+                            } else {
+                              setExpandedTicket(null);
+                            }
+                          }}
+                          className={`w-full rounded-xl border-2 p-3 transition-all text-left ${
+                            isSelected ? 'shadow-md' : ''
+                          }`}
+                          style={{ borderColor: isSelected ? themeColor : "#e5e7eb" }}
+                        >
+                          <div className="flex justify-between items-center">
+                            <div>
+                              <p className="font-bold text-gray-900">{ticket.name}</p>
+                              <p className="text-xs text-gray-500">
+                                {ticket.quantity ? `${ticket.available || 0} left` : "Unlimited"}
+                              </p>
+                            </div>
+                            <span className="font-bold text-lg text-green-600">
+                              ₹{ticket.finalPrice}
+                            </span>
+                          </div>
+                        </button>
+
+                        {/* Sub-Tickets */}
+                        {isSelected && hasSubTickets && isExpanded && (
+                          <div className="mt-2 ml-3 space-y-2 p-2 rounded-lg" style={{ backgroundColor: `${themeColor}08` }}>
+                            <p className="text-xs font-semibold text-gray-600 uppercase mb-1">Select Option</p>
+                            {ticket.subTickets.map((sub: any) => (
+                              <button
+                                key={sub.name}
+                                onClick={() => setSelectedSubTicket(sub.name)}
+                                className={`w-full flex justify-between p-2 rounded-lg border transition text-sm ${
+                                  selectedSubTicket === sub.name
+                                    ? 'bg-white border-2 shadow-md'
+                                    : 'bg-white hover:shadow'
+                                }`}
+                                style={selectedSubTicket === sub.name ? { borderColor: themeColor } : {}}
+                              >
+                                <span className="font-medium">{sub.name}</span>
+                                <span className="font-bold text-green-600">₹{sub.finalPrice}</span>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* ✅ SINGLE REGISTER BUTTON AT BOTTOM */}
+                <div className="p-3 border-t">
+                  <button
+                    disabled={!registrationOpen || !canRegister}
+                    onClick={handleRegister}
+                    className="w-full py-3 rounded-lg text-white font-bold disabled:opacity-50 disabled:cursor-not-allowed shadow hover:shadow-lg transition"
+                    style={{ backgroundColor: themeColor }}
+                  >
+                    {!registrationOpen
+                      ? "Registration Closed"
+                      : !selectedTicket
+                      ? "Select a Ticket"
+                      : hasSubTickets && !selectedSubTicket
+                      ? "Select an Option"
+                      : "Register Now"}
+                  </button>
+                </div>
+
+                {/* Footer */}
+                <div className="p-3 bg-gray-50 border-t text-center">
+                  <p className="text-xs text-gray-600 font-medium">
+                    💳 Secure Payment • 🎫 Instant E-Tickets
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
     </PublicLayout>
-  );
-}
-
-/* ---------- UI COMPONENTS ---------- */
-
-function StatusBadge({ status }: { status: string }) {
-  const styles: any = {
-    UPCOMING: "bg-slate-700 text-white",
-    LIVE: "bg-red-600 text-white animate-pulse",
-    ENDED: "bg-slate-500 text-white",
-  };
-
-  return (
-    <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase ${styles[status]}`}>
-      {status === "LIVE" ? "LIVE NOW" : status}
-    </span>
-  );
-}
-
-function TicketCard({ 
-  ticket, 
-  eventId, 
-  registrationOpen 
-}: { 
-  ticket: any;
-  eventId: string;
-  registrationOpen: boolean;
-}) {
-  return (
-    <Link
-      to={registrationOpen ? `/events/${eventId}/register` : "#"}
-      onClick={(e) => !registrationOpen && e.preventDefault()}
-      className={`block border border-slate-200 rounded-lg p-3 transition-all ${
-        registrationOpen 
-          ? 'hover:border-slate-900 cursor-pointer' 
-          : 'opacity-60 cursor-not-allowed'
-      }`}
-    >
-      <div className="flex justify-between items-center">
-        <div>
-          <h4 className="font-bold text-base text-slate-900">
-            {ticket.name || ticket.type}
-          </h4>
-          <p className="text-xs text-slate-600 mt-0.5">
-            {ticket.available} available
-          </p>
-        </div>
-        <div className="text-right">
-          <p className="text-xl font-black text-slate-900">
-            {ticket.finalPrice === 0 ? "FREE" : `₹${ticket.finalPrice.toLocaleString()}`}
-          </p>
-        </div>
-      </div>
-    </Link>
   );
 }

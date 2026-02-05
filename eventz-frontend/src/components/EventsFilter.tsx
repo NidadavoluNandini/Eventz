@@ -2,9 +2,7 @@ import React from "react";
 
 type EventsFilterProps = {
   selected: string;
-  setSelected: React.Dispatch<
-    React.SetStateAction<string>
-  >;
+  setSelected: React.Dispatch<React.SetStateAction<string>>;
 };
 
 const categories = [
@@ -15,7 +13,7 @@ const categories = [
   { label: "Business", value: "Business" },
   { label: "Sports", value: "Sports" },
   { label: "Entertainment", value: "Entertainment" },
-  { label: "Industry" , value:"Industry"},
+  { label: "Industry", value: "Industry" },
 ];
 
 export default function EventsFilter({
@@ -23,7 +21,7 @@ export default function EventsFilter({
   setSelected,
 }: EventsFilterProps) {
   return (
-    <div className="flex flex-wrap gap-3 justify-center mb-10">
+    <div className="flex flex-wrap gap-3 justify-center py-4">
       {categories.map(({ label, value }) => {
         const isActive = selected === value;
 

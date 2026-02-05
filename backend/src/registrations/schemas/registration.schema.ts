@@ -37,7 +37,8 @@ export class Registration extends Document {
   // ===============================
   @Prop({ required: true })
   ticketName: string; // Free, Early Bird, VIP
-
+  @Prop() // ✅ Make sure this exists
+  subTicketName?: string;
   @Prop({ required: true })
   basePricePerTicket: number; // 👈 ₹200
 

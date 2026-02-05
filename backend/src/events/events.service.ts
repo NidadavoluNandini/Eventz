@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
-import { Event, EventStatus } from './schemas/event.schema';
+import { Event, EventDocument, EventStatus } from './schemas/event.schema';
 import { CreateEventDto } from './dto/create-event.dto';
 import { UpdateEventDto } from './dto/update-event.dto';
 import { MailService } from '../email/mail.service';
@@ -10,18 +10,64 @@ import { MailService } from '../email/mail.service';
 export class EventsService {
   constructor(
     @InjectModel(Event.name)
-    private eventModel: Model<Event>,
+    private eventModel: Model<EventDocument>,
     private readonly mailService: MailService,
   ) {}
 
-  async create(dto: CreateEventDto, organizerId: string) {
-    return this.eventModel.create({
-      ...dto,
-      organizerId: new Types.ObjectId(organizerId),
-      registrationOpen: true,
-      status: EventStatus.DRAFT,
-    });
-  }
+async create(dto: CreateEventDto, organizerId: string) {
+  console.log('SERVICE DTO:', JSON.stringify(dto, null, 2));
+
+  const event = await this.eventModel.create({
+    title: dto.title,
+    description: dto.description,
+    category: dto.category,
+    city: dto.city,
+    location: dto.location,
+
+    startDate: new Date(dto.startDate),
+    endDate: new Date(dto.endDate),
+    startTime: dto.startTime,
+    endTime: dto.endTime,
+
+    mediaUrls: dto.mediaUrls ?? [],
+
+    themeColor: dto.themeColor
+      ? {
+          name: dto.themeColor.name,
+          value: dto.themeColor.value,
+          class: dto.themeColor.class,
+        }
+      : undefined,
+
+    tickets: dto.tickets.map((t) => ({
+      type: t.type,  // ✅ ADDED
+      name: t.name,
+      description: t.description,
+      price: t.price,
+      quantity: t.quantity ?? 0,  // ✅ ADDED
+      available: t.available ?? t.quantity ?? 0,  // ✅ ADDED
+      gst: t.gst,
+      finalPrice: t.finalPrice,
+      gstIncluded: t.gstIncluded ?? true,
+
+      subTickets: t.subTickets?.map((s) => ({
+        name: s.name,
+        price: s.price,
+        quantity: s.quantity ?? 0,  // ✅ ADDED
+        gst: s.gst,
+        finalPrice: s.finalPrice,
+        gstIncluded: s.gstIncluded ?? true,
+      })) ?? [],
+    })),
+
+    organizerId,
+    status: EventStatus.PUBLISHED,
+    registrationOpen: true,
+  });
+
+  return event;
+}
+
 
 async findAll(filters?: {
   status?: EventStatus;

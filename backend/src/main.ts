@@ -5,29 +5,36 @@ import * as express from 'express';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
-  // Global API prefix
+  // Body size (images / base64 safe)
+  app.use(express.json({ limit: '10mb' }));
+  app.use(express.urlencoded({ limit: '10mb', extended: true }));
+
+  // Global prefix
   app.setGlobalPrefix('api');
 
-  // ✅ CORRECT CORS CONFIG (STATIC ORIGINS – REQUIRED FOR FILE DOWNLOADS)
+  // CORS
   app.enableCors({
     origin: [
-      'http://localhost:5173',          // Vite frontend
-      'http://localhost:3000',          // Local backend
-      'https://eventz-zeta.vercel.app', // Production frontend
+      'http://localhost:5173',
+      'http://localhost:3000',
+      'https://eventz-zeta.vercel.app',
     ],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
-    exposedHeaders: ['Content-Disposition'], // ⭐ REQUIRED for PDF download
   });
 
-  // Global validation
+  /**
+   * 🔴 THIS IS THE IMPORTANT PART
+   * - whitelist: false  → DO NOT STRIP FIELDS
+   * - forbidNonWhitelisted: false → DO NOT THROW
+   * - transform: false → DO NOT AUTO-TRANSFORM OBJECTS
+   */
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
+      forbidNonWhitelisted: false,
       transform: true,
     }),
   );

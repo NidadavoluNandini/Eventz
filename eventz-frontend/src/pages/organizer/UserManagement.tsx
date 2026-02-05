@@ -8,7 +8,7 @@ interface Registration {
   userEmail: string;
   ticketType: string;
   status: string;
-  attended?: boolean; // Add this field
+  attended?: boolean;
 }
 
 export default function UserManagement() {
@@ -41,7 +41,6 @@ export default function UserManagement() {
       )
     );
     // TODO: Make API call to update attendance in backend
-    // await api.post(`/registrations/${regId}/attendance`, { attended: !reg.attended });
   };
 
   // Filter registrations
@@ -72,30 +71,28 @@ export default function UserManagement() {
   const attendedCount = registrations.filter((r) => r.attended).length;
 
   return (
-    <div className="space-y-6">
+    <div className="max-w-7xl mx-auto p-6 space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold text-slate-900 mb-2">
-          User Management
-        </h1>
-        <p className="text-slate-600">
+      <div className="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-2xl shadow-lg p-8 text-white">
+        <h1 className="text-3xl font-bold mb-2">User Management</h1>
+        <p className="text-indigo-100">
           Manage and track event registrations
         </p>
       </div>
 
       {/* Event Selection & Stats */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Event Selector */}
-        <div className="lg:col-span-2 bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-          <label className="block text-sm font-semibold text-slate-700 mb-3">
+        <div className="lg:col-span-2 bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+          <label className="block text-sm font-semibold text-slate-700 mb-2">
             Select Event
           </label>
           <select
-            className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition outline-none text-slate-900 font-medium"
+            className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition outline-none text-slate-900 font-medium"
             onChange={(e) => loadUsers(e.target.value)}
             value={selectedEvent}
           >
-            <option value="">Choose an event to view registrations</option>
+            <option value="">Choose an event...</option>
             {events.map((e) => (
               <option key={e._id} value={e._id}>
                 {e.title} - {new Date(e.startDate).toLocaleDateString()}
@@ -106,9 +103,9 @@ export default function UserManagement() {
 
         {/* Stats Card */}
         {selectedEvent && (
-          <div className="bg-gradient-to-br from-indigo-50 to-indigo-100 rounded-xl shadow-sm border border-indigo-200 p-6">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 bg-indigo-600 rounded-lg flex items-center justify-center">
+          <div className="bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl shadow-lg p-5 text-white">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 bg-white/20 backdrop-blur rounded-lg flex items-center justify-center">
                 <svg
                   className="w-5 h-5 text-white"
                   fill="none"
@@ -124,26 +121,20 @@ export default function UserManagement() {
                 </svg>
               </div>
               <div>
-                <p className="text-sm text-indigo-700 font-medium">
+                <p className="text-xs text-white/80 font-medium">
                   Total Registrations
                 </p>
-                <p className="text-3xl font-bold text-indigo-900">
-                  {totalRegistrations}
-                </p>
+                <p className="text-3xl font-bold">{totalRegistrations}</p>
               </div>
             </div>
-            <div className="space-y-2 pt-3 border-t border-indigo-200">
-              <p className="text-sm text-indigo-700 flex justify-between">
-                <span>Confirmed:</span>
-                <span className="font-bold text-indigo-900">
-                  {confirmedRegistrations}
-                </span>
+            <div className="space-y-2 pt-3 border-t border-white/20">
+              <p className="text-sm flex justify-between">
+                <span className="text-white/80">Confirmed:</span>
+                <span className="font-bold">{confirmedRegistrations}</span>
               </p>
-              <p className="text-sm text-indigo-700 flex justify-between">
-                <span>Attended:</span>
-                <span className="font-bold text-green-700">
-                  {attendedCount}
-                </span>
+              <p className="text-sm flex justify-between">
+                <span className="text-white/80">Attended:</span>
+                <span className="font-bold">{attendedCount}</span>
               </p>
             </div>
           </div>
@@ -152,16 +143,16 @@ export default function UserManagement() {
 
       {/* Filters & Search */}
       {selectedEvent && (
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
             {/* Search */}
             <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-slate-700 mb-2">
+              <label className="block text-xs font-medium text-slate-700 mb-1.5">
                 Search Users
               </label>
               <div className="relative">
                 <svg
-                  className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400"
+                  className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -176,7 +167,7 @@ export default function UserManagement() {
                 <input
                   type="text"
                   placeholder="Search by name or email..."
-                  className="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition outline-none"
+                  className="w-full pl-9 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition outline-none text-sm"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
@@ -185,11 +176,11 @@ export default function UserManagement() {
 
             {/* Status Filter */}
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
+              <label className="block text-xs font-medium text-slate-700 mb-1.5">
                 Status
               </label>
               <select
-                className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition outline-none"
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition outline-none text-sm"
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value)}
               >
@@ -202,11 +193,11 @@ export default function UserManagement() {
 
             {/* Ticket Filter */}
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
+              <label className="block text-xs font-medium text-slate-700 mb-1.5">
                 Ticket Type
               </label>
               <select
-                className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition outline-none"
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition outline-none text-sm"
                 value={filterTicket}
                 onChange={(e) => setFilterTicket(e.target.value)}
               >
@@ -221,10 +212,10 @@ export default function UserManagement() {
           </div>
 
           {/* Results count */}
-          <div className="mt-4 pt-4 border-t border-slate-200">
-            <p className="text-sm text-slate-600">
+          <div className="mt-3 pt-3 border-t border-slate-200">
+            <p className="text-xs text-slate-600">
               Showing{" "}
-              <span className="font-semibold text-slate-900">
+              <span className="font-semibold text-indigo-600">
                 {filteredRegistrations.length}
               </span>{" "}
               of{" "}
@@ -240,17 +231,17 @@ export default function UserManagement() {
       {/* Users Table */}
       {selectedEvent && (
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-          <div className="p-6 border-b border-slate-200">
-            <h2 className="text-xl font-bold text-slate-900">
+          <div className="p-5 border-b border-slate-200 bg-slate-50">
+            <h2 className="text-lg font-bold text-slate-900">
               Registered Users
             </h2>
-            <p className="text-sm text-slate-600 mt-1">
+            <p className="text-xs text-slate-600 mt-0.5">
               Complete list of event attendees
             </p>
           </div>
 
           {loading ? (
-            <div className="flex items-center justify-center py-20">
+            <div className="flex items-center justify-center py-16">
               <svg
                 className="animate-spin h-8 w-8 text-indigo-600"
                 xmlns="http://www.w3.org/2000/svg"
@@ -273,9 +264,9 @@ export default function UserManagement() {
               </svg>
             </div>
           ) : filteredRegistrations.length === 0 ? (
-            <div className="text-center py-20">
+            <div className="text-center py-16">
               <svg
-                className="w-16 h-16 text-slate-300 mx-auto mb-4"
+                className="w-16 h-16 text-slate-300 mx-auto mb-3"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -290,7 +281,7 @@ export default function UserManagement() {
               <p className="text-slate-500 font-medium">
                 No registrations found
               </p>
-              <p className="text-sm text-slate-400 mt-1">
+              <p className="text-xs text-slate-400 mt-1">
                 {searchTerm || filterStatus !== "all" || filterTicket !== "all"
                   ? "Try adjusting your filters"
                   : "Users will appear here once they register"}
@@ -301,147 +292,72 @@ export default function UserManagement() {
               <table className="w-full">
                 <thead className="bg-slate-50 border-b border-slate-200">
                   <tr>
-                    <th className="text-left py-4 px-6 text-sm font-semibold text-slate-700">
-                      <div className="flex items-center gap-2">
-                        <svg
-                          className="w-4 h-4"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                          />
-                        </svg>
-                        Name
-                      </div>
+                    <th className="text-left py-3 px-5 text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                      Name
                     </th>
-                    <th className="text-left py-4 px-6 text-sm font-semibold text-slate-700">
-                      <div className="flex items-center gap-2">
-                        <svg
-                          className="w-4 h-4"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-                          />
-                        </svg>
-                        Email
-                      </div>
+                    <th className="text-left py-3 px-5 text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                      Email
                     </th>
-                    <th className="text-left py-4 px-6 text-sm font-semibold text-slate-700">
-                      <div className="flex items-center gap-2">
-                        <svg
-                          className="w-4 h-4"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"
-                          />
-                        </svg>
-                        Ticket Type
-                      </div>
+                    <th className="text-left py-3 px-5 text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                      Ticket
                     </th>
-                    <th className="text-left py-4 px-6 text-sm font-semibold text-slate-700">
-                      <div className="flex items-center gap-2">
-                        <svg
-                          className="w-4 h-4"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                          />
-                        </svg>
-                        Status
-                      </div>
+                    <th className="text-left py-3 px-5 text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                      Status
                     </th>
-                    <th className="text-left py-4 px-6 text-sm font-semibold text-slate-700">
-                      <div className="flex items-center gap-2">
-                        <svg
-                          className="w-4 h-4"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"
-                          />
-                        </svg>
-                        Attendance
-                      </div>
+                    <th className="text-left py-3 px-5 text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                      Attendance
                     </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {filteredRegistrations.map((r) => (
                     <tr key={r._id} className="hover:bg-slate-50 transition">
-                      <td className="py-4 px-6">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center">
-                            <span className="text-indigo-700 font-semibold text-sm">
+                      <td className="py-3 px-5">
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center flex-shrink-0">
+                            <span className="text-indigo-700 font-semibold text-xs">
                               {r.userName.charAt(0).toUpperCase()}
                             </span>
                           </div>
-                          <span className="font-medium text-slate-900">
+                          <span className="font-medium text-slate-900 text-sm">
                             {r.userName}
                           </span>
                         </div>
                       </td>
-                      <td className="py-4 px-6 text-sm text-slate-600">
+                      <td className="py-3 px-5 text-sm text-slate-600">
                         {r.userEmail}
                       </td>
-                      <td className="py-4 px-6">
-                        <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700">
+                      <td className="py-3 px-5">
+                        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700">
                           {r.ticketType}
                         </span>
                       </td>
-                      <td className="py-4 px-6">
+                      <td className="py-3 px-5">
                         <span
-                          className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
+                          className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
                             r.status === "CONFIRMED"
-                              ? "bg-green-50 text-green-700"
+                              ? "bg-emerald-50 text-emerald-700"
                               : r.status === "PENDING"
-                              ? "bg-yellow-50 text-yellow-700"
+                              ? "bg-amber-50 text-amber-700"
                               : "bg-red-50 text-red-700"
                           }`}
                         >
                           {r.status}
                         </span>
                       </td>
-                      <td className="py-4 px-6">
+                      <td className="py-3 px-5">
                         <button
                           onClick={() => toggleAttendance(r._id)}
-                          className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
+                          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                             r.attended
-                              ? "bg-green-100 text-green-700 hover:bg-green-200"
+                              ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200"
                               : "bg-slate-100 text-slate-600 hover:bg-slate-200"
                           }`}
                         >
                           {r.attended ? (
                             <>
                               <svg
-                                className="w-4 h-4"
+                                className="w-3.5 h-3.5"
                                 fill="none"
                                 stroke="currentColor"
                                 viewBox="0 0 24 24"
@@ -458,7 +374,7 @@ export default function UserManagement() {
                           ) : (
                             <>
                               <svg
-                                className="w-4 h-4"
+                                className="w-3.5 h-3.5"
                                 fill="none"
                                 stroke="currentColor"
                                 viewBox="0 0 24 24"
@@ -487,23 +403,25 @@ export default function UserManagement() {
       {/* No Event Selected State */}
       {!selectedEvent && (
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-12 text-center">
-          <svg
-            className="w-20 h-20 text-slate-300 mx-auto mb-4"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-            />
-          </svg>
+          <div className="w-20 h-20 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg
+              className="w-10 h-10 text-indigo-600"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+              />
+            </svg>
+          </div>
           <h3 className="text-xl font-bold text-slate-900 mb-2">
             Select an Event
           </h3>
-          <p className="text-slate-600">
+          <p className="text-sm text-slate-600">
             Choose an event from the dropdown above to view registered users
           </p>
         </div>

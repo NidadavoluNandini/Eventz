@@ -10,6 +10,8 @@ import {
   Query,
   UseGuards,
   Req,
+  UsePipes,        // ✅ ADD
+  ValidationPipe,  // ✅ ADD
 } from '@nestjs/common';
 import { EventsService } from './events.service';
 import { CreateEventDto } from './dto/create-event.dto';
@@ -21,7 +23,23 @@ import { EventStatus } from './schemas/event.schema';
 
 @Controller('events')
 export class EventsController {
-  constructor(private readonly eventsService: EventsService) {}
+  constructor(private readonly eventsService: EventsService) {
+        console.log('🔥 EventsController LOADED');
+
+  }
+@Post()
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles('ORGANIZER')
+@UsePipes(new ValidationPipe({ whitelist: true, transform: false }))
+createEvent(@Body() body: CreateEventDto, @Req() req) {
+  console.log('RAW BODY:', JSON.stringify(body, null, 2));
+  return this.eventsService.create(body, req.user.userId);
+}
+@Post('ping')
+ping(@Body() body: any) {
+  console.log('🔥 PING HIT', body);
+  return { ok: true };
+}
 
   // 🌍 Public
   @Get()
@@ -48,12 +66,7 @@ export class EventsController {
   }
 
   // 👤 Organizer Actions
-  @Post()
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('ORGANIZER')
-  createEvent(@Body() dto: CreateEventDto, @Req() req) {
-    return this.eventsService.create(dto, req.user.userId);
-  }
+
 
   @Put(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
