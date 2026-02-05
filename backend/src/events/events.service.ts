@@ -40,27 +40,29 @@ async create(dto: CreateEventDto, organizerId: string) {
       : undefined,
 
     tickets: dto.tickets.map((t) => ({
-      type: t.type,  // ✅ ADDED
+      type: t.type,
       name: t.name,
       description: t.description,
       price: t.price,
-      quantity: t.quantity ?? 0,  // ✅ ADDED
-      available: t.available ?? t.quantity ?? 0,  // ✅ ADDED
+      quantity: t.quantity ?? 0,
+      available: t.available ?? t.quantity ?? 0,
       gst: t.gst,
       finalPrice: t.finalPrice,
       gstIncluded: t.gstIncluded ?? true,
-
-      subTickets: t.subTickets?.map((s) => ({
-        name: s.name,
-        price: s.price,
-        quantity: s.quantity ?? 0,  // ✅ ADDED
-        gst: s.gst,
-        finalPrice: s.finalPrice,
-        gstIncluded: s.gstIncluded ?? true,
-      })) ?? [],
+      subTickets:
+        t.subTickets?.map((s) => ({
+          name: s.name,
+          price: s.price,
+          quantity: s.quantity ?? 0,
+          gst: s.gst,
+          finalPrice: s.finalPrice,
+          gstIncluded: s.gstIncluded ?? true,
+        })) ?? [],
     })),
 
-    organizerId,
+    // 🔥 FIX (THIS WAS THE BUG)
+    organizerId: new Types.ObjectId(organizerId),
+
     status: EventStatus.PUBLISHED,
     registrationOpen: true,
   });
@@ -181,11 +183,15 @@ async findAll(filters?: {
   }
 
   async findByOrganizer(organizerId: string) {
-    await this.autoCompleteEvents();
+  await this.autoCompleteEvents();
 
-    return this.eventModel.find({
-      organizerId: new Types.ObjectId(organizerId),
-    });
-  }
+  return this.eventModel.find({
+    $or: [
+      { organizerId: new Types.ObjectId(organizerId) }, // correct
+      { organizerId: organizerId },                     // legacy bad data
+    ],
+  });
+}
+
 }
 
