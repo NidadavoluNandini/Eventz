@@ -1,29 +1,34 @@
-import { Module, forwardRef } from '@nestjs/common';
+// payments.module.ts
+import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
-
-import { PaymentsController } from './payments.controller';
+import { PaymentsService } from './payments.service';
 import { PaymentsIntegrationService } from './payments-integration.service';
+import { PaymentsController } from './payments.controller';
 import { RazorpayService } from './razorpay.service';
 
+// ✅ Import schemas
 import { Registration, RegistrationSchema } from '../registrations/schemas/registration.schema';
+import { Event, EventSchema } from '../events/schemas/event.schema'; // ✅ Add this
+
+// Import other services
+import { EmailService } from '../notifications/email.service';
 import { RegistrationsModule } from '../registrations/registrations.module';
-import { TicketsModule } from '../tickets/tickets.module';
-import { NotificationsModule } from '../notifications/notifications.module';
-import { PaymentReminderService } from './payment-remainder.service';
+
 @Module({
   imports: [
     MongooseModule.forFeature([
       { name: Registration.name, schema: RegistrationSchema },
+      { name: Event.name, schema: EventSchema }, // ✅ Add Event model
     ]),
-    NotificationsModule, // ✅ REQUIRED FOR EMAIL
-    TicketsModule,
-    forwardRef(() => RegistrationsModule),
+    RegistrationsModule, // ✅ Import RegistrationsModule for RegistrationsService
   ],
   controllers: [PaymentsController],
   providers: [
-    PaymentsIntegrationService,
+    PaymentsService,
+    PaymentsIntegrationService, // ✅ Both services
     RazorpayService,
-    PaymentReminderService,
+    EmailService,
   ],
+  exports: [PaymentsService, PaymentsIntegrationService],
 })
 export class PaymentsModule {}

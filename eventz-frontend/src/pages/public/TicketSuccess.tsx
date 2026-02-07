@@ -1,20 +1,22 @@
 import { useParams, Link } from "react-router-dom";
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState } from "react";
 import PublicLayout from "../../layouts/PublicLayout";
 import api from "../../utils/axios";
 
 export default function TicketSuccess() {
   const { id } = useParams<{ id: string }>();
   const [reg, setReg] = useState<any>(null);
+  const [paymentDetails, setPaymentDetails] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [downloading, setDownloading] = useState(false);
   const [resending, setResending] = useState(false);
   const [resendSuccess, setResendSuccess] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
 
   useEffect(() => {
-    if (id) fetchRegistration();
+    if (id) fetchData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
@@ -25,10 +27,14 @@ export default function TicketSuccess() {
     }
   }, [reg]);
 
-  const fetchRegistration = async () => {
+  const fetchData = async () => {
     try {
-      const res = await api.get(`/api/registrations/${id}`);
-      setReg(res.data);
+      const [regRes, paymentRes] = await Promise.all([
+        api.get(`/api/registrations/${id}`),
+        api.get(`/api/payments/registration/details/${id}`),
+      ]);
+      setReg(regRes.data);
+      setPaymentDetails(paymentRes.data);
     } catch (err) {
       console.error("Failed to load ticket", err);
       setError("Failed to load ticket details");
@@ -36,24 +42,6 @@ export default function TicketSuccess() {
       setLoading(false);
     }
   };
-
-  /* ---------------- SAFE DERIVED VALUES ---------------- */
-
-  const paidAmount = useMemo(() => {
-    if (!reg) return 0;
-
-    if (reg.totalAmount) return reg.totalAmount;
-    if (reg.finalAmount) return reg.finalAmount;
-    if (reg.finalPrice) return reg.finalPrice;
-
-    if (reg.amount) {
-      return reg.amount > 1000
-        ? Math.floor(reg.amount / 100)
-        : reg.amount;
-    }
-
-    return 0;
-  }, [reg]);
 
   /* ---------------- ACTIONS ---------------- */
 
@@ -63,9 +51,14 @@ export default function TicketSuccess() {
       setResendSuccess(false);
       await api.post(`/api/tickets/resend/${id}`);
       setResendSuccess(true);
-      setTimeout(() => setResendSuccess(false), 3000);
+      setToast("Ticket email sent successfully");
+      setTimeout(() => {
+        setResendSuccess(false);
+        setToast(null);
+      }, 3000);
     } catch {
-      alert("Failed to resend ticket email");
+      setToast("Failed to resend ticket email");
+      setTimeout(() => setToast(null), 3000);
     } finally {
       setResending(false);
     }
@@ -77,7 +70,11 @@ export default function TicketSuccess() {
       `${import.meta.env.VITE_API_URL}/api/tickets/download/${id}`,
       "_blank"
     );
-    setTimeout(() => setDownloading(false), 1500);
+    setToast("Ticket download started");
+    setTimeout(() => {
+      setDownloading(false);
+      setToast(null);
+    }, 2000);
   };
 
   /* ---------------- STATES ---------------- */
@@ -101,8 +98,18 @@ export default function TicketSuccess() {
         <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-red-50 via-white to-pink-50">
           <div className="text-center bg-white rounded-3xl shadow-xl p-8 max-w-md">
             <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <svg className="w-10 h-10 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              <svg
+                className="w-10 h-10 text-red-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
               </svg>
             </div>
             <h2 className="text-xl font-bold mb-2">Ticket Not Found</h2>
@@ -118,6 +125,9 @@ export default function TicketSuccess() {
       </PublicLayout>
     );
   }
+
+  const paidAmount = paymentDetails?.pricing?.total?.finalAmount || 0;
+  const quantity = paymentDetails?.pricing?.quantity ?? reg.quantity ?? 1;
 
   /* ---------------- UI ---------------- */
 
@@ -165,14 +175,20 @@ export default function TicketSuccess() {
       <div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 flex items-center justify-center px-4 py-8 relative overflow-hidden">
         {/* Confetti Animation */}
         {showConfetti && (
-          <div className="fixed inset-0 pointer-events-none z-50">
+          <div className="fixed inset-0 pointer-events-none z-40">
             {[...Array(50)].map((_, i) => (
               <div
                 key={i}
                 className="confetti"
                 style={{
                   left: `${Math.random() * 100}%`,
-                  backgroundColor: ['#10b981', '#059669', '#34d399', '#fbbf24', '#f59e0b'][Math.floor(Math.random() * 5)],
+                  backgroundColor: [
+                    "#10b981",
+                    "#059669",
+                    "#34d399",
+                    "#fbbf24",
+                    "#f59e0b",
+                  ][Math.floor(Math.random() * 5)],
                   animationDelay: `${Math.random() * 0.5}s`,
                   animationDuration: `${2 + Math.random() * 2}s`,
                 }}
@@ -187,17 +203,15 @@ export default function TicketSuccess() {
           <div className="absolute bottom-20 right-10 w-60 h-60 bg-emerald-500 rounded-full blur-3xl"></div>
         </div>
 
-        {/* ✅ REDUCED MAX WIDTH FROM 2xl TO lg */}
-        <div className="w-full max-w-lg relative z-10">
-          <div className="bg-white rounded-3xl shadow-2xl overflow-hidden">
-            {/* SUCCESS HEADER - REDUCED PADDING */}
-            <div className="bg-gradient-to-r from-green-600 via-emerald-600 to-teal-600 text-white p-6 text-center relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-24 h-24 bg-white/10 rounded-full -mr-12 -mt-12"></div>
-              <div className="absolute bottom-0 left-0 w-20 h-20 bg-white/10 rounded-full -ml-10 -mb-10"></div>
+        <div className="w-full max-w-md relative z-10">
+          <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
+            {/* SUCCESS HEADER */}
+            <div className="bg-gradient-to-r from-green-600 via-emerald-600 to-teal-600 text-white p-5 text-center relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-20 h-20 bg-white/10 rounded-full -mr-10 -mt-10"></div>
+              <div className="absolute bottom-0 left-0 w-16 h-16 bg-white/10 rounded-full -ml-8 -mb-8"></div>
 
               <div className="relative z-10">
-                {/* ✅ SMALLER CHECKMARK */}
-                <div className="w-16 h-16 mx-auto mb-3 animate-bounce-in">
+                <div className="w-14 h-14 mx-auto mb-2.5 animate-bounce-in">
                   <svg viewBox="0 0 100 100" className="w-full h-full">
                     <circle cx="50" cy="50" r="45" fill="white" />
                     <path
@@ -212,7 +226,7 @@ export default function TicketSuccess() {
                   </svg>
                 </div>
 
-                <h1 className="text-2xl font-extrabold mb-1">
+                <h1 className="text-xl font-extrabold mb-1">
                   Payment Successful!
                 </h1>
                 <p className="text-green-100 text-xs">
@@ -221,61 +235,104 @@ export default function TicketSuccess() {
               </div>
             </div>
 
-            {/* BODY - REDUCED PADDING */}
-            <div className="p-5 space-y-4">
-              {/* EVENT DETAILS CARD - COMPACT */}
-              <div className="border-2 border-green-200 rounded-xl p-4 bg-gradient-to-br from-green-50 to-emerald-50 animate-slide-up">
+            {/* BODY */}
+            <div className="p-4 space-y-3">
+              {/* EVENT DETAILS CARD */}
+              <div className="border border-green-200 rounded-xl p-3.5 bg-gradient-to-br from-green-50 to-emerald-50 animate-slide-up">
                 <div className="flex items-center gap-2 mb-2">
-                  <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
+                  <svg
+                    className="w-4 h-4 text-green-600"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"
+                    />
                   </svg>
                   <p className="text-xs uppercase text-green-700 font-bold tracking-wide">
                     Event Details
                   </p>
                 </div>
 
-                <h2 className="font-bold text-lg text-gray-900 mb-3">
+                <h2 className="font-bold text-base text-gray-900 mb-2">
                   {reg.eventId?.title}
                 </h2>
 
-                {/* ✅ GRID WITH TICKET INFO */}
                 <div className="grid grid-cols-2 gap-2">
                   {/* Main Ticket */}
-                  <div className="bg-white rounded-lg p-3 border border-green-100">
-                    <p className="text-xs text-gray-500 font-semibold mb-1">Main Ticket</p>
-                    <p className="font-bold text-sm text-gray-900">{reg.ticketName}</p>
+                  <div className="bg-white rounded-lg p-2.5 border border-green-100">
+                    <p className="text-[11px] text-gray-500 font-semibold mb-0.5">
+                      Main Ticket
+                    </p>
+                    <p className="font-bold text-sm text-gray-900">
+                      {reg.ticketName}
+                    </p>
                   </div>
 
-                  {/* ✅ SUB-TICKET (IF EXISTS) */}
+                  {/* Sub-Ticket */}
                   {reg.subTicketName && (
-                    <div className="bg-white rounded-lg p-3 border border-green-100">
-                      <p className="text-xs text-gray-500 font-semibold mb-1">Option</p>
-                      <p className="font-bold text-sm text-gray-900">{reg.subTicketName}</p>
+                    <div className="bg-white rounded-lg p-2.5 border border-green-100">
+                      <p className="text-[11px] text-gray-500 font-semibold mb-0.5">
+                        Option
+                      </p>
+                      <p className="font-bold text-sm text-gray-900">
+                        {reg.subTicketName}
+                      </p>
                     </div>
                   )}
 
+                  {/* Quantity */}
+                  <div className="bg-white rounded-lg p-2.5 border border-green-100">
+                    <p className="text-[11px] text-gray-500 font-semibold mb-0.5">
+                      Quantity
+                    </p>
+                    <p className="font-bold text-sm text-gray-900">
+                      {quantity}
+                    </p>
+                  </div>
+
                   {/* Amount Paid */}
-                  <div className={`bg-white rounded-lg p-3 border border-green-100 ${!reg.subTicketName ? 'col-span-1' : 'col-span-2'}`}>
-                    <p className="text-xs text-gray-500 font-semibold mb-1">Amount Paid</p>
-                    <p className="font-bold text-lg text-green-600">₹{paidAmount}</p>
+                  <div
+                    className={`bg-white rounded-lg p-2.5 border border-green-100 ${
+                      !reg.subTicketName ? "col-span-1" : "col-span-1"
+                    }`}
+                  >
+                    <p className="text-[11px] text-gray-500 font-semibold mb-0.5">
+                      Amount Paid
+                    </p>
+                    <p className="font-bold text-lg text-green-600">
+                      ₹{paidAmount}
+                    </p>
                   </div>
                 </div>
 
-                {/* Registration Number - COMPACT */}
-                <div className="mt-3 bg-gradient-to-r from-gray-900 to-gray-800 rounded-lg p-3 text-white">
-                  <p className="text-xs text-gray-300 font-semibold mb-1 uppercase">
+                {/* Registration Number */}
+                <div className="mt-2.5 bg-gradient-to-r from-gray-900 to-gray-800 rounded-lg p-2.5 text-white">
+                  <p className="text-[11px] text-gray-300 font-semibold mb-0.5 uppercase">
                     Registration Number
                   </p>
                   <div className="flex items-center justify-between">
-                    <p className="font-mono font-bold text-sm tracking-wider">
+                    <p className="font-mono font-bold text-xs tracking-wider">
                       {reg.registrationNumber}
                     </p>
                     <button
-                      onClick={() => {
-                        navigator.clipboard.writeText(reg.registrationNumber);
-                        alert("Copied!");
+                      onClick={async () => {
+                        try {
+                          await navigator.clipboard.writeText(
+                            reg.registrationNumber
+                          );
+                          setToast("Registration number copied");
+                          setTimeout(() => setToast(null), 2000);
+                        } catch {
+                          setToast("Failed to copy registration number");
+                          setTimeout(() => setToast(null), 2000);
+                        }
                       }}
-                      className="bg-white/20 hover:bg-white/30 px-2 py-1 rounded text-xs font-semibold transition"
+                      className="bg-white/20 hover:bg:white/30 px-2 py-1 rounded text-[11px] font-semibold transition"
                     >
                       Copy
                     </button>
@@ -283,14 +340,29 @@ export default function TicketSuccess() {
                 </div>
               </div>
 
-              {/* INFO BOX - COMPACT */}
-              <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 animate-slide-up" style={{ animationDelay: '0.1s' }}>
+              {/* INFO BOX */}
+              <div
+                className="bg-blue-50 border border-blue-200 rounded-xl p-3 animate-slide-up"
+                style={{ animationDelay: "0.1s" }}
+              >
                 <div className="flex items-start gap-2">
-                  <svg className="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  <svg
+                    className="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
                   </svg>
                   <div>
-                    <p className="font-semibold text-blue-900 text-sm mb-1">What's Next?</p>
+                    <p className="font-semibold text-blue-900 text-sm mb-1">
+                      What's Next?
+                    </p>
                     <ul className="text-xs text-blue-800 space-y-0.5">
                       <li>✓ Check your email for the PDF ticket</li>
                       <li>✓ Download or save it to your phone</li>
@@ -300,65 +372,113 @@ export default function TicketSuccess() {
                 </div>
               </div>
 
-              {/* ACTION BUTTONS - COMPACT */}
-              <div className="space-y-2 animate-slide-up" style={{ animationDelay: '0.2s' }}>
+              {/* ACTION BUTTONS */}
+              <div
+                className="space-y-2 animate-slide-up"
+                style={{ animationDelay: "0.2s" }}
+              >
                 <button
                   onClick={downloadTicket}
                   disabled={downloading}
-                  className="w-full bg-gradient-to-r from-green-600 to-emerald-600 text-white py-3 rounded-xl font-bold shadow-lg hover:shadow-xl hover:from-green-700 hover:to-emerald-700 transition-all flex items-center justify-center gap-2 disabled:opacity-50 text-sm"
+                  className="w-full bg-gradient-to-r from-green-600 to-emerald-600 text-white py-2.5 rounded-xl font-semibold shadow-md hover:shadow-lg hover:from-green-700 hover:to-emerald-700 transition-all flex items-center justify-center gap-2 disabled:opacity-50 text-sm"
                 >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  <svg
+                    className="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                    />
                   </svg>
-                  <span>{downloading ? "Downloading..." : "Download Ticket (PDF)"}</span>
+                  <span>
+                    {downloading ? "Downloading..." : "Download Ticket (PDF)"}
+                  </span>
                 </button>
 
                 <button
                   onClick={resendTicket}
                   disabled={resending}
-                  className="w-full border-2 border-gray-300 py-3 rounded-xl font-semibold hover:border-green-500 hover:text-green-600 transition-all flex items-center justify-center gap-2 disabled:opacity-50 text-sm"
+                  className="w-full border border-gray-300 py-2.5 rounded-xl font-semibold hover:border-green-500 hover:text-green-600 transition-all flex items-center justify-center gap-2 disabled:opacity-50 text-sm"
                 >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                  <svg
+                    className="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 
+                         00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                    />
                   </svg>
                   <span>{resending ? "Sending..." : "Resend Ticket Email"}</span>
                 </button>
 
                 {resendSuccess && (
-                  <div className="bg-green-100 border border-green-300 text-green-700 px-3 py-2 rounded-xl text-center font-semibold text-sm">
+                  <div className="bg-green-100 border border-green-300 text-green-700 px-3 py-2 rounded-xl text-center font-semibold text-xs">
                     ✓ Email sent successfully!
                   </div>
                 )}
               </div>
 
-              {/* FOOTER LINKS - COMPACT */}
+              {/* FOOTER LINKS */}
               <div className="flex items-center justify-center gap-3 pt-3 border-t border-gray-100">
-                <Link to="/" className="text-gray-600 text-xs hover:text-green-600 font-semibold hover:underline">
+                <Link
+                  to="/"
+                  className="text-gray-600 text-xs hover:text-green-600 font-semibold hover:underline"
+                >
                   Back to Home
                 </Link>
                 <span className="text-gray-300">•</span>
-                <Link to="/" className="text-gray-600 text-xs hover:text-green-600 font-semibold hover:underline">
+                <Link
+                  to="/"
+                  className="text-gray-600 text-xs hover:text-green-600 font-semibold hover:underline"
+                >
                   Browse Events
                 </Link>
               </div>
 
-              {/* Help Section - COMPACT */}
+              {/* Help Section */}
               <div className="bg-gray-50 border border-gray-200 rounded-lg p-2 text-center">
-                <p className="text-xs text-gray-600">
-                  Need help? <a href="mailto:support@eventstg.online" className="text-green-600 font-semibold hover:underline">support@eventstg.online</a>
+                <p className="text-[11px] text-gray-600">
+                  Need help?{" "}
+                  <a
+                    href="mailto:support@eventstg.online"
+                    className="text-green-600 font-semibold hover:underline"
+                  >
+                    support@eventstg.online
+                  </a>
                 </p>
               </div>
             </div>
           </div>
 
           {/* Additional Success Message */}
-          <div className="mt-4 text-center animate-slide-up" style={{ animationDelay: '0.3s' }}>
-            <p className="text-gray-600 text-sm">
+          <div
+            className="mt-3 text-center animate-slide-up"
+            style={{ animationDelay: "0.3s" }}
+          >
+            <p className="text-gray-600 text-xs">
               See you at the event! Have an amazing time!
             </p>
           </div>
         </div>
       </div>
+
+      {/* Toast at top-center */}
+      {toast && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 bg-gray-900 text-white px-3 py-1.5 rounded-full text-xs shadow-lg z-50">
+          {toast}
+        </div>
+      )}
     </PublicLayout>
   );
 }

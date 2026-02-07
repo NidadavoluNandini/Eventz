@@ -15,7 +15,7 @@ export class Organizer extends Document {
   @Prop({ default: 'ORGANIZER' })
   role: string;
   @Prop()
-  photoUrl?: string;
+  photo?: string;
   @Prop()
 passwordResetToken?: string;
 

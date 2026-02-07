@@ -14,14 +14,12 @@ const categories = [
   { label: "Sports", value: "Sports" },
   { label: "Entertainment", value: "Entertainment" },
   { label: "Industry", value: "Industry" },
+  {label:"Health",value:"Health"},
 ];
 
-export default function EventsFilter({
-  selected,
-  setSelected,
-}: EventsFilterProps) {
+export default function EventsFilter({ selected, setSelected }: EventsFilterProps) {
   return (
-    <div className="flex flex-wrap gap-3 justify-center py-4">
+    <div className="flex flex-wrap justify-center gap-2">
       {categories.map(({ label, value }) => {
         const isActive = selected === value;
 
@@ -29,10 +27,10 @@ export default function EventsFilter({
           <button
             key={value}
             onClick={() => setSelected(value)}
-            className={`px-4 py-1.5 rounded-full text-sm font-semibold transition
+            className={`px-3 sm:px-4 py-1.5 rounded-full text-xs sm:text-sm font-semibold transition
               ${
                 isActive
-                  ? "bg-blue-600 text-white"
+                  ? "bg-blue-600 text-white shadow-md"
                   : "bg-gray-100 text-gray-700 hover:bg-gray-200"
               }
             `}

@@ -29,8 +29,7 @@ export class EmailService {
   }
 
   async sendOtpEmail(email: string, otp: string) {
-    // ✅ ADD CONSOLE LOG TO DEBUG
-    console.log('📧 Sending OTP Email:', { email, otp, type: typeof otp });
+    console.log('Sending OTP Email:', { email, otp, type: typeof otp });
 
     const html = `
       <!DOCTYPE html>
@@ -44,10 +43,7 @@ export class EmailService {
         <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: #f3f4f6; padding: 40px 20px;">
           <tr>
             <td align="center">
-              <!-- Main Container -->
               <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="max-width: 600px; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
-                
-                <!-- Header with Gradient -->
                 <tr>
                   <td style="background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%); padding: 40px 30px; text-align: center;">
                     <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: bold;">Security Code</h1>
@@ -55,7 +51,6 @@ export class EmailService {
                   </td>
                 </tr>
 
-                <!-- Content -->
                 <tr>
                   <td style="padding: 40px 30px;">
                     <p style="margin: 0 0 20px 0; color: #374151; font-size: 16px; line-height: 1.6;">
@@ -65,7 +60,6 @@ export class EmailService {
                       Use the following One-Time Password (OTP) to complete your authentication. This code is valid for <strong>5 minutes</strong>.
                     </p>
 
-                    <!-- ✅ OTP Box - FIXED WITH NESTED TABLES -->
                     <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
                       <tr>
                         <td align="center" style="padding: 20px 0;">
@@ -81,7 +75,6 @@ export class EmailService {
                       </tr>
                     </table>
 
-                    <!-- Security Warning -->
                     <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin-top: 30px; background-color: #FEF3C7; border-left: 4px solid #F59E0B; border-radius: 8px;">
                       <tr>
                         <td style="padding: 16px 20px;">
@@ -93,12 +86,11 @@ export class EmailService {
                     </table>
 
                     <p style="margin: 30px 0 0 0; color: #6B7280; font-size: 14px; line-height: 1.6;">
-                      If you didn't request this code, please ignore this email or contact our support team.
+                      If you did not request this code, please ignore this email or contact our support team.
                     </p>
                   </td>
                 </tr>
 
-                <!-- Footer -->
                 <tr>
                   <td style="background-color: #F9FAFB; padding: 30px; text-align: center; border-top: 1px solid #E5E7EB;">
                     <p style="margin: 0 0 10px 0; color: #9CA3AF; font-size: 12px;">
@@ -129,6 +121,8 @@ export class EmailService {
     eventDate: string;
     eventTime: string;
     eventLocation: string;
+      quantity: number,  
+    
     pdfBuffer: Buffer;
   }) {
     const html = `
@@ -143,20 +137,12 @@ export class EmailService {
         <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: #f3f4f6; padding: 40px 20px;">
           <tr>
             <td align="center">
-              <!-- Main Container -->
               <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="max-width: 600px; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
                 
                 <!-- Success Header -->
                 <tr>
                   <td style="background: linear-gradient(135deg, #10B981 0%, #059669 100%); padding: 40px 30px; text-align: center;">
-                    <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin: 0 auto 20px;">
-                      <tr>
-                        <td style="width: 80px; height: 80px; background-color: #ffffff; border-radius: 50%; text-align: center; vertical-align: middle; font-size: 48px;">
-                          🎉
-                        </td>
-                      </tr>
-                    </table>
-                    <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: bold;">Payment Successful!</h1>
+                    <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: bold;">Payment Successful</h1>
                     <p style="margin: 10px 0 0 0; color: #D1FAE5; font-size: 14px;">Your ticket is confirmed</p>
                   </td>
                 </tr>
@@ -168,7 +154,7 @@ export class EmailService {
                       Hello <strong>${data.userName}</strong>,
                     </p>
                     <p style="margin: 0 0 30px 0; color: #374151; font-size: 16px; line-height: 1.6;">
-                      Great news! Your registration for <strong>${data.eventName}</strong> has been confirmed. Your ticket is attached to this email.
+                      Your registration for <strong>${data.eventName}</strong> has been confirmed. Your ticket is attached to this email.
                     </p>
 
                     <!-- Event Details Card -->
@@ -223,6 +209,16 @@ export class EmailService {
                             </tr>
                           </table>
 
+                          <!-- Quantity -->
+                          <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin-bottom: 12px;">
+                            <tr>
+                              <td style="color: #6B7280; font-size: 12px; font-weight: 600; text-transform: uppercase; padding-bottom: 4px;">Quantity</td>
+                            </tr>
+                            <tr>
+                              <td style="color: #1F2937; font-size: 14px; font-weight: bold;">${data.quantity}</td>
+                            </tr>
+                          </table>
+
                           <!-- Registration Number -->
                           <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: #1F2937; border-radius: 8px; margin-top: 16px;">
                             <tr>
@@ -243,9 +239,6 @@ export class EmailService {
                           <p style="margin: 0 0 12px 0; color: #1E3A8A; font-size: 14px; font-weight: bold;">Important Information</p>
                           <ul style="margin: 0; padding-left: 20px; color: #1E40AF; font-size: 14px; line-height: 1.8;">
                             <li>Your ticket PDF is attached to this email</li>
-                            <li>Please bring a printed or digital copy to the venue</li>
-                            <li>Show your ticket at the entrance for check-in</li>
-                            <li>Arrive 15 minutes early for smooth entry</li>
                           </ul>
                         </td>
                       </tr>
@@ -255,7 +248,7 @@ export class EmailService {
                     <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin-top: 30px;">
                       <tr>
                         <td align="center">
-                          <a href="https://eventstg.online/events" style="display: inline-block; background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%); color: #ffffff; text-decoration: none; padding: 16px 40px; border-radius: 10px; font-weight: bold; font-size: 16px; box-shadow: 0 4px 6px rgba(79, 70, 229, 0.3);">
+                          <a href="https://eventz-zeta.vercel.app/" style="display: inline-block; background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%); color: #ffffff; text-decoration: none; padding: 16px 40px; border-radius: 10px; font-weight: bold; font-size: 16px; box-shadow: 0 4px 6px rgba(79, 70, 229, 0.3);">
                             Explore More Events
                           </a>
                         </td>
@@ -263,7 +256,7 @@ export class EmailService {
                     </table>
 
                     <p style="margin: 30px 0 0 0; color: #6B7280; font-size: 14px; line-height: 1.6; text-align: center;">
-                      See you at the event!
+                      See you at the event.
                     </p>
                   </td>
                 </tr>
@@ -275,7 +268,7 @@ export class EmailService {
                       This email was sent by <strong>Eventz</strong>
                     </p>
                     <p style="margin: 0 0 15px 0; color: #9CA3AF; font-size: 12px;">
-                      Need help? <a href="mailto:support@eventstg.online" style="color: #4F46E5; text-decoration: none;">Contact Support</a>
+                      Need help? <a href="mailto:interactwitai@gmail.com" style="color: #4F46E5; text-decoration: none;">Contact Support</a>
                     </p>
                     <p style="margin: 0; color: #D1D5DB; font-size: 11px;">
                       © 2026 Eventz. All rights reserved.

@@ -2,21 +2,77 @@ import { useEffect, useState } from "react";
 import { getOrganizerEvents } from "../../api/events.api";
 import { getEventRegistrations } from "../../api/registrations.api";
 
+type RegistrationStatus =
+  | "PENDING_OTP"
+  | "PENDING_PAYMENT"
+  | "COMPLETED";
+  
+
+type PaymentStatus = "PENDING" | "PAID" | "NOT_REQUIRED" | "FAILED";
+
+type UiStatus = "PENDING" | "PAID" ;
+
 interface Registration {
   _id: string;
   userName: string;
   userEmail: string;
-  ticketType: string;
-  status: string;
+  userPhone: string;
+  ticketName: string;
+  subTicketName?: string;
+  status: RegistrationStatus;
+  paymentStatus: PaymentStatus;
   attended?: boolean;
 }
+
+
+
+const getUiStatus = (reg: Registration): UiStatus => {
+  // Only treat explicit CANCELLED status as cancelled
+  
+
+  // Paid or free tickets
+  if (reg.paymentStatus === "PAID" || reg.paymentStatus === "NOT_REQUIRED") {
+    return "PAID";
+  }
+
+  // Everything else (PENDING, FAILED, etc.) is pending
+  return "PENDING";
+};
+
+const getStatusLabelAndClass = (reg: Registration) => {
+  const ui = getUiStatus(reg);
+
+  if (ui === "PENDING") {
+    // Distinguish OTP vs payment
+    const label =
+      reg.status === "PENDING_PAYMENT" ? "Pending Payment" : "Pending OTP";
+    return {
+      label,
+      className: "bg-amber-50 text-amber-700",
+    };
+  }
+
+  if (ui === "PAID") {
+    return {
+      label: "Paid",
+      className: "bg-emerald-50 text-emerald-700",
+    };
+  }
+
+  // Only when status === "CANCELLED"
+  return {
+    label: "Cancelled",
+    className: "bg-red-50 text-red-700",
+  };
+};
+
 
 export default function UserManagement() {
   const [events, setEvents] = useState<any[]>([]);
   const [registrations, setRegistrations] = useState<Registration[]>([]);
   const [selectedEvent, setSelectedEvent] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
-  const [filterStatus, setFilterStatus] = useState("all");
+  const [filterStatus, setFilterStatus] = useState<"all" | UiStatus>("all");
   const [filterTicket, setFilterTicket] = useState("all");
   const [loading, setLoading] = useState(false);
 
@@ -33,41 +89,45 @@ export default function UserManagement() {
       .finally(() => setLoading(false));
   };
 
-  // Toggle attendance
   const toggleAttendance = (regId: string) => {
     setRegistrations((prev) =>
       prev.map((reg) =>
         reg._id === regId ? { ...reg, attended: !reg.attended } : reg
       )
     );
-    // TODO: Make API call to update attendance in backend
   };
 
-  // Filter registrations
+  const getTicketLabel = (r: Registration) =>
+    r.subTicketName ? `${r.ticketName} - ${r.subTicketName}` : r.ticketName;
+
   const filteredRegistrations = registrations.filter((reg) => {
     const matchesSearch =
       reg.userName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       reg.userEmail.toLowerCase().includes(searchTerm.toLowerCase());
 
+    const uiStatus = getUiStatus(reg);
     const matchesStatus =
-      filterStatus === "all" || reg.status === filterStatus;
+      filterStatus === "all" || uiStatus === filterStatus;
 
+    const ticketLabel = getTicketLabel(reg);
     const matchesTicket =
-      filterTicket === "all" || reg.ticketType === filterTicket;
+      filterTicket === "all" || ticketLabel === filterTicket;
 
     return matchesSearch && matchesStatus && matchesTicket;
   });
 
-  // Get unique ticket types for filter
   const ticketTypes = Array.from(
-    new Set(registrations.map((r) => r.ticketType))
+    new Set(registrations.map(getTicketLabel))
   );
 
-  // Get stats
   const totalRegistrations = registrations.length;
-  const confirmedRegistrations = registrations.filter(
-    (r) => r.status === "CONFIRMED"
+  const pendingCount = registrations.filter(
+    (r) => getUiStatus(r) === "PENDING"
   ).length;
+  const paidCount = registrations.filter(
+    (r) => getUiStatus(r) === "PAID"
+  ).length;
+  
   const attendedCount = registrations.filter((r) => r.attended).length;
 
   return (
@@ -76,7 +136,7 @@ export default function UserManagement() {
       <div className="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-2xl shadow-lg p-8 text-white">
         <h1 className="text-3xl font-bold mb-2">User Management</h1>
         <p className="text-indigo-100">
-          Manage and track event registrations
+          Manage registrations and payment status
         </p>
       </div>
 
@@ -103,11 +163,11 @@ export default function UserManagement() {
 
         {/* Stats Card */}
         {selectedEvent && (
-          <div className="bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl shadow-lg p-5 text-white">
+          <div className="bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl shadow-lg p-5 text-white font-bold">
             <div className="flex items-center gap-3 mb-3">
               <div className="w-10 h-10 bg-white/20 backdrop-blur rounded-lg flex items-center justify-center">
                 <svg
-                  className="w-5 h-5 text-white"
+                  className="w-5 h-5 text-white font-bold"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -129,9 +189,14 @@ export default function UserManagement() {
             </div>
             <div className="space-y-2 pt-3 border-t border-white/20">
               <p className="text-sm flex justify-between">
-                <span className="text-white/80">Confirmed:</span>
-                <span className="font-bold">{confirmedRegistrations}</span>
+                <span className="text-white/80">Pending:</span>
+                <span className="font-bold">{pendingCount}</span>
               </p>
+              <p className="text-sm flex justify-between">
+                <span className="text-white/80">Paid:</span>
+                <span className="font-bold">{paidCount}</span>
+              </p>
+             
               <p className="text-sm flex justify-between">
                 <span className="text-white/80">Attended:</span>
                 <span className="font-bold">{attendedCount}</span>
@@ -174,7 +239,7 @@ export default function UserManagement() {
               </div>
             </div>
 
-            {/* Status Filter */}
+            {/* Status Filter (Pending / Paid / Cancelled) */}
             <div>
               <label className="block text-xs font-medium text-slate-700 mb-1.5">
                 Status
@@ -182,12 +247,14 @@ export default function UserManagement() {
               <select
                 className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition outline-none text-sm"
                 value={filterStatus}
-                onChange={(e) => setFilterStatus(e.target.value)}
+                onChange={(e) =>
+                  setFilterStatus(e.target.value as "all" | UiStatus)
+                }
               >
                 <option value="all">All Status</option>
-                <option value="CONFIRMED">Confirmed</option>
                 <option value="PENDING">Pending</option>
-                <option value="CANCELLED">Cancelled</option>
+                <option value="PAID">Paid</option>
+              
               </select>
             </div>
 
@@ -236,7 +303,7 @@ export default function UserManagement() {
               Registered Users
             </h2>
             <p className="text-xs text-slate-600 mt-0.5">
-              Complete list of event attendees
+              Includes pending and completed payments
             </p>
           </div>
 
@@ -310,89 +377,92 @@ export default function UserManagement() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {filteredRegistrations.map((r) => (
-                    <tr key={r._id} className="hover:bg-slate-50 transition">
-                      <td className="py-3 px-5">
-                        <div className="flex items-center gap-2.5">
-                          <div className="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center flex-shrink-0">
-                            <span className="text-indigo-700 font-semibold text-xs">
-                              {r.userName.charAt(0).toUpperCase()}
+                  {filteredRegistrations.map((r) => {
+                    const ticketLabel = getTicketLabel(r);
+                    const { label, className } =
+                      getStatusLabelAndClass(r);
+
+                    return (
+                      <tr
+                        key={r._id}
+                        className="hover:bg-slate-50 transition"
+                      >
+                        <td className="py-3 px-5">
+                          <div className="flex items-center gap-2.5">
+                            <div className="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center flex-shrink-0">
+                              <span className="text-indigo-700 font-semibold text-xs">
+                                {r.userName.charAt(0).toUpperCase()}
+                              </span>
+                            </div>
+                            <span className="font-medium text-slate-900 text-sm">
+                              {r.userName}
                             </span>
                           </div>
-                          <span className="font-medium text-slate-900 text-sm">
-                            {r.userName}
+                        </td>
+                        <td className="py-3 px-5 text-sm text-slate-600">
+                          {r.userEmail}
+                        </td>
+                        <td className="py-3 px-5">
+                          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700">
+                            {ticketLabel}
                           </span>
-                        </div>
-                      </td>
-                      <td className="py-3 px-5 text-sm text-slate-600">
-                        {r.userEmail}
-                      </td>
-                      <td className="py-3 px-5">
-                        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700">
-                          {r.ticketType}
-                        </span>
-                      </td>
-                      <td className="py-3 px-5">
-                        <span
-                          className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
-                            r.status === "CONFIRMED"
-                              ? "bg-emerald-50 text-emerald-700"
-                              : r.status === "PENDING"
-                              ? "bg-amber-50 text-amber-700"
-                              : "bg-red-50 text-red-700"
-                          }`}
-                        >
-                          {r.status}
-                        </span>
-                      </td>
-                      <td className="py-3 px-5">
-                        <button
-                          onClick={() => toggleAttendance(r._id)}
-                          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                            r.attended
-                              ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200"
-                              : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                          }`}
-                        >
-                          {r.attended ? (
-                            <>
-                              <svg
-                                className="w-3.5 h-3.5"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M5 13l4 4L19 7"
-                                />
-                              </svg>
-                              Attended
-                            </>
-                          ) : (
-                            <>
-                              <svg
-                                className="w-3.5 h-3.5"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M6 18L18 6M6 6l12 12"
-                                />
-                              </svg>
-                              Not Attended
-                            </>
-                          )}
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
+                        </td>
+                        <td className="py-3 px-5">
+                          <span
+                            className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${className}`}
+                          >
+                            {label}
+                          </span>
+                        </td>
+                        <td className="py-3 px-5">
+                          <button
+                            onClick={() => toggleAttendance(r._id)}
+                            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                              r.attended
+                                ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200"
+                                : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                            }`}
+                          >
+                            {r.attended ? (
+                              <>
+                                <svg
+                                  className="w-3.5 h-3.5"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M5 13l4 4L19 7"
+                                  />
+                                </svg>
+                                Attended
+                              </>
+                            ) : (
+                              <>
+                                <svg
+                                  className="w-3.5 h-3.5"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M6 18L18 6M6 6l12 12"
+                                  />
+                                </svg>
+                                Not Attended
+                              </>
+                            )}
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

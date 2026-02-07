@@ -39,13 +39,16 @@ export class RegistrationsService {
   // =====================================================
   // STEP 1: INITIATE REGISTRATION (SEND OTP)
   // =====================================================
+// =====================================================
+// STEP 1: INITIATE REGISTRATION (SEND OTP)
+// =====================================================
 async initiateRegistration(dto: {
   eventId: string;
   userName: string;
   userEmail: string;
   userPhone: string;
   ticketName: string;
-  subTicketName?: string; // ✅ Type definition
+  subTicketName?: string;
   quantity: number;
 }) {
   const event = await this.eventModel.findById(dto.eventId);
@@ -61,18 +64,19 @@ async initiateRegistration(dto: {
     throw new BadRequestException('Invalid ticket selected');
   }
 
-  const quantity = dto.quantity || 1;
+  const quantity = dto.quantity && dto.quantity > 0 ? dto.quantity : 1;
 
-  let basePricePerTicket: number = 0; // ✅ Changed from undefined to 0
-  let gstRate: number = 0;
+  let basePricePerTicket = 0;
+  let gstRate = 0;
 
-  // ALWAYS START WITH PARENT TICKET PRICE
-  if (ticket.price !== undefined) {
+  // PARENT TICKET PRICE (0 is valid free price if configured)
+  if (ticket.price !== undefined && ticket.price !== null) {
     basePricePerTicket = ticket.price;
     gstRate = ticket.gst || 0;
   }
 
-  // IF SUB-TICKET SELECTED, ADD ITS PRICE TO PARENT
+  // OPTIONAL SUB-TICKET
+  let subTicketPrice: number | undefined;
   if (dto.subTicketName && ticket.subTickets?.length) {
     const subTicket = ticket.subTickets.find(
       (s) => s.name === dto.subTicketName,
@@ -82,13 +86,22 @@ async initiateRegistration(dto: {
       throw new BadRequestException('Invalid sub-ticket selected');
     }
 
-    // ✅ ADD instead of REPLACE
-    basePricePerTicket += subTicket.price;
-    gstRate = Math.max(gstRate, subTicket.gst || 0);
-    // ❌ REMOVE THIS LINE: subTicketName = dto.subTicketName;
+    subTicketPrice = subTicket.price;
+    if (subTicketPrice !== undefined && subTicketPrice !== null) {
+      basePricePerTicket += subTicketPrice;
+      // gstRate: keep parent GST or adjust here if required
+    }
   }
 
-  if (basePricePerTicket === 0 && !ticket.price && !dto.subTicketName) {
+  // NEW: only treat as "not configured" when neither parent nor selected sub have any price set
+  const parentPriceConfigured =
+    ticket.price !== undefined && ticket.price !== null;
+  const subPriceConfigured =
+    dto.subTicketName != null &&
+    subTicketPrice !== undefined &&
+    subTicketPrice !== null;
+
+  if (!parentPriceConfigured && !subPriceConfigured) {
     throw new BadRequestException('Ticket price not configured');
   }
 
@@ -120,7 +133,7 @@ async initiateRegistration(dto: {
 
   if (existingPending) {
     existingPending.ticketName = dto.ticketName;
-    existingPending.subTicketName = dto.subTicketName || undefined; // ✅ Use dto.subTicketName directly
+    existingPending.subTicketName = dto.subTicketName || undefined;
     existingPending.basePricePerTicket = basePricePerTicket;
     existingPending.quantity = quantity;
     existingPending.gstRate = gstRate;
@@ -154,7 +167,7 @@ async initiateRegistration(dto: {
     userPhone: dto.userPhone,
 
     ticketName: dto.ticketName,
-    subTicketName: dto.subTicketName || undefined, // ✅ Use dto.subTicketName directly
+    subTicketName: dto.subTicketName || undefined,
     basePricePerTicket,
     quantity,
     gstRate,
@@ -290,19 +303,26 @@ async initiateRegistration(dto: {
     return { message: 'OTP resent successfully' };
   }
 
-  async findByEvent(eventId: string, organizerId: string) {
-    const event = await this.eventModel.findById(eventId);
-    if (!event) throw new NotFoundException('Event not found');
+// RegistrationsService
+// registrations.service.ts
+async findByEvent(eventId: string, organizerId: string) {
+  const event = await this.eventModel.findById(eventId);
+  if (!event) throw new NotFoundException('Event not found');
 
-    if (event.organizerId.toString() !== organizerId) {
-      throw new ForbiddenException('Access denied');
-    }
-
-    return this.registrationModel.find({
-      eventId: new Types.ObjectId(eventId),
-      status: RegistrationStatus.COMPLETED,
-    });
+  if (event.organizerId.toString() !== organizerId) {
+    throw new ForbiddenException('Access denied');
   }
+
+  const regs = await this.registrationModel
+    .find({ eventId: new Types.ObjectId(eventId) })
+    .select(
+      'userName userEmail userPhone ticketName subTicketName status paymentStatus createdAt',
+    )
+    .sort({ createdAt: -1 })
+    .lean();
+
+  return regs;
+}
 
   async findByUser(phone: string) {
     return this.registrationModel

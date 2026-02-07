@@ -20,7 +20,6 @@ export class PaymentReminderService {
   // ⏰ Runs every 2 hours
   @Cron('0 */2 * * *')
   async sendRegistrationReminders() {
-    console.log('⏰ Registration reminder cron running');
 
     const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000);
 
@@ -49,7 +48,6 @@ export class PaymentReminderService {
       })
       .populate('eventId');
 
-    console.log(`📨 Found ${pendingRegs.length} pending registrations`);
 
     for (const reg of pendingRegs) {
       let reason = '';

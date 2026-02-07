@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import api from "../../utils/axios";
 import PublicLayout from "../../layouts/PublicLayout";
@@ -21,10 +21,10 @@ export default function Payment() {
 
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [orderDetails, setOrderDetails] = useState<any>(null);
+  const [paymentDetails, setPaymentDetails] = useState<any>(null);
   const [fetchingDetails, setFetchingDetails] = useState(true);
 
-  /* ---------------- FETCH REGISTRATION ---------------- */
+  /* ---------------- FETCH PAYMENT DETAILS ---------------- */
   useEffect(() => {
     if (!finalRegistrationId) {
       setError("Invalid payment session.");
@@ -34,8 +34,10 @@ export default function Payment() {
 
     const fetchDetails = async () => {
       try {
-        const res = await api.get(`/api/registrations/${finalRegistrationId}`);
-        setOrderDetails(res.data);
+        const res = await api.get(
+          `/api/payments/registration/details/${finalRegistrationId}`
+        );
+        setPaymentDetails(res.data);
       } catch {
         setError("Failed to load payment details");
       } finally {
@@ -45,26 +47,6 @@ export default function Payment() {
 
     fetchDetails();
   }, [finalRegistrationId]);
-
-  /* ---------------- SAFE AMOUNT RESOLUTION ---------------- */
-  const displayAmount = useMemo(() => {
-    if (!orderDetails) return 0;
-
-    // Priority-based resolution
-    if (orderDetails.totalAmount) return orderDetails.totalAmount;
-    if (orderDetails.finalAmount) return orderDetails.finalAmount;
-    if (orderDetails.finalPrice) return orderDetails.finalPrice;
-    if (orderDetails.payment?.amount) return orderDetails.payment.amount;
-
-    // Fallback: Convert from smallest currency unit if needed
-    if (orderDetails.amount) {
-      return orderDetails.amount > 1000
-        ? Math.floor(orderDetails.amount / 100)
-        : orderDetails.amount;
-    }
-
-    return 0;
-  }, [orderDetails]);
 
   /* ---------------- START PAYMENT ---------------- */
   const startPayment = async () => {
@@ -82,16 +64,16 @@ export default function Payment() {
 
       const options = {
         key,
-        amount, // Amount in smallest currency unit (from backend)
+        amount,
         currency,
         name: "Event Registration",
         description: "Event Ticket Payment",
         order_id: razorpayOrderId,
 
         prefill: {
-          name: orderDetails?.userName || "",
-          email: orderDetails?.userEmail || "",
-          contact: orderDetails?.userPhone || "",
+          name: paymentDetails?.registration?.userName || "",
+          email: paymentDetails?.registration?.userEmail || "",
+          contact: paymentDetails?.registration?.userPhone || "",
         },
 
         handler: async (response: any) => {
@@ -111,10 +93,11 @@ export default function Payment() {
         },
 
         modal: {
-          // Payment modal dismiss handler
           ondismiss: async () => {
             try {
-              await api.post(`/api/payments/registration/fail/${finalRegistrationId}`);
+              await api.post(
+                `/api/payments/registration/fail/${finalRegistrationId}`
+              );
             } catch {}
 
             navigate(`/payment-cancelled/${finalRegistrationId}`);
@@ -127,7 +110,9 @@ export default function Payment() {
       const rzp = new window.Razorpay(options);
       rzp.open();
     } catch (err: any) {
-      setError(err.response?.data?.message || "Payment initialization failed");
+      setError(
+        err.response?.data?.message || "Payment initialization failed"
+      );
     } finally {
       setLoading(false);
     }
@@ -140,14 +125,18 @@ export default function Payment() {
         <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 via-white to-purple-50">
           <div className="text-center">
             <div className="w-16 h-16 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-            <p className="text-gray-600 font-medium">Loading payment details...</p>
+            <p className="text-gray-600 font-medium">
+              Loading payment details...
+            </p>
           </div>
         </div>
       </PublicLayout>
     );
   }
 
-  /* ---------------- ENHANCED UI ---------------- */
+  const quantity = paymentDetails?.pricing?.quantity ?? 1;
+
+  /* ---------------- RENDER ---------------- */
   return (
     <PublicLayout>
       <style>
@@ -182,17 +171,27 @@ export default function Payment() {
         <div className="w-full max-w-lg">
           {/* Payment Card */}
           <div className="bg-white rounded-3xl shadow-2xl overflow-hidden animate-slide-up">
-            {/* HEADER with Gradient */}
+            {/* HEADER */}
             <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-6 text-white relative overflow-hidden">
-              {/* Decorative circles */}
               <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16"></div>
               <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/10 rounded-full -ml-12 -mb-12"></div>
 
               <div className="relative z-10 flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
-                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                    <svg
+                      className="w-6 h-6"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 
+                           00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"
+                      />
                     </svg>
                   </div>
                   <div>
@@ -201,8 +200,21 @@ export default function Payment() {
                   </div>
                 </div>
                 <div className="flex items-center gap-2 text-xs bg-white/20 backdrop-blur-sm px-3 py-1.5 rounded-full">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                  <svg
+                    className="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 15v2m-6 4h12a2 2 0 
+                         002-2v-6a2 2 0 00-2-2H6a2 2 0 
+                         00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 
+                         00-8 0v4h8z"
+                    />
                   </svg>
                   <span className="font-medium">Secure</span>
                 </div>
@@ -212,7 +224,7 @@ export default function Payment() {
             {/* BODY */}
             <div className="p-6 space-y-5">
               {/* EVENT DETAILS CARD */}
-              {orderDetails && (
+              {paymentDetails && (
                 <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-2xl p-5 border-2 border-indigo-100">
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex-1">
@@ -220,7 +232,7 @@ export default function Payment() {
                         Event Details
                       </p>
                       <h3 className="text-lg font-bold text-gray-900">
-                        {orderDetails.eventId?.title || "Event"}
+                        {paymentDetails.event?.title || "Event"}
                       </h3>
                     </div>
                   </div>
@@ -229,27 +241,57 @@ export default function Payment() {
                     {/* Ticket */}
                     <div className="flex items-center justify-between py-2 border-b border-indigo-200">
                       <div className="flex items-center gap-2">
-                        <svg className="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
+                        <svg
+                          className="w-4 h-4 text-indigo-600"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 
+                               00-2 2v3a2 2 0 110 4v3a2 2 0 
+                               002 2h14a2 2 0 002-2v-3a2 2 0 
+                               110-4V7a2 2 0 00-2-2H5z"
+                          />
                         </svg>
-                        <span className="text-sm font-medium text-gray-700">Ticket</span>
+                        <span className="text-sm font-medium text-gray-700">
+                          Ticket
+                        </span>
                       </div>
                       <span className="text-sm font-bold text-gray-900">
-                        {orderDetails.ticketName}
+                        {paymentDetails.registration?.ticketName}
                       </span>
                     </div>
 
                     {/* Sub-Ticket */}
-                    {orderDetails.subTicketName && (
+                    {paymentDetails.registration?.subTicketName && (
                       <div className="flex items-center justify-between py-2 border-b border-indigo-200">
                         <div className="flex items-center gap-2">
-                          <svg className="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                          <svg
+                            className="w-4 h-4 text-indigo-600"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 
+                                 010 2.828l-7 7a2 2 0 
+                                 01-2.828 0l-7-7A1.994 1.994 0 
+                                 013 12V7a4 4 0 014-4z"
+                            />
                           </svg>
-                          <span className="text-sm font-medium text-gray-700">Option</span>
+                          <span className="text-sm font-medium text-gray-700">
+                            Option
+                          </span>
                         </div>
                         <span className="text-sm font-bold text-gray-900">
-                          {orderDetails.subTicketName}
+                          {paymentDetails.registration?.subTicketName}
                         </span>
                       </div>
                     )}
@@ -257,28 +299,129 @@ export default function Payment() {
                     {/* Attendee */}
                     <div className="flex items-center justify-between py-2">
                       <div className="flex items-center gap-2">
-                        <svg className="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                        <svg
+                          className="w-4 h-4 text-indigo-600"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M16 7a4 4 0 11-8 0 4 4 0 
+                               018 0zM12 14a7 7 0 00-7 7h14a7 7 0 
+                               00-7-7z"
+                          />
                         </svg>
-                        <span className="text-sm font-medium text-gray-700">Attendee</span>
+                        <span className="text-sm font-medium text-gray-700">
+                          Attendee
+                        </span>
                       </div>
                       <span className="text-sm font-bold text-gray-900">
-                        {orderDetails.userName}
+                        {paymentDetails.registration?.userName}
                       </span>
                     </div>
+
+                    {/* Quantity */}
+                    {quantity && (
+                      <div className="flex items-center justify-between py-2">
+                        <div className="flex items-center gap-2">
+                          <svg
+                            className="w-4 h-4 text-indigo-600"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M7 10h10M7 14h7M5 6h14a2 2 0 
+                                 012 2v10a2 2 0 
+                                 01-2 2H5a2 2 0 
+                                 01-2-2V8a2 2 0 012-2z"
+                            />
+                          </svg>
+                          <span className="text-sm font-medium text-gray-700">
+                            Quantity
+                          </span>
+                        </div>
+                        <span className="text-sm font-bold text-gray-900">
+                          {quantity}
+                        </span>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
 
-              {/* AMOUNT DISPLAY */}
-              {orderDetails && (
-                <div className="bg-gray-50 rounded-2xl p-5 border-2 border-gray-200 relative overflow-hidden">
-                  <div className="shimmer absolute inset-0"></div>
-                  <div className="relative flex items-center justify-between mb-2">
-                    <span className="text-gray-600 font-medium">Amount to Pay</span>
-                    <div className="text-right">
-                      <p className="text-3xl font-bold text-green-600">₹{displayAmount}</p>
-                      <p className="text-xs text-gray-500">GST included</p>
+              {/* AMOUNT WITH BREAKDOWN */}
+              {paymentDetails?.pricing && (
+                <div className="bg-gray-50 rounded-2xl p-5 border-2 border-gray-200">
+                  <div className="space-y-3">
+                    {/* Parent Ticket */}
+                    <div className="flex justify-between items-center pb-2 border-b">
+                      <div>
+                        <p className="font-semibold text-gray-900">
+                          {paymentDetails.pricing.parentTicket.name}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          ₹{paymentDetails.pricing.parentTicket.basePrice} ×{" "}
+                          {quantity} ticket{quantity > 1 ? "s" : ""}
+                        </p>
+                      </div>
+                      <span className="font-bold text-gray-900">
+                        ₹
+                        {paymentDetails.pricing.parentTicket.basePrice *
+                          quantity}
+                      </span>
+                    </div>
+
+                    {/* Sub-Ticket */}
+                    {paymentDetails.pricing.subTicket && (
+                      <div className="flex justify-between items-center pb-2 border-b mt-3">
+                        <div>
+                          <p className="font-semibold text-gray-900">
+                            {paymentDetails.pricing.subTicket.name}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            ₹{paymentDetails.pricing.subTicket.basePrice} ×{" "}
+                            {quantity} ticket{quantity > 1 ? "s" : ""}
+                          </p>
+                        </div>
+                        <span className="font-bold text-gray-900">
+                          ₹
+                          {paymentDetails.pricing.subTicket.basePrice *
+                            quantity}
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Totals */}
+                    <div className="pt-3 mt-3 border-t-2 space-y-2">
+                      <div className="flex justify-between text-sm font-medium text-gray-700">
+                        <span>Subtotal (Base)</span>
+                        <span>₹{paymentDetails.pricing.total.basePrice}</span>
+                      </div>
+                      <div className="flex justify-between text-sm font-medium text-gray-700">
+                        <span>Total GST</span>
+                        <span>₹{paymentDetails.pricing.total.totalGST}</span>
+                      </div>
+                      <div className="flex justify-between items-center pt-2 border-t">
+                        <span className="text-gray-600 font-medium">
+                          Amount to Pay
+                        </span>
+                        <div className="text-right">
+                          <p className="text-3xl font-bold text-green-600">
+                            ₹{paymentDetails.pricing.total.finalAmount}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            GST included for {quantity} ticket
+                            {quantity > 1 ? "s" : ""}
+                          </p>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -288,8 +431,19 @@ export default function Payment() {
               {error && (
                 <div className="bg-red-50 border-2 border-red-200 rounded-xl p-4">
                   <div className="flex items-center gap-3">
-                    <svg className="w-5 h-5 text-red-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    <svg
+                      className="w-5 h-5 text-red-500 flex-shrink-0"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 8v4m0 4h.01M21 12a9 9 0 
+                           11-18 0 9 9 0 0118 0z"
+                      />
                     </svg>
                     <p className="text-red-600 text-sm font-medium">{error}</p>
                   </div>
@@ -304,15 +458,41 @@ export default function Payment() {
               >
                 {loading ? (
                   <>
-                    <svg className="animate-spin w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    <svg
+                      className="animate-spin w-6 h-6"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 
+                           004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 
+                           01-15.357-2m15.357 2H15"
+                      />
                     </svg>
                     <span>Processing...</span>
                   </>
                 ) : (
                   <>
-                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+                    <svg
+                      className="w-6 h-6"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M17 9V7a2 2 0 00-2-2H5a2 2 0 
+                           00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 
+                           002-2v-6a2 2 0 00-2-2H9a2 2 0 
+                           00-2 2v6a2 2 0 002 2zm7-5a2 2 0 
+                           11-4 0 2 2 0 014 0z"
+                      />
                     </svg>
                     <span>Proceed to Payment</span>
                   </>
@@ -322,15 +502,42 @@ export default function Payment() {
               {/* SECURITY BADGES */}
               <div className="flex items-center justify-center gap-4 pt-4 border-t">
                 <div className="flex items-center gap-2 text-xs text-gray-600">
-                  <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                  <svg
+                    className="w-4 h-4 text-green-600"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 
+                         0112 2.944a11.955 11.955 0 
+                         01-8.618 3.04A12.02 12.02 0 
+                         003 9c0 5.591 3.824 10.29 9 11.622 
+                         5.176-1.332 9-6.03 9-11.622 
+                         0-1.042-.133-2.052-.382-3.016z"
+                    />
                   </svg>
                   <span className="font-medium">256-bit SSL</span>
                 </div>
                 <div className="w-px h-4 bg-gray-300"></div>
                 <div className="flex items-center gap-2 text-xs text-gray-600">
-                  <svg className="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                  <svg
+                    className="w-4 h-4 text-indigo-600"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 
+                         003-3V8a3 3 0 00-3-3H6a3 3 0 
+                         00-3 3v8a3 3 0 003 3z"
+                    />
                   </svg>
                   <span className="font-medium">Razorpay Secure</span>
                 </div>
@@ -339,13 +546,27 @@ export default function Payment() {
               {/* INFO NOTE */}
               <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
                 <div className="flex items-start gap-3">
-                  <svg className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  <svg
+                    className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 
+                         11-18 0 9 9 0 0118 0z"
+                    />
                   </svg>
                   <div>
-                    <p className="text-sm font-semibold text-blue-900 mb-1">Payment Information</p>
+                    <p className="text-sm font-semibold text-blue-900 mb-1">
+                      Payment Information
+                    </p>
                     <p className="text-xs text-blue-700 leading-relaxed">
-                      You will be redirected to Razorpay's secure payment gateway. Your payment information is encrypted and safe.
+                      You will be redirected to Razorpay&apos;s secure payment
+                      gateway. Your payment information is encrypted and safe.
                     </p>
                   </div>
                 </div>
@@ -359,8 +580,18 @@ export default function Payment() {
               onClick={() => navigate(-1)}
               className="text-gray-600 hover:text-gray-900 font-medium text-sm hover:underline flex items-center gap-2 mx-auto"
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M10 19l-7-7m0 0l7-7m-7 7h18"
+                />
               </svg>
               Go Back
             </button>

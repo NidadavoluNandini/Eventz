@@ -1,14 +1,19 @@
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import api from "../../utils/axios";
 import OrganizerHeader from "./OrganizerHeader";
+import { toast } from "react-hot-toast";
+
+const deleteClickState = { lastClickAt: 0 };
 
 export default function OrganizerLayout() {
   const navigate = useNavigate();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [organizer, setOrganizer] = useState<any>(null);
   const [scrolled, setScrolled] = useState(false);
+  const deleteTimerRef = useRef<number | null>(null);
 
+  // Load organizer from localStorage
   useEffect(() => {
     const loadOrganizer = () => {
       const data = localStorage.getItem("organizer");
@@ -32,11 +37,7 @@ export default function OrganizerLayout() {
   useEffect(() => {
     const handleScroll = (e: Event) => {
       const target = e.target as HTMLElement;
-      if (target.scrollTop > 20) {
-        setScrolled(true);
-      } else {
-        setScrolled(false);
-      }
+      setScrolled(target.scrollTop > 20);
     };
 
     const mainContent = document.getElementById("main-content");
@@ -48,47 +49,116 @@ export default function OrganizerLayout() {
   }, []);
 
   // ======================
-  // LOGOUT
+  // LOGOUT with toast confirm
   // ======================
   const logout = () => {
-    const confirmed = window.confirm("Are you sure you want to logout?");
-    if (!confirmed) return;
-
-    localStorage.removeItem("organizerToken");
-    localStorage.removeItem("organizer");
-    navigate("/organizer/login");
+    toast((t) => (
+      <div className="space-y-1">
+        <p className="font-semibold text-slate-900">Logout?</p>
+        <p className="text-xs text-slate-700">
+          You will be signed out from the organizer dashboard.
+        </p>
+        <div className="flex gap-2 mt-2">
+          <button
+            className="px-3 py-1.5 text-xs rounded-lg border border-slate-300 text-slate-700"
+            onClick={() => toast.dismiss(t.id)}
+          >
+            Cancel
+          </button>
+          <button
+            className="px-3 py-1.5 text-xs rounded-lg bg-red-600 text-white"
+            onClick={() => {
+              toast.dismiss(t.id);
+              localStorage.removeItem("organizerToken");
+              localStorage.removeItem("organizer");
+              toast.success("Logged out");
+              navigate("/organizer/login");
+            }}
+          >
+            Logout
+          </button>
+        </div>
+      </div>
+    ));
   };
 
   // ======================
-  // DELETE ACCOUNT
+  // DELETE ACCOUNT with toast confirm
   // ======================
-  const deleteAccount = async () => {
-    const confirmed = window.confirm(
-      "⚠️ WARNING: This will permanently delete your account and all your events.\n\nAre you absolutely sure? This action cannot be undone."
-    );
-
-    if (!confirmed) return;
-
-    const doubleCheck = window.confirm(
-      "Final confirmation: Click OK to proceed with account deletion"
-    );
-
-    if (!doubleCheck) return;
-
+  const performDeleteAccount = async () => {
     try {
       await api.delete("/api/organizers/me");
 
       localStorage.removeItem("organizerToken");
       localStorage.removeItem("organizer");
 
-      alert("✅ Account deleted successfully");
+      toast.success("Account deleted successfully");
       navigate("/organizer/login");
     } catch (err: any) {
-      alert(
-        err.response?.data?.message ||
+      toast.error(
+        err?.response?.data?.message ||
           "Failed to delete account. Please try again."
       );
+    } finally {
+      deleteClickState.lastClickAt = 0;
+      if (deleteTimerRef.current) {
+        window.clearTimeout(deleteTimerRef.current);
+        deleteTimerRef.current = null;
+      }
     }
+  };
+
+  const deleteAccount = () => {
+    const now = Date.now();
+
+    // First click (or after timeout): show confirmation toast
+    if (now - deleteClickState.lastClickAt > 10_000) {
+      deleteClickState.lastClickAt = now;
+
+      toast((t) => (
+        <div className="space-y-1">
+          <p className="font-semibold text-red-600">Delete account?</p>
+          <p className="text-xs text-slate-700">
+            This will permanently delete your account and all your events. This
+            action cannot be undone.
+          </p>
+          <div className="flex gap-2 mt-2">
+            <button
+              className="px-3 py-1.5 text-xs rounded-lg border border-slate-300 text-slate-700"
+              onClick={() => {
+                deleteClickState.lastClickAt = 0;
+                toast.dismiss(t.id);
+              }}
+            >
+              Cancel
+            </button>
+            <button
+              className="px-3 py-1.5 text-xs rounded-lg bg-red-600 text-white"
+              onClick={async () => {
+                toast.dismiss(t.id);
+                await performDeleteAccount();
+              }}
+            >
+              Confirm delete
+            </button>
+          </div>
+        </div>
+      ), {
+        duration: 10000,
+      });
+
+      if (deleteTimerRef.current) {
+        window.clearTimeout(deleteTimerRef.current);
+      }
+      deleteTimerRef.current = window.setTimeout(() => {
+        deleteClickState.lastClickAt = 0;
+      }, 10000);
+
+      return;
+    }
+
+    // Second click within 10 seconds (optional direct delete)
+    performDeleteAccount();
   };
 
   return (
@@ -104,9 +174,7 @@ export default function OrganizerLayout() {
       {/* SIDEBAR */}
       <aside
         className={`fixed lg:relative top-0 left-0 h-full w-64 bg-white/95 backdrop-blur-xl border-r border-slate-200/80 shadow-2xl z-50 flex flex-col transition-all duration-300 ${
-          isSidebarOpen
-            ? "translate-x-0"
-            : "-translate-x-full lg:translate-x-0"
+          isSidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
         }`}
       >
         {/* Header with Gradient */}
@@ -237,10 +305,10 @@ export default function OrganizerLayout() {
             <span className="relative z-10">Registrations</span>
           </NavLink>
 
-          {/* Divider with Gradient */}
+          {/* Divider */}
           <div className="relative my-3">
             <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-gradient-to-r from-transparent via-slate-300 to-transparent"></div>
+              <div className="w-full border-t border-slate-200"></div>
             </div>
           </div>
 
@@ -251,15 +319,19 @@ export default function OrganizerLayout() {
             </p>
           </div>
 
-          <button
-            onClick={() => {
-              navigate("/organizer/profile");
-              setIsSidebarOpen(false);
-            }}
-            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900 hover:translate-x-1 transition-all duration-200"
+          <NavLink
+            to="/organizer/profile"
+            onClick={() => setIsSidebarOpen(false)}
+            className={({ isActive }) =>
+              `flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium transition-all duration-200 group relative overflow-hidden ${
+                isActive
+                  ? "bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-lg shadow-indigo-500/50"
+                  : "text-slate-600 hover:bg-slate-50 hover:text-slate-900 hover:translate-x-1"
+              }`
+            }
           >
             <svg
-              className="w-5 h-5"
+              className="w-5 h-5 relative z-10"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -271,8 +343,8 @@ export default function OrganizerLayout() {
                 d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
               />
             </svg>
-            Profile Settings
-          </button>
+            <span className="relative z-10">Profile Settings</span>
+          </NavLink>
         </nav>
 
         {/* Footer Actions */}
@@ -384,7 +456,7 @@ export default function OrganizerLayout() {
                     d="M12 4v16m8-8H4"
                   />
                 </svg>
-                <span className="hidden sm:inline">New Event</span>
+                <span className="hidden sm:inline">Create Event</span>
               </button>
 
               {/* Notifications */}
@@ -449,7 +521,7 @@ export default function OrganizerLayout() {
         </footer>
       </main>
 
-      {/* Add custom animations in your global CSS */}
+      {/* Animations */}
       <style>{`
         @keyframes fadeIn {
           from {

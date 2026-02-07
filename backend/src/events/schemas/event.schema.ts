@@ -1,12 +1,10 @@
+// src/events/schemas/event.schema.ts
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Types, HydratedDocument } from 'mongoose';
 
 /* =====================================================
-   SUB TICKET (NO _id — embedded only)
-   ===================================================== */
-/* =====================================================
-   SUB TICKET (NO _id — embedded only)
-   ===================================================== */
+   SUB TICKET (no GST)
+   ==================================================== */
 @Schema({ _id: false })
 export class SubTicket {
   @Prop({ required: true })
@@ -15,26 +13,21 @@ export class SubTicket {
   @Prop({ required: true })
   price: number;
 
-  @Prop({ default: 0 })  // ✅ ADDED
+  @Prop({ default: 0 })
   quantity?: number;
 
-  @Prop()
-  gst?: number;
-
+  // finalPrice can just mirror price; keep if you want analytics
   @Prop({ required: true })
   finalPrice: number;
-
-  @Prop({ default: true })
-  gstIncluded?: boolean;
 }
 export const SubTicketSchema = SchemaFactory.createForClass(SubTicket);
 
 /* =====================================================
-   MAIN TICKET (🔥 MUST HAVE _id)
-   ===================================================== */
+   MAIN TICKET
+   ==================================================== */
 @Schema()
 export class Ticket {
-  @Prop()  // ✅ ADDED
+  @Prop()
   type?: string;
 
   @Prop({ required: true })
@@ -46,10 +39,10 @@ export class Ticket {
   @Prop()
   price?: number;
 
-  @Prop({ default: 0 })  // ✅ ADDED
+  @Prop({ default: 0 })
   quantity?: number;
 
-  @Prop({ default: 0 })  // ✅ ADDED
+  @Prop({ default: 0 })
   available?: number;
 
   @Prop()
@@ -68,7 +61,7 @@ export const TicketSchema = SchemaFactory.createForClass(Ticket);
 
 /* =====================================================
    THEME COLOR
-   ===================================================== */
+   ==================================================== */
 @Schema({ _id: false })
 export class ThemeColor {
   @Prop({ required: true })
@@ -84,12 +77,13 @@ export const ThemeColorSchema = SchemaFactory.createForClass(ThemeColor);
 
 /* =====================================================
    EVENT
-   ===================================================== */
+   ==================================================== */
 export enum EventStatus {
   DRAFT = 'DRAFT',
   PUBLISHED = 'PUBLISHED',
   UNPUBLISHED = 'UNPUBLISHED',
   COMPLETED = 'COMPLETED',
+  EDITING = 'EDITING',
 }
 
 @Schema({ timestamps: true })
@@ -107,10 +101,10 @@ export class Event {
   endDate: Date;
 
   @Prop({ required: true })
-  startTime: string;
+  startTime: string; // "HH:MM"
 
   @Prop({ required: true })
-  endTime: string;
+  endTime: string; // "HH:MM"
 
   @Prop({ required: true })
   location: string;
@@ -121,6 +115,11 @@ export class Event {
   @Prop({ required: true })
   category: string;
 
+  // Hero banner image (optional, S3 URL)
+  @Prop()
+  bannerImageUrl?: string;
+
+  // Other gallery images (S3 URLs)
   @Prop({ type: [String], default: [] })
   mediaUrls: string[];
 
@@ -130,7 +129,8 @@ export class Event {
   @Prop({ type: [TicketSchema], default: [] })
   tickets: Ticket[];
 
-  @Prop({ default: true })
+  // manual toggle from organizer dashboard
+  @Prop({ default: false })
   registrationOpen: boolean;
 
   @Prop({
@@ -142,6 +142,16 @@ export class Event {
 
   @Prop({ type: Types.ObjectId, ref: 'Organizer', required: true })
   organizerId: Types.ObjectId;
+
+  // analytics
+  @Prop({ default: 0 })
+  totalRevenue: number;
+
+  @Prop({ default: 0 })
+  totalRegistrations: number;
+
+  @Prop({ default: 0 })
+  totalTicketsSold: number;
 }
 
 export type EventDocument = HydratedDocument<Event>;

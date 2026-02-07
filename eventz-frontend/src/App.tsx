@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+
 import { Toaster } from "react-hot-toast";
 
 /* PUBLIC */
@@ -33,7 +34,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 export default function App() {
   return (
     <BrowserRouter>
-      {/* ✅ Toast globally available */}
+      {/* Toasts globally available */}
       <Toaster position="top-right" />
 
       <Routes>
@@ -49,7 +50,10 @@ export default function App() {
         <Route path="/payment" element={<Payment />} />
         <Route path="/payment/:registrationId" element={<Payment />} />
 
-        <Route path="/payment-processing/:registrationId" element={<PaymentProcessing />} />
+        <Route
+          path="/payment-processing/:registrationId"
+          element={<PaymentProcessing />}
+        />
 
         <Route
           path="/resume/:registrationId"
@@ -83,17 +87,7 @@ export default function App() {
           element={<OrganizerResetPassword />}
         />
 
-        {/* PROFILE PAGE */}
-        <Route
-          path="/organizer/profile"
-          element={
-            <ProtectedRoute>
-              <OrganizerProfile />
-            </ProtectedRoute>
-          }
-        />
-
-        {/* ========== ORGANIZER DASHBOARD ========== */}
+        {/* ========== ORGANIZER DASHBOARD WITH LAYOUT ========== */}
         <Route
           path="/organizer"
           element={
@@ -106,6 +100,7 @@ export default function App() {
           <Route path="events" element={<Events />} />
           <Route path="events/create" element={<CreateEvent />} />
           <Route path="users" element={<UserManagement />} />
+          <Route path="profile" element={<OrganizerProfile />} />
         </Route>
       </Routes>
     </BrowserRouter>

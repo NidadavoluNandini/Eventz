@@ -1,3 +1,4 @@
+// events/events.controller.ts
 import {
   Controller,
   Get,
@@ -10,8 +11,8 @@ import {
   Query,
   UseGuards,
   Req,
-  UsePipes,        // ✅ ADD
-  ValidationPipe,  // ✅ ADD
+  UsePipes,
+  ValidationPipe,
 } from '@nestjs/common';
 import { EventsService } from './events.service';
 import { CreateEventDto } from './dto/create-event.dto';
@@ -23,25 +24,18 @@ import { EventStatus } from './schemas/event.schema';
 
 @Controller('events')
 export class EventsController {
-  constructor(private readonly eventsService: EventsService) {
-        console.log('🔥 EventsController LOADED');
+  constructor(private readonly eventsService: EventsService) {}
 
+  // ✅ CREATE EVENT (Starts as DRAFT)
+  @Post()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ORGANIZER')
+  @UsePipes(new ValidationPipe({ whitelist: true, transform: false }))
+  createEvent(@Body() body: CreateEventDto, @Req() req) {
+    return this.eventsService.create(body, req.user.userId);
   }
-@Post()
-@UseGuards(JwtAuthGuard, RolesGuard)
-@Roles('ORGANIZER')
-@UsePipes(new ValidationPipe({ whitelist: true, transform: false }))
-createEvent(@Body() body: CreateEventDto, @Req() req) {
-  console.log('RAW BODY:', JSON.stringify(body, null, 2));
-  return this.eventsService.create(body, req.user.userId);
-}
-@Post('ping')
-ping(@Body() body: any) {
-  console.log('🔥 PING HIT', body);
-  return { ok: true };
-}
 
-  // 🌍 Public
+  // ✅ GET ALL PUBLIC EVENTS (Only PUBLISHED with registrationOpen=true)
   @Get()
   getAllEvents(
     @Query('status') status?: EventStatus,
@@ -51,7 +45,7 @@ ping(@Body() body: any) {
     return this.eventsService.findAll({ status, category, city });
   }
 
-  // 👤 Organizer (STATIC ROUTE FIRST ✅)
+  // ✅ GET ORGANIZER'S EVENTS (All statuses)
   @Get('organizer/me')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ORGANIZER')
@@ -59,22 +53,21 @@ ping(@Body() body: any) {
     return this.eventsService.findByOrganizer(req.user.userId);
   }
 
-  // 🔍 Event by ID (DYNAMIC ROUTE LAST ✅)
+  // ✅ GET EVENT BY ID
   @Get(':id')
   getEvent(@Param('id') id: string) {
     return this.eventsService.findById(id);
   }
 
-  // 👤 Organizer Actions
-
-
+  // ✅ UPDATE EVENT
   @Put(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ORGANIZER')
-  updateEvent(@Param('id') id: string, @Body() dto: UpdateEventDto) {
+  updateEvent(@Param('id') id: string, @Body() dto: UpdateEventDto, @Req() req) {
     return this.eventsService.update(id, dto);
   }
 
+  // ✅ DELETE EVENT
   @Delete(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ORGANIZER')
@@ -82,6 +75,7 @@ ping(@Body() body: any) {
     return this.eventsService.delete(id);
   }
 
+  // ✅ PUBLISH EVENT (Make visible + open registration)
   @Patch(':id/publish')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ORGANIZER')
@@ -89,6 +83,7 @@ ping(@Body() body: any) {
     return this.eventsService.publishEvent(id);
   }
 
+  // ✅ UNPUBLISH EVENT (Hide + close registration)
   @Patch(':id/unpublish')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ORGANIZER')
@@ -96,13 +91,15 @@ ping(@Body() body: any) {
     return this.eventsService.unpublishEvent(id);
   }
 
-  @Patch(':id/complete')
+  // ✅ MOVE TO DRAFT (For editing)
+  @Patch(':id/draft')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ORGANIZER')
-  completeEvent(@Param('id') id: string) {
-    return this.eventsService.markCompleted(id);
+  moveToDraft(@Param('id') id: string) {
+    return this.eventsService.moveToDraft(id);
   }
 
+  // ✅ CLOSE REGISTRATION (Keep visible but stop registrations)
   @Patch(':id/close-registration')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ORGANIZER')
@@ -110,10 +107,19 @@ ping(@Body() body: any) {
     return this.eventsService.closeRegistration(id, req.user.userId);
   }
 
-  @Patch(':id/draft')
+  // ✅ OPEN REGISTRATION
+  @Patch(':id/open-registration')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ORGANIZER')
-  moveToDraft(@Param('id') id: string) {
-    return this.eventsService.moveToDraft(id);
+  openRegistration(@Param('id') id: string, @Req() req) {
+    return this.eventsService.openRegistration(id, req.user.userId);
+  }
+
+  // ✅ MARK AS COMPLETED
+  @Patch(':id/complete')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ORGANIZER')
+  completeEvent(@Param('id') id: string) {
+    return this.eventsService.markCompleted(id);
   }
 }

@@ -1,3 +1,4 @@
+// src/events/dto/create-event.dto.ts
 import {
   IsString,
   IsDateString,
@@ -22,7 +23,7 @@ class SubTicketDto {
   @IsOptional()
   @Type(() => Number)
   @IsNumber()
-  quantity?: number;  // ✅ ADDED
+  quantity?: number;
 
   @IsOptional()
   @Type(() => Number)
@@ -40,9 +41,9 @@ class SubTicketDto {
 
 /* ---------- MAIN TICKET DTO ---------- */
 class TicketDto {
-  @IsOptional()  // ✅ ADDED
+  @IsOptional()
   @IsString()
-  type?: string;  // ✅ ADDED
+  type?: string;
 
   @IsString()
   name: string;
@@ -56,15 +57,15 @@ class TicketDto {
   @IsNumber()
   price?: number;
 
-  @IsOptional()  // ✅ ADDED
+  @IsOptional()
   @Type(() => Number)
   @IsNumber()
-  quantity?: number;  // ✅ ADDED
+  quantity?: number;
 
-  @IsOptional()  // ✅ ADDED
+  @IsOptional()
   @Type(() => Number)
   @IsNumber()
-  available?: number;  // ✅ ADDED
+  available?: number;
 
   @IsOptional()
   @Type(() => Number)
@@ -129,10 +130,16 @@ export class CreateEventDto {
   @IsString()
   category: string;
 
-  @IsOptional()  // ✅ MAKE OPTIONAL
+  // Hero banner (S3 URL, optional)
+  @IsOptional()
+  @IsString()
+  bannerImageUrl?: string;
+
+  // Gallery images (S3 URLs, optional)
+  @IsOptional()
   @IsArray()
   @IsString({ each: true })
-  mediaUrls?: string[];  // ✅ MAKE OPTIONAL
+  mediaUrls?: string[];
 
   @IsOptional()
   @IsObject()

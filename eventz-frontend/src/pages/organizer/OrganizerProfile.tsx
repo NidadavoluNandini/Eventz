@@ -8,11 +8,12 @@ export default function OrganizerProfile() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [changingPassword, setChangingPassword] = useState(false);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
 
   const [profile, setProfile] = useState({
     name: "",
     email: "",
-    photoUrl: "",
+    photo: "",
   });
 
   const [password, setPassword] = useState({
@@ -31,8 +32,9 @@ export default function OrganizerProfile() {
       setProfile({
         name: res.data.name || "",
         email: res.data.email || "",
-        photoUrl: res.data.photoUrl || "",
+        photo: res.data.photo || "", // backend field: photo
       });
+     
     } catch {
       toast.error("Failed to load profile");
     } finally {
@@ -40,11 +42,46 @@ export default function OrganizerProfile() {
     }
   };
 
-  // ================= SAVE PROFILE =================
+  // ================= UPLOAD PROFILE PHOTO (FILE) =================
+  const handlePhotoFileChange = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadingPhoto(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const res = await api.post("/api/organizers/me/photo", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+
+      setProfile((p) => {
+  const next = { ...p, photo: res.data.photo || "" };
+  return next;
+});
+
+localStorage.setItem("organizer", JSON.stringify(res.data));
+
+      toast.success("Profile photo updated");
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || "Photo upload failed");
+    } finally {
+      setUploadingPhoto(false);
+    }
+  };
+
+  // ================= SAVE PROFILE (NAME/EMAIL/PHOTO URL) =================
   const saveProfile = async () => {
     setSaving(true);
     try {
-      const res = await api.put("/api/organizers/me", profile);
+      const res = await api.put("/api/organizers/me", {
+        name: profile.name,
+        email: profile.email,
+        photo: profile.photo, // send as photo
+      });
 
       localStorage.setItem("organizer", JSON.stringify(res.data));
       window.dispatchEvent(new Event("profileUpdated"));
@@ -74,7 +111,9 @@ export default function OrganizerProfile() {
       localStorage.removeItem("organizerToken");
       navigate("/organizer/login");
     } catch (err: any) {
-      toast.error(err.response?.data?.message || "Password update failed");
+      toast.error(
+        err.response?.data?.message || "Password update failed",
+      );
     } finally {
       setChangingPassword(false);
     }
@@ -84,7 +123,7 @@ export default function OrganizerProfile() {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">
-          <div className="w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <div className="w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
           <p className="text-slate-500 font-medium">Loading profile...</p>
         </div>
       </div>
@@ -92,7 +131,7 @@ export default function OrganizerProfile() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto p-6 space-y-6">
+    <div className="max-w-4xl mx-auto space-y-6">
       {/* Header */}
       <div className="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-2xl shadow-lg p-8 text-white">
         <div className="flex items-center gap-4">
@@ -155,14 +194,14 @@ export default function OrganizerProfile() {
                 <div className="flex items-center gap-6">
                   <div className="relative">
                     <img
-                      src={profile.photoUrl || "/default-avatar.png"}
+                      src={profile.photo || "/default-avatar.png"}
                       onError={(e) =>
                         (e.currentTarget.src = "/default-avatar.png")
                       }
                       className="w-24 h-24 rounded-full object-cover border-4 border-slate-200 shadow-md"
                       alt="Profile"
                     />
-                    <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-indigo-600 rounded-full flex items-center justify-center border-4 border-white shadow-lg">
+                    <label className="absolute -bottom-2 -right-2 w-8 h-8 bg-indigo-600 rounded-full flex items-center justify-center border-4 border-white shadow-lg cursor-pointer">
                       <svg
                         className="w-4 h-4 text-white"
                         fill="none"
@@ -182,17 +221,32 @@ export default function OrganizerProfile() {
                           d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"
                         />
                       </svg>
-                    </div>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={handlePhotoFileChange}
+                      />
+                    </label>
+                    {uploadingPhoto && (
+                      <p className="text-xs text-slate-500 mt-1">
+                        Uploading photo...
+                      </p>
+                    )}
                   </div>
                   <div className="flex-1">
                     <p className="text-sm text-slate-600 mb-2">
-                      Update your profile picture by entering an image URL
+                      Update your profile picture by entering an image URL or
+                      clicking the camera icon.
                     </p>
                     <input
                       placeholder="https://example.com/image.jpg"
-                      value={profile.photoUrl}
+                      value={profile.photo}
                       onChange={(e) =>
-                        setProfile({ ...profile, photoUrl: e.target.value })
+                        setProfile({
+                          ...profile,
+                          photo: e.target.value,
+                        })
                       }
                       className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition outline-none text-sm"
                     />
@@ -282,12 +336,12 @@ export default function OrganizerProfile() {
                           r="10"
                           stroke="currentColor"
                           strokeWidth="4"
-                        ></circle>
+                        />
                         <path
                           className="opacity-75"
                           fill="currentColor"
                           d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                        ></path>
+                        />
                       </svg>
                       Saving...
                     </>
@@ -371,7 +425,10 @@ export default function OrganizerProfile() {
                     placeholder="Enter your current password"
                     value={password.oldPassword}
                     onChange={(e) =>
-                      setPassword({ ...password, oldPassword: e.target.value })
+                      setPassword({
+                        ...password,
+                        oldPassword: e.target.value,
+                      })
                     }
                     className="w-full pl-11 pr-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent transition outline-none"
                   />
@@ -402,7 +459,10 @@ export default function OrganizerProfile() {
                     placeholder="Enter your new password"
                     value={password.newPassword}
                     onChange={(e) =>
-                      setPassword({ ...password, newPassword: e.target.value })
+                      setPassword({
+                        ...password,
+                        newPassword: e.target.value,
+                      })
                     }
                     className="w-full pl-11 pr-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent transition outline-none"
                   />
@@ -429,12 +489,12 @@ export default function OrganizerProfile() {
                         r="10"
                         stroke="currentColor"
                         strokeWidth="4"
-                      ></circle>
+                      />
                       <path
                         className="opacity-75"
                         fill="currentColor"
                         d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                      ></path>
+                      />
                     </svg>
                     Updating Password...
                   </>

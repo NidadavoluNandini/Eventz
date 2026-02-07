@@ -2,8 +2,8 @@ export function invoiceEmailTemplate(data: {
   userName: string;
   eventTitle: string;
   quantity: number;
-  unitPrice: number;
-  totalAmount: number;
+  unitPrice: number;   // price per 1 ticket (including GST if you want)
+  totalAmount: number; // unitPrice * quantity
 }) {
   return `
 <!DOCTYPE html>
@@ -43,8 +43,7 @@ export function invoiceEmailTemplate(data: {
                 </tr>
                 <tr>
                   <td>
-                    Ticket × ${data.quantity}
-                    <br/>
+                    Ticket × ${data.quantity}<br/>
                     <small>₹${data.unitPrice} per ticket</small>
                   </td>
                   <td align="right">₹${data.totalAmount}</td>

@@ -32,20 +32,12 @@ export class PdfService {
       // ===============================
       // GRADIENT HEADER BACKGROUND
       // ===============================
-      doc
-        .rect(0, 0, pageWidth, 130)
-        .fillAndStroke('#4F46E5', '#4F46E5');
+      doc.rect(0, 0, pageWidth, 130).fillAndStroke('#4F46E5', '#4F46E5');
 
       // Decorative circles
-      doc
-        .circle(pageWidth - 50, 50, 60)
-        .fillOpacity(0.1)
-        .fill('#FFFFFF');
+      doc.circle(pageWidth - 50, 50, 60).fillOpacity(0.1).fill('#FFFFFF');
 
-      doc
-        .circle(50, 100, 40)
-        .fillOpacity(0.1)
-        .fill('#FFFFFF');
+      doc.circle(50, 100, 40).fillOpacity(0.1).fill('#FFFFFF');
 
       // ===============================
       // HEADER TITLE
@@ -109,7 +101,6 @@ export class PdfService {
         y: number,
         label: string,
         value: string,
-        iconSymbol?: string,
       ) => {
         doc
           .roundedRect(x, y, colWidth, 58, 8)
@@ -121,31 +112,18 @@ export class PdfService {
           .font('Helvetica-Bold')
           .text(label.toUpperCase(), x + 15, y + 10);
 
-        // Draw icon circle if provided
-        if (iconSymbol) {
-          doc
-            .circle(x + 22, y + 38, 12)
-            .fillAndStroke('#EEF2FF', '#C7D2FE');
-
-          doc
-            .fontSize(10)
-            .fillColor('#4F46E5')
-            .font('Helvetica-Bold')
-            .text(iconSymbol, x + 18, y + 31);
-        }
-
         doc
           .fontSize(11)
           .fillColor('#1F2937')
           .font('Helvetica-Bold')
-          .text(value || 'N/A', x + (iconSymbol ? 45 : 15), y + 30, {
-            width: colWidth - (iconSymbol ? 60 : 30),
+          .text(value || 'N/A', x + 15, y + 30, {
+            width: colWidth - 30,
             ellipsis: true,
           });
       };
 
       // Left Column
-      drawDetailBox(leftColX, detailsY, 'Attendee', data.userName, 'A');
+      drawDetailBox(leftColX, detailsY, 'Attendee', data.userName);
       drawDetailBox(
         leftColX,
         detailsY + 68,
@@ -158,26 +136,25 @@ export class PdfService {
               year: 'numeric',
             })
           : 'TBA',
-        'D',
       );
 
       // Right Column
-      drawDetailBox(rightColX, detailsY, 'Venue', data.venue, 'V');
+      drawDetailBox(rightColX, detailsY, 'Venue', data.venue);
 
-      // ✅ TICKET TYPE - SHOW MAIN + SUB-TICKET
+      // Ticket Type - Show main + sub-ticket
       const ticketDisplay = data.subTicketName
         ? `${data.ticketName} + ${data.subTicketName}`
         : data.ticketName;
 
-      drawDetailBox(rightColX, detailsY + 68, 'Ticket Type', ticketDisplay, 'T');
+      drawDetailBox(rightColX, detailsY + 68, 'Ticket Type', ticketDisplay);
 
       // ===============================
       // PAYMENT DETAILS SECTION
       // ===============================
       const paymentY = detailsY + 148;
 
-      // ✅ COMPACT HEIGHT
-      const paymentHeight = data.subTicketName ? 140 : 125;
+      // Dynamic height based on whether sub-ticket exists
+      const paymentHeight = data.subTicketName ? 155 : 140;
 
       doc
         .roundedRect(50, paymentY, pageWidth - 100, paymentHeight, 10)
@@ -205,39 +182,46 @@ export class PdfService {
           .text(value, pageWidth - 170, y, { width: 100, align: 'right' });
       };
 
-      // ✅ SHOW MAIN TICKET
+      // Show main ticket
       drawRow('Ticket', data.ticketName || 'N/A', tableY);
 
       let currentY = tableY + 18;
 
-      // ✅ SHOW SUB-TICKET IF EXISTS
+      // Show sub-ticket if exists
       if (data.subTicketName) {
         drawRow('Option', data.subTicketName, currentY);
         currentY += 18;
       }
 
+      // Base price and quantity
       drawRow(
         'Base Price (per ticket)',
-        `₹${data.basePricePerTicket?.toFixed(2) || '0.00'}`,
+        `Rs ${data.basePricePerTicket?.toFixed(2) || '0.00'}`,
         currentY,
       );
-      drawRow('Quantity', `${data.quantity || 1}`, currentY + 18);
+      drawRow('Quantity', `x ${data.quantity || 1}`, currentY + 18);
+
+      // Subtotal
+      const subtotal = (data.basePricePerTicket || 0) * (data.quantity || 1);
+      drawRow('Subtotal', `Rs ${subtotal.toFixed(2)}`, currentY + 36);
+
+      // GST
       drawRow(
         `GST (${data.gstRate || 0}%)`,
-        `₹${data.gstAmount?.toFixed(2) || '0.00'}`,
-        currentY + 36,
+        `Rs ${data.gstAmount?.toFixed(2) || '0.00'}`,
+        currentY + 54,
       );
 
       // Total line
       doc
-        .moveTo(70, currentY + 56)
-        .lineTo(pageWidth - 70, currentY + 56)
+        .moveTo(70, currentY + 74)
+        .lineTo(pageWidth - 70, currentY + 74)
         .stroke('#C7D2FE');
 
       drawRow(
         'TOTAL PAID',
-        `₹${data.totalAmount?.toFixed(2) || '0.00'}`,
-        currentY + 64,
+        `Rs ${data.totalAmount?.toFixed(2) || '0.00'}`,
+        currentY + 82,
         true,
       );
 
@@ -302,9 +286,7 @@ export class PdfService {
         .fillColor('#6B7280')
         .font('Helvetica')
         .text(
-          '- Please carry a printed or digital copy of this ticket\n' +
-            '- Show this QR code at the venue entrance for check-in\n' +
-            '- Arrive 15 minutes early for smooth entry\n' +
+          
             '- This ticket is non-transferable and valid for one entry only',
           50,
           footerY + 26,
@@ -325,7 +307,7 @@ export class PdfService {
           { align: 'center', width: pageWidth },
         );
 
-      // ✅ FINISH PDF (NO EXTRA PAGES)
+      // Finish PDF
       doc.end();
     });
   }

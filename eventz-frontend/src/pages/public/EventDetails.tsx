@@ -9,7 +9,7 @@ import { getEventById } from "../../api/events.api";
 import { getCategoryImage } from "../../utils/categoryImages";
 import {
   getEventStatus,
-  isRegistrationOpen,
+  isRegistrationTimeOpen,
   getCountdown,
 } from "../../utils/eventTime";
 
@@ -24,13 +24,55 @@ L.Icon.Default.mergeOptions({
     "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png",
 });
 
-/* ---------- HELPERS ---------- */
-const getImageUrl = (url: string) => {
-  if (!url) return "";
-  if (url.startsWith("http")) return url;
-  return `${import.meta.env.VITE_API_URL}/${url.replace(/^\/+/, "")}`;
+/* ---------- CATEGORY-BASED SHORT DESCRIPTION ---------- */
+const categoryFallbackCopy: Record<string, string> = {
+  Technology:
+    "Join innovators, developers, and creators for a future‑focused technology experience.",
+  Science:
+    "Explore discoveries, experiments, and ideas shaping the world of science.",
+  Arts:
+    "Immerse yourself in a creative showcase of art, culture, and expression.",
+  Business:
+    "Connect with professionals, founders, and leaders to grow your business journey.",
+  Sports:
+    "Experience the thrill of competition and the energy of live sports.",
+  Entertainment:
+    "Enjoy an unforgettable dose of fun, performances, and entertainment.",
+  Industry:
+    "Deep‑dive into industry trends, best practices, and real‑world insights.",
+  Health:
+    "Learn, share, and engage with experiences that focus on wellness and health.",
+  default:
+    "Be part of an engaging and memorable event designed for curious minds.",
 };
 
+function getShortDescription(event: any): string {
+  const rawDesc = (event.description ?? "").trim();
+  if (rawDesc.length >= 40) return rawDesc;
+
+  const rawCategory = (event.category ?? "").toString().trim();
+  if (!rawCategory) {
+    return categoryFallbackCopy.default;
+  }
+
+  const normalizedCategory =
+    rawCategory.charAt(0).toUpperCase() + rawCategory.slice(1).toLowerCase();
+
+  return categoryFallbackCopy[normalizedCategory] ?? categoryFallbackCopy.default;
+}
+
+/* ---------- HEIGHT BASED ON DESCRIPTION ---------- */
+function getAboutMinHeightClass(description: string | undefined) {
+  const len = (description ?? "").trim().length;
+
+  if (len === 0) return "min-h-[80px]";
+  if (len < 80) return "min-h-[140px]";
+  if (len < 200) return "min-h-[220px]";
+
+  return "min-h-[320px]";
+}
+
+/* ---------- HELPERS ---------- */
 const geocodeLocation = async (
   location: string,
   city: string
@@ -68,11 +110,16 @@ export default function EventDetails() {
   const [event, setEvent] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [countdown, setCountdown] = useState<string | null>(null);
-  const [mapCenter, setMapCenter] = useState<[number, number]>([20.5937, 78.9629]);
-  const [activeTab, setActiveTab] = useState<"about" | "location" | "gallery">("about");
+  const [mapCenter, setMapCenter] = useState<[number, number]>([
+    20.5937, 78.9629,
+  ]);
+  const [activeTab, setActiveTab] = useState<"about" | "location" | "gallery">(
+    "about"
+  );
   const [selectedTicket, setSelectedTicket] = useState<string | null>(null);
-  const [selectedSubTicket, setSelectedSubTicket] = useState<string | null>(null);
-  const [expandedTicket, setExpandedTicket] = useState<string | null>(null);
+  const [selectedSubTicket, setSelectedSubTicket] = useState<string | null>(
+    null
+  );
 
   useEffect(() => {
     if (!id) return;
@@ -121,26 +168,44 @@ export default function EventDetails() {
 
   if (!event) return null;
 
-  const heroImage = getCategoryImage(event.category, event._id);
+  const heroImage = event.bannerImageUrl
+    ? event.bannerImageUrl
+    : getCategoryImage(event.category, event._id);
+
   const themeColor = event.themeColor?.value || "#4F46E5";
   const rgb = hexToRgb(themeColor);
-  const registrationOpen = isRegistrationOpen(event.startDate, event.startTime);
-  const status = getEventStatus(event.startDate, event.startTime, event.endDate, event.endTime);
 
-  // Find selected ticket object
-  const selectedTicketObj = event.tickets.find((t: any) => t.name === selectedTicket);
+  const registrationOpen = isRegistrationTimeOpen(
+    event.startDate,
+    event.startTime,
+    event.endDate,
+    event.endTime
+  );
+  const status = getEventStatus(
+    event.startDate,
+    event.startTime,
+    event.endDate,
+    event.endTime
+  );
+
+  const selectedTicketObj = event.tickets.find(
+    (t: any) => t.name === selectedTicket
+  );
   const hasSubTickets = selectedTicketObj?.subTickets?.length > 0;
-  const canRegister = selectedTicket && (!hasSubTickets || selectedSubTicket);
+
+  const canRegister = selectedTicket !== null;
 
   const handleRegister = () => {
-    if (!canRegister) return;
-    
+    if (!canRegister || !registrationOpen) return;
+
     const state: any = { ticketName: selectedTicket };
     if (selectedSubTicket) {
       state.subTicketName = selectedSubTicket;
     }
     navigate(`/events/${event._id}/register`, { state });
   };
+
+  const aboutMinHeightClass = getAboutMinHeightClass(event.description);
 
   return (
     <PublicLayout>
@@ -173,7 +238,7 @@ export default function EventDetails() {
             />
             <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/50 to-black/70" />
 
-            <div className="relative z-10 h-full flex items-end px-6 pb-5">
+            <div className="relative z-10 h-full flex items end px-6 pb-5">
               <div className="w-full">
                 <div className="flex items-center gap-3 mb-2">
                   <span
@@ -194,21 +259,53 @@ export default function EventDetails() {
                   {event.title}
                 </h1>
 
-                <div className="flex flex-wrap items-center gap-4 text-gray-100 text-sm">
-                  <div className="flex items-center gap-1">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                {/* HIGHLIGHTED LOCATION + TIME */}
+                <div className="flex flex-wrap items-center gap-4 text-sm">
+                  {/* Location */}
+                  <div className="flex items-center gap-1.5 text-indigo-100 font-semibold">
+                    <svg
+                      className="w-4 h-4 text-indigo-200"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M17.657 16.657L13.414 20.9a1.998 1.998 0 
+                           01-2.827 0l-4.244-4.243a8 8 0 
+                           1111.314 0z"
+                      />
                     </svg>
-                    <span>{event.location}, {event.city}</span>
+                    <span className="text-white font-semibold">
+                      {event.location}, {event.city}
+                    </span>
                   </div>
-                  <div className="flex items-center gap-1">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+
+                  {/* Time */}
+                  <div className="flex items-center gap-1.5 text-indigo-100 font-semibold">
+                    <svg
+                      className="w-4 h-4 text-indigo-200"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 8v4l3 3m6-3a9 9 0 
+                           11-18 0 9 9 0 0118 0z"
+                      />
                     </svg>
-                    <span>{event.startTime}</span>
+                    <span className="text-white font-semibold">
+                      {event.startTime}
+                    </span>
                   </div>
+
                   {countdown && (
-                    <span className="px-2 py-1 bg-white/20 rounded text-xs font-semibold">
+                    <span className="px-2 py-1 bg-white/20 rounded text-xs font-semibold text-amber-200">
                       🎉 Starts in {countdown}
                     </span>
                   )}
@@ -224,23 +321,41 @@ export default function EventDetails() {
             {/* LEFT - TABBED CONTENT */}
             <div className="lg:col-span-2 animate-slide-up">
               {/* TABS */}
-              <div className="bg-white rounded-t-2xl border-2 border-b-0 overflow-hidden" style={{ borderColor: `${themeColor}30` }}>
-                <div className="flex border-b" style={{ borderColor: `${themeColor}20` }}>
+              <div
+                className="bg-white rounded-t-2xl border-2 border-b-0 overflow-hidden"
+                style={{ borderColor: `${themeColor}30` }}
+              >
+                <div
+                  className="flex border-b"
+                  style={{ borderColor: `${themeColor}20` }}
+                >
                   <button
                     onClick={() => setActiveTab("about")}
                     className={`flex-1 py-3 px-4 font-semibold transition-all ${
-                      activeTab === "about" ? "text-white" : "text-gray-600 hover:bg-gray-50"
+                      activeTab === "about"
+                        ? "text-white"
+                        : "text-gray-600 hover:bg-gray-50"
                     }`}
-                    style={activeTab === "about" ? { backgroundColor: themeColor } : {}}
+                    style={
+                      activeTab === "about"
+                        ? { backgroundColor: themeColor }
+                        : {}
+                    }
                   >
                     About
                   </button>
                   <button
                     onClick={() => setActiveTab("location")}
                     className={`flex-1 py-3 px-4 font-semibold transition-all ${
-                      activeTab === "location" ? "text-white" : "text-gray-600 hover:bg-gray-50"
+                      activeTab === "location"
+                        ? "text-white"
+                        : "text-gray-600 hover:bg-gray-50"
                     }`}
-                    style={activeTab === "location" ? { backgroundColor: themeColor } : {}}
+                    style={
+                      activeTab === "location"
+                        ? { backgroundColor: themeColor }
+                        : {}
+                    }
                   >
                     Location
                   </button>
@@ -248,9 +363,15 @@ export default function EventDetails() {
                     <button
                       onClick={() => setActiveTab("gallery")}
                       className={`flex-1 py-3 px-4 font-semibold transition-all ${
-                        activeTab === "gallery" ? "text-white" : "text-gray-600 hover:bg-gray-50"
+                        activeTab === "gallery"
+                          ? "text-white"
+                          : "text-gray-600 hover:bg-gray-50"
                       }`}
-                      style={activeTab === "gallery" ? { backgroundColor: themeColor } : {}}
+                      style={
+                        activeTab === "gallery"
+                          ? { backgroundColor: themeColor }
+                          : {}
+                      }
                     >
                       Gallery
                     </button>
@@ -259,17 +380,32 @@ export default function EventDetails() {
               </div>
 
               {/* TAB CONTENT */}
-              <div className="bg-white rounded-b-2xl border-2 border-t-0 p-6 shadow-lg" style={{ borderColor: `${themeColor}30`, minHeight: "320px" }}>
+              <div
+                className={`bg-white rounded-b-2xl border-2 border-t-0 p-6 shadow-lg ${aboutMinHeightClass}`}
+                style={{ borderColor: `${themeColor}30` }}
+              >
                 {activeTab === "about" && (
                   <div>
                     <h2 className="text-xl font-bold mb-3 flex items-center gap-2">
-                      <svg className="w-5 h-5" style={{ color: themeColor }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      <svg
+                        className="w-5 h-5"
+                        style={{ color: themeColor }}
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M13 16h-1v-4h-1m1-4h.01M21 
+                             12a9 9 0 11-18 0 9 9 0 0118 0z"
+                        />
                       </svg>
                       About This Event
                     </h2>
                     <p className="text-gray-700 leading-relaxed whitespace-pre-line">
-                      {event.description}
+                      {getShortDescription(event)}
                     </p>
                   </div>
                 )}
@@ -277,16 +413,37 @@ export default function EventDetails() {
                 {activeTab === "location" && (
                   <div>
                     <h2 className="text-xl font-bold mb-3 flex items-center gap-2">
-                      <svg className="w-5 h-5" style={{ color: themeColor }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                      <svg
+                        className="w-5 h-5"
+                        style={{ color: themeColor }}
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M17.657 16.657L13.414 20.9a1.998 1.998 
+                             0 01-2.827 0l-4.244-4.243a8 8 0 
+                             1111.314 0z"
+                        />
                       </svg>
                       Event Location
                     </h2>
-                    <div className="mb-3 p-3 rounded-lg" style={{ backgroundColor: `${themeColor}10` }}>
-                      <p className="font-semibold text-gray-900">{event.location}</p>
+                    <div
+                      className="mb-3 p-3 rounded-lg"
+                      style={{ backgroundColor: `${themeColor}10` }}
+                    >
+                      <p className="font-semibold text-gray-900">
+                        {event.location}
+                      </p>
                       <p className="text-sm text-gray-600">{event.city}</p>
                     </div>
-                    <div className="rounded-xl overflow-hidden border-2" style={{ borderColor: themeColor }}>
+                    <div
+                      className="rounded-xl overflow-hidden border-2"
+                      style={{ borderColor: themeColor }}
+                    >
                       <MapContainer
                         center={mapCenter}
                         zoom={15}
@@ -305,8 +462,23 @@ export default function EventDetails() {
                 {activeTab === "gallery" && event.mediaUrls?.length > 0 && (
                   <div>
                     <h2 className="text-xl font-bold mb-3 flex items-center gap-2">
-                      <svg className="w-5 h-5" style={{ color: themeColor }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      <svg
+                        className="w-5 h-5"
+                        style={{ color: themeColor }}
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M4 16l4.586-4.586a2 2 0 012.828 
+                             0L16 16m-2-2l1.586-1.586a2 2 0 
+                             012.828 0L20 14m-6-6h.01M6 20h12a2 
+                             2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 
+                             00-2 2v12a2 2 0 002 2z"
+                        />
                       </svg>
                       Photo Gallery
                     </h2>
@@ -314,7 +486,7 @@ export default function EventDetails() {
                       {event.mediaUrls.map((url: string, i: number) => (
                         <img
                           key={i}
-                          src={getImageUrl(url)}
+                          src={url}
                           alt={`Gallery ${i + 1}`}
                           className="rounded-xl h-40 w-full object-cover hover:opacity-90 transition cursor-pointer shadow-lg hover:shadow-xl"
                         />
@@ -326,76 +498,113 @@ export default function EventDetails() {
             </div>
 
             {/* RIGHT - STICKY TICKETS */}
-            <div className="lg:sticky lg:top-6 h-fit animate-slide-up" style={{ animationDelay: "0.1s" }}>
-              <div className="bg-white rounded-2xl border-2 shadow-xl overflow-hidden" style={{ borderColor: `${themeColor}40` }}>
+            <div
+              className="lg:sticky lg:top-6 h-fit animate-slide-up"
+              style={{ animationDelay: "0.1s" }}
+            >
+              <div
+                className="bg-white rounded-2xl border-2 shadow-xl overflow-hidden"
+                style={{ borderColor: `${themeColor}40` }}
+              >
                 {/* Header */}
-                <div className="p-4 text-white font-bold" style={{ backgroundColor: themeColor }}>
+                <div
+                  className="p-4 text-white font-bold"
+                  style={{ backgroundColor: themeColor }}
+                >
                   <div className="flex items-center gap-2">
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
+                    <svg
+                      className="w-5 h-5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 
+                           00-2 2v3a2 2 0 110 4v3a2 2 0 
+                           002 2h14a2 2 0 002-2v-3a2 2 0 
+                           110-4V7a2 2 0 00-2-2H5z"
+                      />
                     </svg>
                     <span>Get Tickets</span>
                   </div>
                   {!registrationOpen && (
-                    <p className="text-white/90 text-xs mt-1">⚠️ Registration closed</p>
+                    <p className="text-white/90 text-xs mt-1">
+                      ⚠️ Registration closed
+                    </p>
                   )}
                 </div>
 
-                {/* Tickets List - Selection Only */}
+                {/* Tickets List */}
                 <div className="p-3 space-y-3 max-h-[340px] overflow-y-auto">
                   {event.tickets.map((ticket: any) => {
                     const isSelected = selectedTicket === ticket.name;
                     const hasSubTickets = ticket.subTickets?.length > 0;
-                    const isExpanded = expandedTicket === ticket.name;
 
                     return (
                       <div key={ticket.name}>
-                        {/* Ticket Card */}
+                        {/* Parent Ticket */}
                         <button
                           onClick={() => {
                             setSelectedTicket(ticket.name);
                             setSelectedSubTicket(null);
-                            if (hasSubTickets) {
-                              setExpandedTicket(ticket.name);
-                            } else {
-                              setExpandedTicket(null);
-                            }
                           }}
                           className={`w-full rounded-xl border-2 p-3 transition-all text-left ${
-                            isSelected ? 'shadow-md' : ''
+                            isSelected ? "shadow-md" : ""
                           }`}
-                          style={{ borderColor: isSelected ? themeColor : "#e5e7eb" }}
+                          style={{
+                            borderColor: isSelected ? themeColor : "#e5e7eb",
+                          }}
                         >
                           <div className="flex justify-between items-center">
                             <div>
-                              <p className="font-bold text-gray-900">{ticket.name}</p>
+                              <p className="font-bold text-gray-900">
+                                {ticket.name}
+                              </p>
                               <p className="text-xs text-gray-500">
-                                {ticket.quantity ? `${ticket.available || 0} left` : "Unlimited"}
+                                {ticket.quantity
+                                  ? `${ticket.available || 0} left`
+                                  : "Unlimited"}
                               </p>
                             </div>
                             <span className="font-bold text-lg text-green-600">
-                              ₹{ticket.finalPrice}
+                              ₹{ticket.price || 0}
                             </span>
                           </div>
                         </button>
 
                         {/* Sub-Tickets */}
-                        {isSelected && hasSubTickets && isExpanded && (
-                          <div className="mt-2 ml-3 space-y-2 p-2 rounded-lg" style={{ backgroundColor: `${themeColor}08` }}>
-                            <p className="text-xs font-semibold text-gray-600 uppercase mb-1">Select Option</p>
+                        {isSelected && hasSubTickets && (
+                          <div
+                            className="mt-2 ml-3 space-y-2 p-2 rounded-lg animate-slide-up"
+                            style={{
+                              backgroundColor: `${themeColor}08`,
+                            }}
+                          >
+                            <p className="text-xs font-semibold text-gray-600 uppercase mb-1">
+                              Select Option (Optional)
+                            </p>
                             {ticket.subTickets.map((sub: any) => (
                               <button
                                 key={sub.name}
                                 onClick={() => setSelectedSubTicket(sub.name)}
                                 className={`w-full flex justify-between p-2 rounded-lg border transition text-sm ${
                                   selectedSubTicket === sub.name
-                                    ? 'bg-white border-2 shadow-md'
-                                    : 'bg-white hover:shadow'
+                                    ? "bg-white border-2 shadow-md"
+                                    : "bg-white hover:shadow"
                                 }`}
-                                style={selectedSubTicket === sub.name ? { borderColor: themeColor } : {}}
+                                style={
+                                  selectedSubTicket === sub.name
+                                    ? { borderColor: themeColor }
+                                    : {}
+                                }
                               >
                                 <span className="font-medium">{sub.name}</span>
-                                <span className="font-bold text-green-600">₹{sub.finalPrice}</span>
+                                <span className="font-bold text-green-600">
+                                  ₹{sub.price || 0}
+                                </span>
                               </button>
                             ))}
                           </div>
@@ -405,7 +614,7 @@ export default function EventDetails() {
                   })}
                 </div>
 
-                {/* ✅ SINGLE REGISTER BUTTON AT BOTTOM */}
+                {/* Register Button */}
                 <div className="p-3 border-t">
                   <button
                     disabled={!registrationOpen || !canRegister}
@@ -417,10 +626,13 @@ export default function EventDetails() {
                       ? "Registration Closed"
                       : !selectedTicket
                       ? "Select a Ticket"
-                      : hasSubTickets && !selectedSubTicket
-                      ? "Select an Option"
                       : "Register Now"}
                   </button>
+                  {selectedTicket && hasSubTickets && !selectedSubTicket && (
+                    <p className="text-xs text-gray-500 text-center mt-2">
+                      💡 Sub-ticket selection is optional
+                    </p>
+                  )}
                 </div>
 
                 {/* Footer */}

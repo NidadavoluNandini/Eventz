@@ -6,58 +6,52 @@ import {
   Headers,
   BadRequestException,
   Req,
+  Get,
 } from '@nestjs/common';
 import { PaymentsIntegrationService } from './payments-integration.service';
+import { PaymentsService } from './payments.service';
 
 @Controller('payments/registration')
 export class PaymentsController {
   constructor(
-    private readonly paymentsService: PaymentsIntegrationService,
+    private readonly paymentsIntegrationService: PaymentsIntegrationService,
+    private readonly paymentsService: PaymentsService,
   ) {}
 
-  // ✅ CREATE ORDER
+  // ✅ CREATE ORDER - Use paymentsService
   @Post('create-order')
-  createOrder(
-    @Body('registrationId') registrationId: string,
-  ) {
-    return this.paymentsService.createOrderForRegistration(
-      registrationId,
-    );
+  createOrder(@Body('registrationId') registrationId: string) {
+    return this.paymentsService.createOrderForRegistration(registrationId);
   }
 
-  // ✅ VERIFY PAYMENT
+  // ✅ VERIFY PAYMENT - Use paymentsIntegrationService
   @Post('verify')
   verify(@Body() body: any) {
-    return this.paymentsService.verifyPaymentForRegistration(
-      body,
-    );
+    return this.paymentsIntegrationService.verifyPaymentForRegistration(body);
   }
 
-  // ✅ PAYMENT FAILED
+  // ✅ PAYMENT FAILED - Use paymentsIntegrationService
   @Post('fail/:registrationId')
-  markFailed(
-    @Param('registrationId') registrationId: string,
-  ) {
-    return this.paymentsService.markPaymentFailed(
-      registrationId,
-    );
+  markFailed(@Param('registrationId') registrationId: string) {
+    return this.paymentsIntegrationService.markPaymentFailed(registrationId);
   }
 
-  // ✅ WEBHOOK
+  // ✅ WEBHOOK - Use paymentsIntegrationService
   @Post('webhook')
   webhook(
     @Req() req: any,
     @Headers('x-razorpay-signature') signature: string,
   ) {
     if (!signature) {
-      throw new BadRequestException(
-        'Missing Razorpay signature',
-      );
+      throw new BadRequestException('Missing Razorpay signature');
     }
 
-    return this.paymentsService.handleWebhook(
-      req.body,
-      signature,
-    );
+    return this.paymentsIntegrationService.handleWebhook(req.body, signature);
+  }
+
+  // ✅ GET PAYMENT DETAILS - Use paymentsService
+  @Get('details/:registrationId')
+  async getPaymentDetails(@Param('registrationId') registrationId: string) {
+    return this.paymentsService.getPaymentDetails(registrationId);
   }
 }

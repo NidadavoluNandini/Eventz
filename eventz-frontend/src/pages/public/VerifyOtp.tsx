@@ -14,7 +14,7 @@ export default function VerifyOtp() {
   const [success, setSuccess] = useState(false);
   const [resendLoading, setResendLoading] = useState(false);
   const [resendMessage, setResendMessage] = useState("");
-  const [timeLeft, setTimeLeft] = useState(300); // 5 minutes countdown
+  const [timeLeft, setTimeLeft] = useState(120); // ✅ CHANGED: 2 minutes (120 seconds)
 
   const session =
     JSON.parse(sessionStorage.getItem("otpSession") || "null") ?? { registrationId };
@@ -80,7 +80,7 @@ export default function VerifyOtp() {
         registrationId: session.registrationId,
       });
       setResendMessage("OTP resent successfully!");
-      setTimeLeft(300); // Reset timer
+      setTimeLeft(120); // ✅ CHANGED: Reset to 2 minutes
       setOtp(Array(6).fill("")); // Clear OTP inputs
       inputs.current[0]?.focus();
     } catch (err: any) {
@@ -181,7 +181,7 @@ export default function VerifyOtp() {
 
               {/* Timer */}
               <div className="text-center mb-6">
-                <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full ${timeLeft < 60 ? 'bg-red-50 text-red-600' : 'bg-gray-100 text-gray-700'}`}>
+                <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full ${timeLeft < 30 ? 'bg-red-50 text-red-600' : 'bg-gray-100 text-gray-700'}`}>
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
@@ -269,30 +269,20 @@ export default function VerifyOtp() {
                 <p className="text-gray-600 text-sm mb-2">Didn't receive the code?</p>
                 <button
                   onClick={resendOtp}
-                  disabled={resendLoading || timeLeft > 240}
+                  disabled={resendLoading || timeLeft > 60}
                   className="text-indigo-600 font-semibold text-sm hover:underline disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {resendLoading ? "Resending..." : "Resend OTP"}
                 </button>
-                {timeLeft > 240 && (
+                {timeLeft > 60 && (
                   <p className="text-xs text-gray-500 mt-1">
-                    Available in {formatTime(timeLeft - 240)}
+                    Available in {formatTime(timeLeft - 60)}
                   </p>
                 )}
               </div>
 
               {/* Help Text */}
-              <div className="mt-6 p-4 bg-gray-50 rounded-xl border border-gray-200">
-                <div className="flex items-start gap-3">
-                  <svg className="w-5 h-5 text-indigo-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  <div>
-                    <p className="text-sm font-medium text-gray-900 mb-1">For testing:</p>
-                    <p className="text-xs text-gray-600">Check the backend console for your OTP code</p>
-                  </div>
-                </div>
-              </div>
+            
             </>
           ) : (
             // 🎉 SUCCESS STATE

@@ -51,9 +51,9 @@ export default function OrganizerHeader() {
         {/* Avatar */}
         <div className="relative">
           <div className="w-10 h-10 rounded-full overflow-hidden bg-gradient-to-br from-indigo-500 to-purple-600 ring-2 ring-slate-200">
-            {organizer?.photoUrl ? (
+            {organizer?.photo ? (
               <img
-                src={resolveImageSrc(organizer.photoUrl)}
+                src={resolveImageSrc(organizer.photo)}
                 className="w-full h-full object-cover"
                 alt="Profile"
               />
@@ -102,9 +102,9 @@ export default function OrganizerHeader() {
           <div className="bg-gradient-to-r from-indigo-500 to-purple-600 p-4">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 rounded-full overflow-hidden bg-white/20 backdrop-blur ring-2 ring-white/50">
-                {organizer?.photoUrl ? (
+                {organizer?.photo ? (
                   <img
-                    src={resolveImageSrc(organizer.photoUrl)}
+                    src={resolveImageSrc(organizer.photo)}
                     className="w-full h-full object-cover"
                     alt="Profile"
                   />

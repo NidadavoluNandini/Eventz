@@ -1,7 +1,9 @@
+// src/payments/payments-integration.service.ts
 import {
   Injectable,
   BadRequestException,
   NotFoundException,
+  InternalServerErrorException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
@@ -14,7 +16,7 @@ import {
   PaymentStatus,
   RegistrationStatus,
 } from '../registrations/schemas/registration.schema';
-
+import { Event } from '../events/schemas/event.schema';
 import { EmailService } from '../notifications/email.service';
 
 @Injectable()
@@ -22,31 +24,71 @@ export class PaymentsIntegrationService {
   constructor(
     @InjectModel(Registration.name)
     private registrationModel: Model<Registration>,
+
+    @InjectModel(Event.name)
+    private eventModel: Model<Event>,
+
     private readonly registrationsService: RegistrationsService,
     private readonly razorpayService: RazorpayService,
     private readonly emailService: EmailService,
   ) {}
 
-  // ===============================
-  // CREATE RAZORPAY ORDER
-  // ===============================
-  async createOrderForRegistration(registrationId: string) {
-    const registration =
-      await this.registrationModel.findById(registrationId);
+  private calculateGST(basePrice: number, gstPercent: number): number {
+    if (!gstPercent) return 0;
+    return Math.round((basePrice * gstPercent) / 100);
+  }
 
+  // =====================================================
+  // CREATE RAZORPAY ORDER
+  // =====================================================
+  async createOrderForRegistration(registrationId: string) {
+    const registration = await this.registrationModel.findById(registrationId);
     if (!registration) {
       throw new NotFoundException('Registration not found');
     }
 
-    if (
-      registration.status !==
-      RegistrationStatus.PENDING_PAYMENT
-    ) {
+    if (registration.status !== RegistrationStatus.PENDING_PAYMENT) {
       throw new BadRequestException('Payment not required');
     }
 
-    // ✅ SINGLE TICKET
-    const totalAmount = registration.ticketPrice;
+    const event = await this.eventModel.findById(registration.eventId);
+    if (!event) {
+      throw new NotFoundException('Event not found');
+    }
+
+    const ticket = event.tickets.find(
+      (t) => t.name === registration.ticketName,
+    );
+    if (!ticket) {
+      throw new NotFoundException('Ticket not found');
+    }
+
+    const quantity = registration.quantity || 1;
+
+    // Parent ticket: GST applies (per ticket)
+    const parentPrice = ticket.price || 0;
+    const parentGSTPercent = ticket.gst || 0;
+    const parentGSTAmount = this.calculateGST(parentPrice, parentGSTPercent);
+    const parentFinal = parentPrice + parentGSTAmount;
+
+    // Sub-ticket: NO GST (per ticket)
+    let subPrice = 0;
+    if (registration.subTicketName) {
+      const subTicket = ticket.subTickets?.find(
+        (s) => s.name === registration.subTicketName,
+      );
+      if (subTicket) {
+        subPrice = subTicket.price || 0;
+      }
+    }
+
+    // Total for all tickets
+    const totalAmountPerTicket = parentFinal + subPrice;
+    const totalAmount = totalAmountPerTicket * quantity;
+
+    if (!totalAmount || totalAmount <= 0) {
+      throw new BadRequestException('Invalid payment amount');
+    }
 
     const order = await this.razorpayService.createOrder(
       totalAmount,
@@ -54,6 +96,7 @@ export class PaymentsIntegrationService {
     );
 
     registration.razorpayOrderId = order.id;
+    registration.ticketPrice = totalAmount;
     await registration.save();
 
     return {
@@ -65,71 +108,53 @@ export class PaymentsIntegrationService {
     };
   }
 
-  // ===============================
   // VERIFY PAYMENT
-  // ===============================
   async verifyPaymentForRegistration(dto: {
     registrationId: string;
     razorpay_order_id: string;
     razorpay_payment_id: string;
     razorpay_signature: string;
   }) {
-    const isValid =
-      this.razorpayService.verifySignature(
-        dto.razorpay_order_id,
-        dto.razorpay_payment_id,
-        dto.razorpay_signature,
-      );
+    const isValid = this.razorpayService.verifySignature(
+      dto.razorpay_order_id,
+      dto.razorpay_payment_id,
+      dto.razorpay_signature,
+    );
 
     if (!isValid) {
-      throw new BadRequestException(
-        'Invalid payment signature',
-      );
+      throw new BadRequestException('Invalid payment signature');
     }
 
-    await this.registrationsService.completeRegistration(
-      dto.registrationId,
-      {
-        razorpayOrderId: dto.razorpay_order_id,
-        razorpayPaymentId: dto.razorpay_payment_id,
-      },
-    );
+    await this.registrationsService.completeRegistration(dto.registrationId, {
+      razorpayOrderId: dto.razorpay_order_id,
+      razorpayPaymentId: dto.razorpay_payment_id,
+    });
 
     return { success: true };
   }
 
-  // ===============================
   // WEBHOOK
-  // ===============================
   async handleWebhook(payload: any, signature: string) {
-    const isValid =
-      this.razorpayService.verifyWebhookSignature(
-        payload,
-        signature,
-      );
+    const isValid = this.razorpayService.verifyWebhookSignature(
+      payload,
+      signature,
+    );
 
     if (!isValid) {
-      throw new BadRequestException(
-        'Invalid webhook signature',
-      );
+      throw new BadRequestException('Invalid webhook signature');
     }
 
     if (payload.event === 'payment.captured') {
-      const razorpayOrderId =
-        payload.payload.payment.entity.order_id;
+      const razorpayOrderId = payload.payload.payment.entity.order_id;
+      const razorpayPaymentId = payload.payload.payment.entity.id;
 
-      const razorpayPaymentId =
-        payload.payload.payment.entity.id;
-
-      const registration =
-        await this.registrationModel.findOne({
-          razorpayOrderId,
-        });
+      const registration = await this.registrationModel.findOne({
+        razorpayOrderId,
+      });
 
       if (
         registration &&
-        registration.status ===
-          RegistrationStatus.PENDING_PAYMENT
+        registration.status === RegistrationStatus.PENDING_PAYMENT
       ) {
         await this.registrationsService.completeRegistration(
           registration._id.toString(),
@@ -144,13 +169,9 @@ export class PaymentsIntegrationService {
     return { status: 'ok' };
   }
 
-  // ===============================
   // PAYMENT FAILED
-  // ===============================
   async markPaymentFailed(registrationId: string) {
-    const reg =
-      await this.registrationModel.findById(registrationId);
-
+    const reg = await this.registrationModel.findById(registrationId);
     if (!reg) return;
 
     reg.paymentStatus = PaymentStatus.FAILED;

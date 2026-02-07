@@ -118,6 +118,8 @@ async generateAndSendTicket(reg: Registration) {
     eventDate: event.startDate.toDateString(),
     eventTime: `${event.startTime} - ${event.endTime}`,
     eventLocation: event.location,
+      quantity: reg.quantity || 1,   // ✅ here is correct
+
     pdfBuffer,
   });
 
