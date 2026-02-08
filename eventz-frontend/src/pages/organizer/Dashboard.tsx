@@ -490,58 +490,60 @@ export default function Dashboard() {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50 to-purple-50 p-6">
       <div className="max-w-7xl mx-auto space-y-6">
         {/* HEADER */}
-        <div className="bg-white rounded-2xl shadow-lg border border-indigo-100 p-6">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-            <div>
-              <h1 className="text-3xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-                Analytics Dashboard
-              </h1>
-              <p className="text-sm text-slate-600 mt-1">
-                📊 Track performance, registrations, and revenue in real-time
-              </p>
-            </div>
+{/* HEADER */}
+<div className="bg-white rounded-2xl shadow-lg border border-indigo-100 p-6">
+  <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+    <div>
+      <h1 className="text-3xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+        Analytics Dashboard
+      </h1>
+      <p className="text-sm text-slate-600 mt-1">
+        📊 Track performance, registrations, and revenue in real-time
+      </p>
+    </div>
 
-            <div className="flex gap-3 flex-wrap">
-              <select
-                value={selectedEventId}
-                onChange={(e) => setSelectedEventId(e.target.value)}
-                className="px-4 py-2.5 border-2 border-indigo-200 rounded-xl font-semibold text-gray-700 bg-white hover:border-indigo-400 transition-all focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              >
-                <option value="all">📊 All Events Overview</option>
-                {events.map((e) => (
-                  <option key={e._id} value={e._id}>
-                    {e.title}
-                  </option>
-                ))}
-              </select>
+    {/* make this column on mobile, row on md+ */}
+    <div className="flex flex-col md:flex-row gap-3 w-full lg:w-auto">
+      <select
+        value={selectedEventId}
+        onChange={(e) => setSelectedEventId(e.target.value)}
+        className="w-full md:w-64 px-4 py-2.5 border-2 border-indigo-200 rounded-xl font-semibold text-gray-700 bg-white hover:border-indigo-400 transition-all focus:outline-none focus:ring-2 focus:ring-indigo-500"
+      >
+        <option value="all">📊 All Events Overview</option>
+        {events.map((e) => (
+          <option key={e._id} value={e._id}>
+            {e.title}
+          </option>
+        ))}
+      </select>
 
-              <button
-                disabled={!selectedEvent}
-                onClick={downloadAttendeesCSV}
-                className={`px-6 py-2.5 rounded-xl font-semibold transition-all flex items-center gap-2 shadow-md hover:shadow-lg ${
-                  selectedEvent
-                    ? "bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:from-indigo-700 hover:to-purple-700"
-                    : "bg-slate-200 text-slate-500 cursor-not-allowed"
-                }`}
-              >
-                <svg
-                  className="w-5 h-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                  />
-                </svg>
-                Download CSV
-              </button>
-            </div>
-          </div>
-        </div>
+      <button
+        disabled={!selectedEvent}
+        onClick={downloadAttendeesCSV}
+        className={`w-full md:w-auto px-6 py-2.5 rounded-xl font-semibold transition-all flex items-center justify-center gap-2 shadow-md hover:shadow-lg ${
+          selectedEvent
+            ? "bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:from-indigo-700 hover:to-purple-700"
+            : "bg-slate-200 text-slate-500 cursor-not-allowed"
+        }`}
+      >
+        <svg
+          className="w-5 h-5"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+          />
+        </svg>
+        Download CSV
+      </button>
+    </div>
+  </div>
+</div>
 
         {/* KPIs */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

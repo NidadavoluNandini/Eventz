@@ -1,5 +1,9 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
+import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
+
 import { createEvent, updateEvent } from "../../api/events.api";
 import api from "../../utils/axios";
 
@@ -33,6 +37,17 @@ const THEME_COLORS = [
   { name: "Slate", value: "#475569", class: "bg-slate-600" },
 ];
 
+// Leaflet icon fix (same as EventDetails)
+delete (L.Icon.Default.prototype as any)._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl:
+    "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png",
+  iconUrl:
+    "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png",
+  shadowUrl:
+    "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png",
+});
+
 interface SubTicket {
   id: string;
   name: string;
@@ -55,12 +70,32 @@ interface Ticket {
 
 type FormStep = "basic" | "schedule" | "media" | "tickets" | "review" | "preview";
 
+const geocodeLocation = async (
+  location: string,
+  city: string
+): Promise<[number, number]> => {
+  try {
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
+        `${location}, ${city}`
+      )}&limit=1`
+    );
+    const data = await res.json();
+    if (data?.length) {
+      return [parseFloat(data[0].lat), parseFloat(data[0].lon)];
+    }
+  } catch (e) {
+    console.error("Geocode error", e);
+  }
+  return [20.5937, 78.9629];
+};
+
 export default function CreateEvent() {
   const navigate = useNavigate();
-  const location = useLocation() as any;
+  const locationHook = useLocation() as any;
 
-  const editMode = location.state?.editMode || false;
-  const existingEvent = location.state?.eventData || null;
+  const editMode = locationHook.state?.editMode || false;
+  const existingEvent = locationHook.state?.eventData || null;
 
   const [isLoading, setIsLoading] = useState(false);
   const [currentStep, setCurrentStep] = useState<FormStep>("basic");
@@ -69,6 +104,17 @@ export default function CreateEvent() {
   );
   const [returnToReviewAfterEdit, setReturnToReviewAfterEdit] =
     useState<FormStep | null>(null);
+
+  // scroll to top of card when step changes
+  const formCardRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (formCardRef.current) {
+      formCardRef.current.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    }
+  }, [currentStep]);
 
   // BASIC
   const [title, setTitle] = useState(existingEvent?.title || "");
@@ -100,7 +146,7 @@ export default function CreateEvent() {
   const [startTime, setStartTime] = useState(existingEvent?.startTime || "");
   const [endTime, setEndTime] = useState(existingEvent?.endTime || "");
 
-  // MEDIA (new)
+  // MEDIA
   const [bannerImageUrl, setBannerImageUrl] = useState<string | undefined>(
     existingEvent?.bannerImageUrl
   );
@@ -115,26 +161,29 @@ export default function CreateEvent() {
     existingEvent?.tickets?.map((t: any) => ({
       id: `ticket-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       name: t.name,
-      price: t.price || 0,
-      quantity: t.quantity || 0,
-      gst: t.gst || 0,
-      finalPrice: t.finalPrice || 0,
+      price: t.price ?? 0,
+      quantity: t.quantity ?? 0,
+      gst: t.gst ?? 0,
+      finalPrice: t.finalPrice ?? 0,
       subTickets:
         t.subTickets?.map((s: any) => ({
           id: `sub-${Date.now()}-${Math.random()
             .toString(36)
             .substr(2, 9)}`,
           name: s.name,
-          price: s.price || 0,
-          quantity: s.quantity || 0,
-          gst: s.gst || 0,
-          finalPrice: s.finalPrice || 0,
+          price: s.price ?? 0,
+          quantity: s.quantity ?? 0,
+          gst: s.gst ?? 0,
+          finalPrice: s.finalPrice ?? 0,
         })) || [],
       isExpanded: false,
     })) || []
   );
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [previewMapCenter, setPreviewMapCenter] = useState<[number, number]>([
+    20.5937, 78.9629,
+  ]);
 
   const formatDate = (date: string) => {
     const d = new Date(date);
@@ -154,11 +203,10 @@ export default function CreateEvent() {
     setCompletedSections((prev) => new Set(prev).add(section));
   };
 
-  const isSectionCompleted = (section: FormStep): boolean => {
-    return completedSections.has(section);
-  };
+  const isSectionCompleted = (section: FormStep): boolean =>
+    completedSections.has(section);
 
-  /* ============ VALIDATION ============ */
+  // VALIDATION
 
   const validateBasicInfo = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -216,7 +264,7 @@ export default function CreateEvent() {
     return isValid;
   };
 
-  /* ============ MEDIA UPLOAD HELPERS ============ */
+  // MEDIA UPLOAD HELPERS
 
   const uploadImage = async (file: File): Promise<string> => {
     const formData = new FormData();
@@ -263,7 +311,7 @@ export default function CreateEvent() {
     setMediaUrls((prev) => prev.filter((u) => u !== url));
   };
 
-  /* ============ STEP NAVIGATION ============ */
+  // STEP NAVIGATION
 
   const goToStep = (step: FormStep, fromReview = false) => {
     setErrors({});
@@ -273,11 +321,9 @@ export default function CreateEvent() {
     setCurrentStep(step);
   };
 
-  const handleNext = () => {
+  const handleNext = async () => {
     setErrors({});
 
-    // If we came from review and are editing a section,
-    // after validation go back to review instead of forward.
     if (returnToReviewAfterEdit) {
       if (currentStep === "basic") {
         if (validateBasicInfo()) {
@@ -308,7 +354,6 @@ export default function CreateEvent() {
       }
     }
 
-    // Normal linear flow
     if (currentStep === "basic") {
       if (validateBasicInfo()) setCurrentStep("schedule");
     } else if (currentStep === "schedule") {
@@ -317,9 +362,22 @@ export default function CreateEvent() {
       markSectionComplete("media");
       setCurrentStep("tickets");
     } else if (currentStep === "tickets") {
-      if (validateTickets()) setCurrentStep("review");
+      if (validateTickets()) {
+        markSectionComplete("review");
+        // prepare map center for preview
+        if (locationText && city) {
+          setPreviewMapCenter(await geocodeLocation(locationText, city));
+        } else {
+          setPreviewMapCenter([20.5937, 78.9629]);
+        }
+        setCurrentStep("preview");
+      }
     } else if (currentStep === "review") {
-      markSectionComplete("review");
+      if (locationText && city) {
+        setPreviewMapCenter(await geocodeLocation(locationText, city));
+      } else {
+        setPreviewMapCenter([20.5937, 78.9629]);
+      }
       setCurrentStep("preview");
     }
   };
@@ -333,7 +391,7 @@ export default function CreateEvent() {
     else if (currentStep === "preview") setCurrentStep("review");
   };
 
-  /* ============ TICKET HELPERS ============ */
+  // TICKET HELPERS
 
   const addTicket = () => {
     const newTicket: Ticket = {
@@ -500,7 +558,7 @@ export default function CreateEvent() {
     );
   };
 
-  /* ============ SUBMIT ============ */
+  // SUBMIT
 
   const handleSubmit = async () => {
     if (!validateTickets()) return;
@@ -622,7 +680,6 @@ export default function CreateEvent() {
                   key={step.id}
                   className="flex items-center flex-1"
                 >
-                  {/* Circle */}
                   <button
                     onClick={() => goToStep(step.id)}
                     className="flex flex-col items-center relative group"
@@ -667,7 +724,6 @@ export default function CreateEvent() {
                     </span>
                   </button>
 
-                  {/* Line */}
                   {index < steps.length - 1 && (
                     <div className="flex-1 h-1 mx-2 relative">
                       <div
@@ -688,7 +744,10 @@ export default function CreateEvent() {
         </div>
 
         {/* Form Content */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 mb-4 min-h-[500px]">
+        <div
+          ref={formCardRef}
+          className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 mb-4 min-h-[500px]"
+        >
           {/* STEP 1: BASIC */}
           {currentStep === "basic" && (
             <div className="space-y-4">
@@ -845,7 +904,9 @@ export default function CreateEvent() {
                     }`}
                     placeholder="Enter venue address"
                     value={locationText}
-                    onChange={(e) => setLocationText(e.target.value)}
+                    onChange={(e) =>
+                      setLocationText(e.target.value)
+                    }
                   />
                   {errors.location && (
                     <p className="text-red-500 text-xs mt-1">
@@ -870,7 +931,9 @@ export default function CreateEvent() {
                           : "border-gray-300"
                       }`}
                       value={startDate}
-                      onChange={(e) => setStartDate(e.target.value)}
+                      onChange={(e) =>
+                        setStartDate(e.target.value)
+                      }
                     />
                     <input
                       type="time"
@@ -880,7 +943,9 @@ export default function CreateEvent() {
                           : "border-gray-300"
                       }`}
                       value={startTime}
-                      onChange={(e) => setStartTime(e.target.value)}
+                      onChange={(e) =>
+                        setStartTime(e.target.value)
+                      }
                     />
                   </div>
                   {(errors.startDate || errors.startTime) && (
@@ -904,7 +969,9 @@ export default function CreateEvent() {
                           : "border-gray-300"
                       }`}
                       value={endDate}
-                      onChange={(e) => setEndDate(e.target.value)}
+                      onChange={(e) =>
+                        setEndDate(e.target.value)
+                      }
                     />
                     <input
                       type="time"
@@ -914,7 +981,9 @@ export default function CreateEvent() {
                           : "border-gray-300"
                       }`}
                       value={endTime}
-                      onChange={(e) => setEndTime(e.target.value)}
+                      onChange={(e) =>
+                        setEndTime(e.target.value)
+                      }
                     />
                   </div>
                   {(errors.endDate || errors.endTime) && (
@@ -939,7 +1008,6 @@ export default function CreateEvent() {
                 </p>
               </div>
 
-              {/* Banner image */}
               <div className="bg-white rounded-xl border border-gray-200 p-4 space-y-2">
                 <label className="block text-sm font-semibold text-gray-800">
                   Banner image (hero)
@@ -947,12 +1015,27 @@ export default function CreateEvent() {
                     Optional – shown at top of event page
                   </span>
                 </label>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleBannerChange}
-                  className="block w-full text-sm text-gray-600 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
-                />
+                <div className="relative inline-block">
+                  <button
+                    type="button"
+                    className="px-4 py-2 bg-indigo-600 text-white text-sm rounded-lg font-semibold hover:bg-indigo-700 transition"
+                    onClick={() =>
+                      document.getElementById("banner-input")?.click()
+                    }
+                  >
+                    Choose File
+                  </button>
+                  <span className="ml-2 text-sm text-gray-600 align-middle">
+                    {bannerImageUrl ? "1 file selected" : "No file chosen"}
+                  </span>
+                  <input
+                    id="banner-input"
+                    type="file"
+                    accept="image/*"
+                    onChange={handleBannerChange}
+                    className="hidden"
+                  />
+                </div>
                 {uploadingBanner && (
                   <p className="text-xs text-gray-500 mt-1">
                     Uploading banner...
@@ -972,7 +1055,6 @@ export default function CreateEvent() {
                 )}
               </div>
 
-              {/* Gallery images */}
               <div className="bg-white rounded-xl border border-gray-200 p-4 space-y-2">
                 <label className="block text-sm font-semibold text-gray-800">
                   Gallery images
@@ -980,13 +1062,32 @@ export default function CreateEvent() {
                     Optional – shown in event gallery
                   </span>
                 </label>
-                <input
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  onChange={handleGalleryChange}
-                  className="block w-full text-sm text-gray-600 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
-                />
+                <div className="relative inline-block">
+                  <button
+                    type="button"
+                    className="px-4 py-2 bg-indigo-600 text-white text-sm rounded-lg font-semibold hover:bg-indigo-700 transition"
+                    onClick={() =>
+                      document.getElementById("gallery-input")?.click()
+                    }
+                  >
+                    Choose Files
+                  </button>
+                  <span className="ml-2 text-sm text-gray-600 align-middle">
+                    {mediaUrls.length > 0
+                      ? `${mediaUrls.length} file${
+                          mediaUrls.length > 1 ? "s" : ""
+                        } selected`
+                      : "No file chosen"}
+                  </span>
+                  <input
+                    id="gallery-input"
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    onChange={handleGalleryChange}
+                    className="hidden"
+                  />
+                </div>
                 {uploadingGallery && (
                   <p className="text-xs text-gray-500 mt-1">
                     Uploading gallery images...
@@ -1010,7 +1111,9 @@ export default function CreateEvent() {
                           />
                           <button
                             type="button"
-                            onClick={() => removeGalleryImage(url)}
+                            onClick={() =>
+                              removeGalleryImage(url)
+                            }
                             className="absolute top-1 right-1 bg-black/60 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
                             title="Remove"
                           >
@@ -1046,7 +1149,7 @@ export default function CreateEvent() {
                     Ticket Configuration
                   </h2>
                   <p className="text-xs text-gray-500 mt-0.5">
-                    Add tickets and sub-tickets with pricing
+                    Add tickets and addons with pricing
                   </p>
                 </div>
                 <button
@@ -1154,7 +1257,7 @@ export default function CreateEvent() {
                                 )}
                                 {ticket.subTickets.length > 0 && (
                                   <span className="ml-2 px-2 py-0.5 bg-purple-100 text-purple-700 text-xs font-bold rounded-full">
-                                    {ticket.subTickets.length} Options
+                                    {ticket.subTickets.length} Addons
                                   </span>
                                 )}
                               </h3>
@@ -1278,7 +1381,11 @@ export default function CreateEvent() {
                                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 transition outline-none text-sm"
                                     placeholder="0"
                                     min={0}
-                                    value={ticket.quantity}
+                                    value={
+                                      ticket.quantity === 0
+                                        ? ""
+                                        : ticket.quantity
+                                    }
                                     onChange={(e) =>
                                       updateTicket(
                                         ticket.id,
@@ -1299,7 +1406,11 @@ export default function CreateEvent() {
                                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 transition outline-none text-sm"
                                     placeholder="0"
                                     min={0}
-                                    value={ticket.price}
+                                    value={
+                                      ticket.price === 0
+                                        ? ""
+                                        : ticket.price
+                                    }
                                     onChange={(e) =>
                                       updateTicket(
                                         ticket.id,
@@ -1319,7 +1430,11 @@ export default function CreateEvent() {
                                     placeholder="0"
                                     min={0}
                                     max={100}
-                                    value={ticket.gst}
+                                    value={
+                                      ticket.gst === 0
+                                        ? ""
+                                        : ticket.gst
+                                    }
                                     onChange={(e) =>
                                       updateTicket(
                                         ticket.id,
@@ -1344,7 +1459,7 @@ export default function CreateEvent() {
                               </div>
                             </div>
 
-                            {/* Sub-tickets */}
+                            {/* Sub-tickets / Addons */}
                             <div>
                               <div className="flex items-center justify-between mb-2">
                                 <h4 className="text-xs font-bold text-gray-700 uppercase tracking-wide flex items-center gap-2">
@@ -1361,7 +1476,7 @@ export default function CreateEvent() {
                                       d="M12 6v6m0 0v6m0-6h6m-6 0H6"
                                     />
                                   </svg>
-                                  Sub-Ticket Options
+                                  Addons
                                 </h4>
                                 <button
                                   type="button"
@@ -1383,7 +1498,7 @@ export default function CreateEvent() {
                                       d="M12 4v16m8-8H4"
                                     />
                                   </svg>
-                                  Add Sub-Ticket
+                                  Addons
                                 </button>
                               </div>
 
@@ -1394,52 +1509,72 @@ export default function CreateEvent() {
                                       key={sub.id}
                                       className="bg-purple-50 border border-purple-200 rounded-lg p-3"
                                     >
-                                      <div className="grid grid-cols-5 gap-2 items-center">
-                                        <input
-                                          type="text"
-                                          className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 transition outline-none text-sm"
-                                          placeholder="Sub-ticket name"
-                                          value={sub.name}
-                                          onChange={(e) =>
-                                            updateSubTicket(
-                                              ticket.id,
-                                              sub.id,
-                                              "name",
-                                              e.target.value
-                                            )
-                                          }
-                                        />
-                                        <input
-                                          type="number"
-                                          className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 transition outline-none text-sm"
-                                          placeholder="Price"
-                                          min={0}
-                                          value={sub.price}
-                                          onChange={(e) =>
-                                            updateSubTicket(
-                                              ticket.id,
-                                              sub.id,
-                                              "price",
-                                              e.target.value
-                                            )
-                                          }
-                                        />
-                        
-                                        <div className="px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm font-bold text-green-600">
-                                          {sub.finalPrice.toFixed(2)}
+                                      <div className="grid grid-cols-6 gap-2 items-end">
+                                        <div className="col-span-2">
+                                          <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+                                            Addon Name
+                                          </label>
+                                          <input
+                                            type="text"
+                                            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 transition outline-none text-sm"
+                                            placeholder="Addon name"
+                                            value={sub.name}
+                                            onChange={(e) =>
+                                              updateSubTicket(
+                                                ticket.id,
+                                                sub.id,
+                                                "name",
+                                                e.target.value
+                                              )
+                                            }
+                                          />
                                         </div>
-                                        <button
-                                          type="button"
-                                          onClick={() =>
-                                            removeSubTicket(
-                                              ticket.id,
-                                              sub.id
-                                            )
-                                          }
-                                          className="px-3 py-2 bg-red-500 text-white rounded-lg text-xs font-medium hover:bg-red-600 transition"
-                                        >
-                                          Remove
-                                        </button>
+                                        <div className="col-span-2">
+                                          <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+                                            Price
+                                          </label>
+                                          <input
+                                            type="number"
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 transition outline-none text-sm"
+                                            placeholder="Price"
+                                            min={0}
+                                            value={
+                                              sub.price === 0
+                                                ? ""
+                                                : sub.price
+                                            }
+                                            onChange={(e) =>
+                                              updateSubTicket(
+                                                ticket.id,
+                                                sub.id,
+                                                "price",
+                                                e.target.value
+                                              )
+                                            }
+                                          />
+                                        </div>
+                                        <div className="col-span-1">
+                                          <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+                                            Final Price
+                                          </label>
+                                          <div className="px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm font-bold text-green-600 text-center">
+                                            {sub.finalPrice.toFixed(2)}
+                                          </div>
+                                        </div>
+                                        <div className="col-span-1 flex justify-end">
+                                          <button
+                                            type="button"
+                                            onClick={() =>
+                                              removeSubTicket(
+                                                ticket.id,
+                                                sub.id
+                                              )
+                                            }
+                                            className="px-3 py-2 bg-red-500 text-white rounded-lg text-xs font-medium hover:bg-red-600 transition w-full"
+                                          >
+                                            Remove
+                                          </button>
+                                        </div>
                                       </div>
                                     </div>
                                   ))}
@@ -1469,7 +1604,6 @@ export default function CreateEvent() {
               </div>
 
               <div className="space-y-3">
-                {/* Basic Info */}
                 <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
                   <div className="flex items-center justify-between mb-2">
                     <h3 className="font-semibold text-gray-800 flex items-center gap-2">
@@ -1505,12 +1639,10 @@ export default function CreateEvent() {
                   </div>
                 </div>
 
-                {/* Schedule */}
                 <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
                   <div className="flex items-center justify-between mb-2">
                     <h3 className="font-semibold text-gray-800 flex items-center gap-2">
-                      <span className="text-xl">📅</span> Schedule &
-                      Location
+                      <span className="text-xl">📅</span> Schedule & Location
                     </h3>
                     <button
                       type="button"
@@ -1552,7 +1684,6 @@ export default function CreateEvent() {
                   </div>
                 </div>
 
-                {/* Media summary */}
                 {(bannerImageUrl || mediaUrls.length > 0) && (
                   <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
                     <div className="flex items-center justify-between mb-2">
@@ -1581,7 +1712,6 @@ export default function CreateEvent() {
                   </div>
                 )}
 
-                {/* Tickets summary */}
                 <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
                   <div className="flex items-center justify-between mb-2">
                     <h3 className="font-semibold text-gray-800 mb-2 flex items-center gap-2">
@@ -1610,7 +1740,8 @@ export default function CreateEvent() {
                         </p>
                         {t.subTickets.length > 0 && (
                           <p className="text-xs text-gray-600 ml-4">
-                            {t.subTickets.length} sub-ticket options
+                            {t.subTickets.length} addon option
+                            {t.subTickets.length > 1 ? "s" : ""}
                           </p>
                         )}
                       </div>
@@ -1679,8 +1810,7 @@ export default function CreateEvent() {
                           strokeLinejoin="round"
                           strokeWidth={2}
                           d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 
-                             002-2V7a2 2 0 00-2-2H5a2 
-                             2 0 00-2 2v12a2 2 0 002 2z"
+                             002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
                         />
                       </svg>
                       <div>
@@ -1698,7 +1828,6 @@ export default function CreateEvent() {
                         </p>
                       </div>
                     </div>
-
                     <div className="flex items-center gap-3 text-gray-700">
                       <svg
                         className="w-5 h-5"
@@ -1732,6 +1861,49 @@ export default function CreateEvent() {
                     </div>
                   </div>
 
+                  {/* Map – same behaviour as EventDetails location tab */}
+                  {locationText && city && (
+                    <div className="mb-6">
+                      <h3 className="text-sm font-semibold text-gray-800 mb-2 flex items-center gap-2">
+                        <svg
+                          className="w-4 h-4 text-indigo-600"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M17.657 16.657L13.414 20.9a1.998 1.998 
+                               0 01-2.827 0l-4.244-4.243a8 8 0 
+                               1111.314 0z"
+                          />
+                        </svg>
+                        Event Location
+                      </h3>
+                      <div className="mb-3 p-3 rounded-lg bg-indigo-50/40">
+                        <p className="font-semibold text-gray-900">
+                          {locationText}
+                        </p>
+                        <p className="text-sm text-gray-600">{city}</p>
+                      </div>
+                      <div className="rounded-xl overflow-hidden border-2 border-indigo-500/60">
+                        <MapContainer
+                          center={previewMapCenter}
+                          zoom={15}
+                          style={{ height: "240px" }}
+                          scrollWheelZoom={false}
+                        >
+                          <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+                          <Marker position={previewMapCenter}>
+                            <Popup>{locationText}</Popup>
+                          </Marker>
+                        </MapContainer>
+                      </div>
+                    </div>
+                  )}
+
                   <h3 className="font-semibold text-gray-800 mb-3">
                     Available Tickets
                   </h3>
@@ -1748,7 +1920,8 @@ export default function CreateEvent() {
                             </h4>
                             {t.subTickets.length > 0 && (
                               <p className="text-xs text-gray-500 mt-1">
-                                {t.subTickets.length} options available
+                                {t.subTickets.length} addon option
+                                {t.subTickets.length > 1 ? "s" : ""} available
                               </p>
                             )}
                           </div>
