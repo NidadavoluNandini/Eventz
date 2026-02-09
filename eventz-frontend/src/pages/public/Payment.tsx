@@ -85,7 +85,7 @@ export default function Payment() {
               razorpay_signature: response.razorpay_signature,
             });
           } catch {
-            // Webhook handles verification
+            // webhook handles verification
           }
 
           sessionStorage.removeItem("paymentSession");
@@ -124,8 +124,8 @@ export default function Payment() {
       <PublicLayout>
         <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 via-white to-purple-50">
           <div className="text-center">
-            <div className="w-16 h-16 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-            <p className="text-gray-600 font-medium">
+            <div className="w-14 h-14 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+            <p className="text-gray-600 font-medium text-sm">
               Loading payment details...
             </p>
           </div>
@@ -142,45 +142,36 @@ export default function Payment() {
       <style>
         {`
           @keyframes pulse-glow {
-            0%, 100% { box-shadow: 0 0 20px rgba(79, 70, 229, 0.3); }
-            50% { box-shadow: 0 0 40px rgba(79, 70, 229, 0.6); }
+            0%, 100% { box-shadow: 0 0 14px rgba(79, 70, 229, 0.25); }
+            50% { box-shadow: 0 0 26px rgba(79, 70, 229, 0.5); }
           }
           @keyframes slide-up {
-            from { opacity: 0; transform: translateY(20px); }
+            from { opacity: 0; transform: translateY(14px); }
             to { opacity: 1; transform: translateY(0); }
           }
-          @keyframes shimmer {
-            0% { background-position: -1000px 0; }
-            100% { background-position: 1000px 0; }
-          }
           .animate-slide-up {
-            animation: slide-up 0.4s ease-out;
+            animation: slide-up 0.35s ease-out;
           }
           .pulse-glow {
             animation: pulse-glow 2s ease-in-out infinite;
           }
-          .shimmer {
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
-            background-size: 1000px 100%;
-            animation: shimmer 2s infinite;
-          }
         `}
       </style>
 
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 via-white to-purple-50 px-4 py-8">
-        <div className="w-full max-w-lg">
-          {/* Payment Card */}
-          <div className="bg-white rounded-3xl shadow-2xl overflow-hidden animate-slide-up">
-            {/* HEADER */}
-            <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-6 text-white relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16"></div>
-              <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/10 rounded-full -ml-12 -mb-12"></div>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 via-white to-purple-50 px-3 py-6">
+        {/* slightly smaller max width and padding so no internal scroll */}
+        <div className="w-full max-w-md">
+          <div className="bg-white rounded-2xl shadow-2xl overflow-hidden animate-slide-up">
+            {/* HEADER (more compact) */}
+            <div className="bg-gradient-to-r from-indigo-600 to-purple-600 px-4 py-4 text-white relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-24 h-24 bg-white/10 rounded-full -mr-10 -mt-10" />
+              <div className="absolute bottom-0 left-0 w-20 h-20 bg-white/10 rounded-full -ml-10 -mb-10" />
 
-              <div className="relative z-10 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
+              <div className="relative z-10 flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-9 h-9 bg-white/20 backdrop-blur-sm rounded-lg flex items-center justify-center">
                     <svg
-                      className="w-6 h-6"
+                      className="w-5 h-5"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -189,19 +180,22 @@ export default function Payment() {
                         strokeLinecap="round"
                         strokeLinejoin="round"
                         strokeWidth={2}
-                        d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 
-                           00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"
+                        d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"
                       />
                     </svg>
                   </div>
                   <div>
-                    <h2 className="text-2xl font-bold">Payment</h2>
-                    <p className="text-indigo-100 text-sm">Secure checkout</p>
+                    <h2 className="text-lg font-semibold leading-tight">
+                      Payment
+                    </h2>
+                    <p className="text-indigo-100 text-[11px]">
+                      Secure checkout
+                    </p>
                   </div>
                 </div>
-                <div className="flex items-center gap-2 text-xs bg-white/20 backdrop-blur-sm px-3 py-1.5 rounded-full">
+                <div className="flex items-center gap-1.5 text-[11px] bg-white/20 backdrop-blur-sm px-2.5 py-1 rounded-full">
                   <svg
-                    className="w-4 h-4"
+                    className="w-3.5 h-3.5"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -221,28 +215,27 @@ export default function Payment() {
               </div>
             </div>
 
-            {/* BODY */}
-            <div className="p-6 space-y-5">
+            {/* BODY (tighter paddings, smaller text, no inner scroll) */}
+            <div className="px-4 py-4 space-y-4">
               {/* EVENT DETAILS CARD */}
               {paymentDetails && (
-                <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-2xl p-5 border-2 border-indigo-100">
-                  <div className="flex items-start justify-between mb-4">
+                <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-xl px-3.5 py-3.5 border border-indigo-100">
+                  <div className="flex items-start justify-between mb-2.5">
                     <div className="flex-1">
-                      <p className="text-xs text-gray-600 font-semibold uppercase tracking-wide mb-1">
-                        Event Details
+                      <p className="text-[11px] text-gray-600 font-semibold uppercase tracking-wide mb-0.5">
+                        Event
                       </p>
-                      <h3 className="text-lg font-bold text-gray-900">
+                      <h3 className="text-sm font-semibold text-gray-900">
                         {paymentDetails.event?.title || "Event"}
                       </h3>
                     </div>
                   </div>
 
-                  <div className="space-y-2">
-                    {/* Ticket */}
-                    <div className="flex items-center justify-between py-2 border-b border-indigo-200">
-                      <div className="flex items-center gap-2">
+                  <div className="space-y-1.5 text-xs">
+                    <div className="flex items-center justify-between py-1 border-b border-indigo-200/70">
+                      <div className="flex items-center gap-1.5">
                         <svg
-                          className="w-4 h-4 text-indigo-600"
+                          className="w-3.5 h-3.5 text-indigo-600"
                           fill="none"
                           stroke="currentColor"
                           viewBox="0 0 24 24"
@@ -257,21 +250,20 @@ export default function Payment() {
                                110-4V7a2 2 0 00-2-2H5z"
                           />
                         </svg>
-                        <span className="text-sm font-medium text-gray-700">
+                        <span className="font-medium text-gray-700">
                           Ticket
                         </span>
                       </div>
-                      <span className="text-sm font-bold text-gray-900">
+                      <span className="font-semibold text-gray-900">
                         {paymentDetails.registration?.ticketName}
                       </span>
                     </div>
 
-                    {/* Sub-Ticket */}
                     {paymentDetails.registration?.subTicketName && (
-                      <div className="flex items-center justify-between py-2 border-b border-indigo-200">
-                        <div className="flex items-center gap-2">
+                      <div className="flex items-center justify-between py-1 border-b border-indigo-200/70">
+                        <div className="flex items-center gap-1.5">
                           <svg
-                            className="w-4 h-4 text-indigo-600"
+                            className="w-3.5 h-3.5 text-indigo-600"
                             fill="none"
                             stroke="currentColor"
                             viewBox="0 0 24 24"
@@ -286,21 +278,20 @@ export default function Payment() {
                                  013 12V7a4 4 0 014-4z"
                             />
                           </svg>
-                          <span className="text-sm font-medium text-gray-700">
+                          <span className="font-medium text-gray-700">
                             Option
                           </span>
                         </div>
-                        <span className="text-sm font-bold text-gray-900">
+                        <span className="font-semibold text-gray-900">
                           {paymentDetails.registration?.subTicketName}
                         </span>
                       </div>
                     )}
 
-                    {/* Attendee */}
-                    <div className="flex items-center justify-between py-2">
-                      <div className="flex items-center gap-2">
+                    <div className="flex items-center justify-between py-1">
+                      <div className="flex items-center gap-1.5">
                         <svg
-                          className="w-4 h-4 text-indigo-600"
+                          className="w-3.5 h-3.5 text-indigo-600"
                           fill="none"
                           stroke="currentColor"
                           viewBox="0 0 24 24"
@@ -310,25 +301,24 @@ export default function Payment() {
                             strokeLinejoin="round"
                             strokeWidth={2}
                             d="M16 7a4 4 0 11-8 0 4 4 0 
-                               018 0zM12 14a7 7 0 00-7 7h14a7 7 0 
-                               00-7-7z"
+                              018 0zM12 14a7 7 0 00-7 7h14a7 7 0 
+                              00-7-7z"
                           />
                         </svg>
-                        <span className="text-sm font-medium text-gray-700">
+                        <span className="font-medium text-gray-700">
                           Attendee
                         </span>
                       </div>
-                      <span className="text-sm font-bold text-gray-900">
+                      <span className="font-semibold text-gray-900">
                         {paymentDetails.registration?.userName}
                       </span>
                     </div>
 
-                    {/* Quantity */}
                     {quantity && (
-                      <div className="flex items-center justify-between py-2">
-                        <div className="flex items-center gap-2">
+                      <div className="flex items-center justify-between py-1">
+                        <div className="flex items-center gap-1.5">
                           <svg
-                            className="w-4 h-4 text-indigo-600"
+                            className="w-3.5 h-3.5 text-indigo-600"
                             fill="none"
                             stroke="currentColor"
                             viewBox="0 0 24 24"
@@ -343,11 +333,11 @@ export default function Payment() {
                                  01-2-2V8a2 2 0 012-2z"
                             />
                           </svg>
-                          <span className="text-sm font-medium text-gray-700">
+                          <span className="font-medium text-gray-700">
                             Quantity
                           </span>
                         </div>
-                        <span className="text-sm font-bold text-gray-900">
+                        <span className="font-semibold text-gray-900">
                           {quantity}
                         </span>
                       </div>
@@ -356,41 +346,39 @@ export default function Payment() {
                 </div>
               )}
 
-              {/* AMOUNT WITH BREAKDOWN */}
+              {/* AMOUNT WITH BREAKDOWN (compact) */}
               {paymentDetails?.pricing && (
-                <div className="bg-gray-50 rounded-2xl p-5 border-2 border-gray-200">
-                  <div className="space-y-3">
-                    {/* Parent Ticket */}
-                    <div className="flex justify-between items-center pb-2 border-b">
+                <div className="bg-gray-50 rounded-xl px-3.5 py-3.5 border border-gray-200 text-xs">
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center pb-1.5 border-b">
                       <div>
                         <p className="font-semibold text-gray-900">
                           {paymentDetails.pricing.parentTicket.name}
                         </p>
-                        <p className="text-xs text-gray-500">
+                        <p className="text-[11px] text-gray-500">
                           ₹{paymentDetails.pricing.parentTicket.basePrice} ×{" "}
-                          {quantity} ticket{quantity > 1 ? "s" : ""}
+                          {quantity}
                         </p>
                       </div>
-                      <span className="font-bold text-gray-900">
+                      <span className="font-semibold text-gray-900">
                         ₹
                         {paymentDetails.pricing.parentTicket.basePrice *
                           quantity}
                       </span>
                     </div>
 
-                    {/* Sub-Ticket */}
                     {paymentDetails.pricing.subTicket && (
-                      <div className="flex justify-between items-center pb-2 border-b mt-3">
+                      <div className="flex justify-between items-center pb-1.5 border-b mt-1.5">
                         <div>
                           <p className="font-semibold text-gray-900">
                             {paymentDetails.pricing.subTicket.name}
                           </p>
-                          <p className="text-xs text-gray-500">
+                          <p className="text-[11px] text-gray-500">
                             ₹{paymentDetails.pricing.subTicket.basePrice} ×{" "}
-                            {quantity} ticket{quantity > 1 ? "s" : ""}
+                            {quantity}
                           </p>
                         </div>
-                        <span className="font-bold text-gray-900">
+                        <span className="font-semibold text-gray-900">
                           ₹
                           {paymentDetails.pricing.subTicket.basePrice *
                             quantity}
@@ -398,25 +386,24 @@ export default function Payment() {
                       </div>
                     )}
 
-                    {/* Totals */}
-                    <div className="pt-3 mt-3 border-t-2 space-y-2">
-                      <div className="flex justify-between text-sm font-medium text-gray-700">
-                        <span>Subtotal (Base)</span>
+                    <div className="pt-2 mt-1.5 border-t space-y-1.5">
+                      <div className="flex justify-between text-gray-700">
+                        <span>Subtotal</span>
                         <span>₹{paymentDetails.pricing.total.basePrice}</span>
                       </div>
-                      <div className="flex justify-between text-sm font-medium text-gray-700">
-                        <span>Total GST</span>
+                      <div className="flex justify-between text-gray-700">
+                        <span>GST</span>
                         <span>₹{paymentDetails.pricing.total.totalGST}</span>
                       </div>
-                      <div className="flex justify-between items-center pt-2 border-t">
-                        <span className="text-gray-600 font-medium">
+                      <div className="flex justify-between items-center pt-1.5 border-t">
+                        <span className="text-gray-700 font-medium">
                           Amount to Pay
                         </span>
                         <div className="text-right">
-                          <p className="text-3xl font-bold text-green-600">
+                          <p className="text-2xl font-bold text-green-600 leading-none">
                             ₹{paymentDetails.pricing.total.finalAmount}
                           </p>
-                          <p className="text-xs text-gray-500">
+                          <p className="text-[11px] text-gray-500 mt-0.5">
                             GST included for {quantity} ticket
                             {quantity > 1 ? "s" : ""}
                           </p>
@@ -429,10 +416,10 @@ export default function Payment() {
 
               {/* ERROR MESSAGE */}
               {error && (
-                <div className="bg-red-50 border-2 border-red-200 rounded-xl p-4">
-                  <div className="flex items-center gap-3">
+                <div className="bg-red-50 border border-red-200 rounded-lg px-3 py-2.5 text-xs">
+                  <div className="flex items-center gap-2">
                     <svg
-                      className="w-5 h-5 text-red-500 flex-shrink-0"
+                      className="w-4 h-4 text-red-500 flex-shrink-0"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -445,7 +432,7 @@ export default function Payment() {
                            11-18 0 9 9 0 0118 0z"
                       />
                     </svg>
-                    <p className="text-red-600 text-sm font-medium">{error}</p>
+                    <p className="text-red-600 font-medium">{error}</p>
                   </div>
                 </div>
               )}
@@ -454,12 +441,12 @@ export default function Payment() {
               <button
                 onClick={startPayment}
                 disabled={loading || !!error}
-                className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-4 rounded-xl font-bold text-lg transition-all hover:from-indigo-700 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed shadow-xl hover:shadow-2xl flex items-center justify-center gap-3 pulse-glow"
+                className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-3 rounded-lg font-semibold text-sm transition-all hover:from-indigo-700 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl flex items-center justify-center gap-2 pulse-glow"
               >
                 {loading ? (
                   <>
                     <svg
-                      className="animate-spin w-6 h-6"
+                      className="animate-spin w-4 h-4"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -478,7 +465,7 @@ export default function Payment() {
                 ) : (
                   <>
                     <svg
-                      className="w-6 h-6"
+                      className="w-4 h-4"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -499,11 +486,11 @@ export default function Payment() {
                 )}
               </button>
 
-              {/* SECURITY BADGES */}
-              <div className="flex items-center justify-center gap-4 pt-4 border-t">
-                <div className="flex items-center gap-2 text-xs text-gray-600">
+              {/* SECURITY BADGES (compact) */}
+              <div className="flex items-center justify-center gap-3 pt-3 border-t text-[11px] text-gray-600">
+                <div className="flex items-center gap-1.5">
                   <svg
-                    className="w-4 h-4 text-green-600"
+                    className="w-3.5 h-3.5 text-green-600"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -520,12 +507,12 @@ export default function Payment() {
                          0-1.042-.133-2.052-.382-3.016z"
                     />
                   </svg>
-                  <span className="font-medium">256-bit SSL</span>
+                  <span>256-bit SSL</span>
                 </div>
-                <div className="w-px h-4 bg-gray-300"></div>
-                <div className="flex items-center gap-2 text-xs text-gray-600">
+                <span className="w-px h-3.5 bg-gray-300" />
+                <div className="flex items-center gap-1.5">
                   <svg
-                    className="w-4 h-4 text-indigo-600"
+                    className="w-3.5 h-3.5 text-indigo-600"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -539,49 +526,20 @@ export default function Payment() {
                          00-3 3v8a3 3 0 003 3z"
                     />
                   </svg>
-                  <span className="font-medium">Razorpay Secure</span>
-                </div>
-              </div>
-
-              {/* INFO NOTE */}
-              <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
-                <div className="flex items-start gap-3">
-                  <svg
-                    className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 
-                         11-18 0 9 9 0 0118 0z"
-                    />
-                  </svg>
-                  <div>
-                    <p className="text-sm font-semibold text-blue-900 mb-1">
-                      Payment Information
-                    </p>
-                    <p className="text-xs text-blue-700 leading-relaxed">
-                      You will be redirected to Razorpay&apos;s secure payment
-                      gateway. Your payment information is encrypted and safe.
-                    </p>
-                  </div>
+                  <span>Razorpay Secure</span>
                 </div>
               </div>
             </div>
           </div>
 
           {/* CANCEL BUTTON */}
-          <div className="mt-4 text-center">
+          <div className="mt-3 text-center">
             <button
               onClick={() => navigate(-1)}
-              className="text-gray-600 hover:text-gray-900 font-medium text-sm hover:underline flex items-center gap-2 mx-auto"
+              className="text-gray-600 hover:text-gray-900 font-medium text-xs hover:underline flex items-center gap-1.5 mx-auto"
             >
               <svg
-                className="w-4 h-4"
+                className="w-3.5 h-3.5"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"

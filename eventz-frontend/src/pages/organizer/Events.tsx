@@ -18,6 +18,23 @@ export default function Events() {
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [successFlash, setSuccessFlash] = useState<string | null>(null);
 
+  // toast
+  const [toast, setToast] = useState<{
+    type: "success" | "error";
+    message: string;
+  } | null>(null);
+
+  // delete confirmation modal
+  const [deleteTarget, setDeleteTarget] = useState<{
+    id: string;
+    title: string;
+  } | null>(null);
+
+  const showToast = (type: "success" | "error", message: string) => {
+    setToast({ type, message });
+    setTimeout(() => setToast(null), 2500);
+  };
+
   const load = async () => {
     setLoading(true);
     try {
@@ -25,6 +42,7 @@ export default function Events() {
       setEvents(res.data || []);
     } catch (error) {
       console.error("Failed to load events", error);
+      showToast("error", "Failed to load events. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -34,18 +52,24 @@ export default function Events() {
     load();
   }, []);
 
-  const handleAction = async (action: () => Promise<any>, eventId: string) => {
+  const handleAction = async (action: () => Promise<any>, eventId: string, successMsg?: string) => {
     setActionLoading(eventId);
     try {
       await action();
       await load();
       setSuccessFlash(eventId);
       setTimeout(() => setSuccessFlash(null), 1000);
+      if (successMsg) {
+        showToast("success", successMsg);
+      } else {
+        showToast("success", "Action completed successfully.");
+      }
     } catch (error: any) {
       console.error("Action failed", error);
-      alert(
-        error.response?.data?.message || "Action failed. Please try again."
-      );
+      const msg =
+        error?.response?.data?.message ||
+        "Action failed. Please try again.";
+      showToast("error", msg);
     } finally {
       setActionLoading(null);
     }
@@ -53,9 +77,17 @@ export default function Events() {
 
   const handleTogglePublish = async (event: any) => {
     if (event.status === "PUBLISHED" && event.registrationOpen) {
-      await handleAction(() => unpublishEvent(event._id), event._id);
+      await handleAction(
+        () => unpublishEvent(event._id),
+        event._id,
+        "Event unpublished."
+      );
     } else if (event.status === "DRAFT" || event.status === "UNPUBLISHED") {
-      await handleAction(() => publishEvent(event._id), event._id);
+      await handleAction(
+        () => publishEvent(event._id),
+        event._id,
+        "Event published."
+      );
     }
   };
 
@@ -66,10 +98,24 @@ export default function Events() {
       navigate("/organizer/events/create", {
         state: { editMode: true, eventData: event },
       });
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
+      const msg =
+        e?.response?.data?.message || "Failed to open event for editing.";
+      showToast("error", msg);
     }
   }
+
+  const confirmDelete = (event: any) => {
+    setDeleteTarget({ id: event._id, title: event.title });
+  };
+
+  const performDelete = async () => {
+    if (!deleteTarget) return;
+    const id = deleteTarget.id;
+    setDeleteTarget(null);
+    await handleAction(() => deleteEvent(id), id, "Event deleted.");
+  };
 
   if (loading) {
     return (
@@ -84,6 +130,49 @@ export default function Events() {
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-6 sm:px-6">
+      {/* Toast */}
+      {toast && (
+        <div
+          className={`fixed top-4 right-4 z-50 px-4 py-2 rounded-lg text-sm text-white shadow-md ${
+            toast.type === "success" ? "bg-green-600" : "bg-red-600"
+          }`}
+        >
+          {toast.message}
+        </div>
+      )}
+
+      {/* Delete confirm modal */}
+      {deleteTarget && (
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-2xl shadow-xl max-w-sm w-full p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+              Delete event?
+            </h3>
+            <p className="text-sm text-gray-600 mb-4">
+              Are you sure you want to delete{" "}
+              <span className="font-semibold">"{deleteTarget.title}"</span>? This
+              action cannot be undone.
+            </p>
+            <div className="flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setDeleteTarget(null)}
+                className="px-4 py-2 rounded-lg border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={performDelete}
+                className="px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-semibold hover:bg-red-700"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* HEADER */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6 sm:mb-8">
         <div>
@@ -175,7 +264,6 @@ export default function Events() {
                 }`}
               >
                 <div className="p-4 sm:p-5">
-                  {/* Layout: column on mobile, row on md+ */}
                   <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                     {/* LEFT - EVENT INFO */}
                     <div className="flex items-start gap-3 flex-1 min-w-0">
@@ -212,7 +300,6 @@ export default function Events() {
                           {e.title}
                         </h2>
 
-                        {/* Metrics + status badges - wrap on small screens */}
                         <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-xs sm:text-sm mt-1">
                           <div className="flex items-center gap-1.5 text-gray-600">
                             <svg
@@ -263,7 +350,6 @@ export default function Events() {
                             </span>
                           </div>
 
-                          {/* STATUS BADGES */}
                           {e.status === "DRAFT" && (
                             <span className="px-2 py-0.5 rounded-full bg-gray-500 text-white text-[11px] sm:text-xs font-semibold">
                               Draft
@@ -315,7 +401,9 @@ export default function Events() {
                           >
                             <span
                               className={`${
-                                isPublished ? "translate-x-7 sm:translate-x-9" : "translate-x-1"
+                                isPublished
+                                  ? "translate-x-7 sm:translate-x-9"
+                                  : "translate-x-1"
                               } inline-flex h-5 w-5 sm:h-6 sm:w-6 items-center justify-center transform rounded-full bg-white shadow-lg transition-transform duration-300 ease-in-out`}
                             >
                               {actionLoading === e._id && (
@@ -336,9 +424,9 @@ export default function Events() {
                                     className="opacity-75"
                                     fill="currentColor"
                                     d="M4 12a8 8 0 018-8V0C5.373 0 
-                                       0 5.373 0 12h4zm2 5.291A7.962 
-                                       7.962 0 014 12H0c0 3.042 1.135 
-                                       5.824 3 7.938l3-2.647z"
+                                     0 5.373 0 12h4zm2 5.291A7.962 
+                                     7.962 0 014 12H0c0 3.042 1.135 
+                                     5.824 3 7.938l3-2.647z"
                                   />
                                 </svg>
                               )}
@@ -356,7 +444,10 @@ export default function Events() {
                                 e.registrationOpen
                                   ? closeRegistration(e._id)
                                   : openRegistration(e._id),
-                              e._id
+                              e._id,
+                              e.registrationOpen
+                                ? "Registration closed."
+                                : "Registration opened."
                             )
                           }
                           disabled={actionLoading === e._id}
@@ -378,9 +469,9 @@ export default function Events() {
                                 strokeLinejoin="round"
                                 strokeWidth={2}
                                 d="M12 15v2m-6 4h12a2 2 0 
-                                   002-2v-6a2 2 0 00-2-2H6a2 2 0 
-                                   00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 
-                                   00-8 0v4h8z"
+                                 002-2v-6a2 2 0 00-2-2H6a2 2 0 
+                                 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 
+                                 00-8 0v4h8z"
                               />
                             ) : (
                               <path
@@ -388,10 +479,10 @@ export default function Events() {
                                 strokeLinejoin="round"
                                 strokeWidth={2}
                                 d="M8 11V7a4 4 0 
-                                   118 0m-4 8v2m-6 4h12a2 2 0 
-                                   002-2v-6a2 2 0 
-                                   00-2-2H6a2 2 0 00-2 2v6a2 2 0 
-                                   002 2z"
+                                 118 0m-4 8v2m-6 4h12a2 2 0 
+                                 002-2v-6a2 2 0 
+                                 00-2-2H6a2 2 0 00-2 2v6a2 2 0 
+                                 002 2z"
                               />
                             )}
                           </svg>
@@ -420,9 +511,9 @@ export default function Events() {
                               strokeLinejoin="round"
                               strokeWidth={2}
                               d="M11 5H6a2 2 0 
-                                 00-2 2v11a2 2 0 002 2h11a2 2 0 
-                                 002-2v-5m-1.414-9.414a2 2 0 
-                                 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                               00-2 2v11a2 2 0 002 2h11a2 2 0 
+                               002-2v-5m-1.414-9.414a2 2 0 
+                               112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
                             />
                           </svg>
                           <span>Edit</span>
@@ -433,7 +524,11 @@ export default function Events() {
                       {e.status !== "DRAFT" && !isCompleted && (
                         <button
                           onClick={() =>
-                            handleAction(() => moveToDraft(e._id), e._id)
+                            handleAction(
+                              () => moveToDraft(e._id),
+                              e._id,
+                              "Moved to draft."
+                            )
                           }
                           disabled={actionLoading === e._id}
                           className="px-2.5 py-1.5 text-xs sm:text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
@@ -450,8 +545,8 @@ export default function Events() {
                               strokeLinejoin="round"
                               strokeWidth={2}
                               d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 
-                                 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 
-                                 3.732z"
+                               2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 
+                               3.732z"
                             />
                           </svg>
                           <span>Draft</span>
@@ -460,15 +555,7 @@ export default function Events() {
 
                       {/* DELETE */}
                       <button
-                        onClick={() => {
-                          if (
-                            confirm(
-                              `Delete "${e.title}" permanently? This cannot be undone.`
-                            )
-                          ) {
-                            handleAction(() => deleteEvent(e._id), e._id);
-                          }
-                        }}
+                        onClick={() => confirmDelete(e)}
                         disabled={actionLoading === e._id}
                         className="px-2.5 py-1.5 text-xs sm:text-sm font-medium text-white bg-red-500 hover:bg-red-600 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
                         title="Delete Event"
@@ -484,10 +571,10 @@ export default function Events() {
                             strokeLinejoin="round"
                             strokeWidth={2}
                             d="M19 7l-.867 12.142A2 2 0 
-                               0116.138 21H7.862a2 2 0 
-                               01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 
-                               1 0 00-1-1h-4a1 1 0 00-1 
-                               1v3M4 7h16"
+                             0116.138 21H7.862a2 2 0 
+                             01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 
+                             1 0 00-1-1h-4a1 1 0 00-1 
+                             1v3M4 7h16"
                           />
                         </svg>
                         <span>Delete</span>

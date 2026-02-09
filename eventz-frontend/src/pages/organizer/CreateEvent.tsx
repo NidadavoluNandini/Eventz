@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import L from "leaflet";
@@ -37,7 +37,7 @@ const THEME_COLORS = [
   { name: "Slate", value: "#475569", class: "bg-slate-600" },
 ];
 
-// Leaflet icon fix (same as EventDetails)
+// Leaflet icon fix
 delete (L.Icon.Default.prototype as any)._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl:
@@ -105,16 +105,22 @@ export default function CreateEvent() {
   const [returnToReviewAfterEdit, setReturnToReviewAfterEdit] =
     useState<FormStep | null>(null);
 
-  // scroll to top of card when step changes
-  const formCardRef = useRef<HTMLDivElement | null>(null);
-  useEffect(() => {
-    if (formCardRef.current) {
-      formCardRef.current.scrollIntoView({
-        behavior: "smooth",
-        block: "start",
-      });
-    }
-  }, [currentStep]);
+  // Simple toast + modal state
+  const [toast, setToast] = useState<{
+    type: "success" | "error";
+    message: string;
+  } | null>(null);
+
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+
+  const showToast = (type: "success" | "error", message: string) => {
+    setToast({ type, message });
+    setTimeout(() => setToast(null), 3000);
+  };
+
+  const scrollTop = () => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
 
   // BASIC
   const [title, setTitle] = useState(existingEvent?.title || "");
@@ -205,6 +211,27 @@ export default function CreateEvent() {
 
   const isSectionCompleted = (section: FormStep): boolean =>
     completedSections.has(section);
+
+  const canNavigateToStep = (step: FormStep) => {
+    if (step === "basic") return true;
+    if (step === "schedule") return isSectionCompleted("basic");
+    if (step === "media")
+      return isSectionCompleted("basic") && isSectionCompleted("schedule");
+    if (step === "tickets")
+      return (
+        isSectionCompleted("basic") &&
+        isSectionCompleted("schedule") &&
+        isSectionCompleted("media")
+      );
+    if (step === "review" || step === "preview")
+      return (
+        isSectionCompleted("basic") &&
+        isSectionCompleted("schedule") &&
+        isSectionCompleted("media") &&
+        isSectionCompleted("tickets")
+      );
+    return false;
+  };
 
   // VALIDATION
 
@@ -314,11 +341,13 @@ export default function CreateEvent() {
   // STEP NAVIGATION
 
   const goToStep = (step: FormStep, fromReview = false) => {
+    if (!canNavigateToStep(step) && !fromReview) return;
     setErrors({});
     if (fromReview) {
       setReturnToReviewAfterEdit("review");
     }
     setCurrentStep(step);
+    scrollTop();
   };
 
   const handleNext = async () => {
@@ -329,6 +358,7 @@ export default function CreateEvent() {
         if (validateBasicInfo()) {
           setReturnToReviewAfterEdit(null);
           setCurrentStep("review");
+          scrollTop();
         }
         return;
       }
@@ -336,6 +366,7 @@ export default function CreateEvent() {
         if (validateSchedule()) {
           setReturnToReviewAfterEdit(null);
           setCurrentStep("review");
+          scrollTop();
         }
         return;
       }
@@ -343,34 +374,43 @@ export default function CreateEvent() {
         markSectionComplete("media");
         setReturnToReviewAfterEdit(null);
         setCurrentStep("review");
+        scrollTop();
         return;
       }
       if (currentStep === "tickets") {
         if (validateTickets()) {
           setReturnToReviewAfterEdit(null);
           setCurrentStep("review");
+          scrollTop();
         }
         return;
       }
     }
 
     if (currentStep === "basic") {
-      if (validateBasicInfo()) setCurrentStep("schedule");
+      if (validateBasicInfo()) {
+        setCurrentStep("schedule");
+        scrollTop();
+      }
     } else if (currentStep === "schedule") {
-      if (validateSchedule()) setCurrentStep("media");
+      if (validateSchedule()) {
+        setCurrentStep("media");
+        scrollTop();
+      }
     } else if (currentStep === "media") {
       markSectionComplete("media");
       setCurrentStep("tickets");
+      scrollTop();
     } else if (currentStep === "tickets") {
       if (validateTickets()) {
         markSectionComplete("review");
-        // prepare map center for preview
         if (locationText && city) {
           setPreviewMapCenter(await geocodeLocation(locationText, city));
         } else {
           setPreviewMapCenter([20.5937, 78.9629]);
         }
         setCurrentStep("preview");
+        scrollTop();
       }
     } else if (currentStep === "review") {
       if (locationText && city) {
@@ -379,6 +419,7 @@ export default function CreateEvent() {
         setPreviewMapCenter([20.5937, 78.9629]);
       }
       setCurrentStep("preview");
+      scrollTop();
     }
   };
 
@@ -389,6 +430,7 @@ export default function CreateEvent() {
     else if (currentStep === "tickets") setCurrentStep("media");
     else if (currentStep === "review") setCurrentStep("tickets");
     else if (currentStep === "preview") setCurrentStep("review");
+    scrollTop();
   };
 
   // TICKET HELPERS
@@ -604,18 +646,22 @@ export default function CreateEvent() {
     try {
       if (editMode && existingEvent?._id) {
         await updateEvent(existingEvent._id, payload);
-        alert("Event updated successfully!");
+        showToast("success", "Event updated successfully!");
       } else {
         await createEvent(payload);
-        alert("Event created successfully!");
+        showToast("success", "Event created successfully!");
       }
-      navigate("/organizer/events");
+
+      setShowSuccessModal(true);
+      setTimeout(() => {
+    navigate("/organizer/events");
+  }, 1000);
     } catch (err: any) {
       console.error("EVENT SAVE ERROR", err?.response?.data || err);
-      alert(
+      const message =
         err?.response?.data?.message?.join?.(", ") ||
-          "Failed to save event"
-      );
+        "Failed to save event";
+      showToast("error", message);
     } finally {
       setIsLoading(false);
     }
@@ -635,6 +681,58 @@ export default function CreateEvent() {
 
   return (
     <div className="min-h-screen bg-gray-50 py-4 px-4">
+      {/* Toast */}
+      {toast && (
+        <div
+          className={`fixed top-4 right-4 z-50 px-4 py-2 rounded-lg text-sm text-white shadow-md ${
+            toast.type === "success" ? "bg-green-600" : "bg-red-600"
+          }`}
+        >
+          {toast.message}
+        </div>
+      )}
+
+      {/* Success modal */}
+      {showSuccessModal && (
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-2xl shadow-xl max-w-sm w-full p-6">
+            <div className="flex items-center justify-center mb-3">
+              <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center">
+                <svg
+                  className="w-6 h-6 text-green-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M5 13l4 4L19 7"
+                  />
+                </svg>
+              </div>
+            </div>
+            <h3 className="text-lg font-semibold text-center text-gray-900 mb-1">
+              {editMode ? "Event Updated" : "Event Created"}
+            </h3>
+            <p className="text-sm text-gray-600 text-center mb-5">
+              Your event has been saved successfully.
+            </p>
+            <button
+              type="button"
+              onClick={() => {
+                setShowSuccessModal(false);
+                navigate("/organizer/events");
+              }}
+              className="w-full px-4 py-2.5 rounded-lg bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700 transition"
+            >
+              Go to My Events
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="max-w-5xl mx-auto">
         {/* Header */}
         <div className="mb-6 flex items-center gap-3">
@@ -668,12 +766,13 @@ export default function CreateEvent() {
 
         {/* Step Progress */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 mb-6">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             {steps.map((step, index) => {
               const isActive = currentStep === step.id;
               const isCompleted = isSectionCompleted(step.id);
               const isPast =
                 getCurrentStepIndex() > index || isCompleted;
+              const clickable = canNavigateToStep(step.id);
 
               return (
                 <div
@@ -681,8 +780,12 @@ export default function CreateEvent() {
                   className="flex items-center flex-1"
                 >
                   <button
+                    type="button"
                     onClick={() => goToStep(step.id)}
-                    className="flex flex-col items-center relative group"
+                    disabled={!clickable}
+                    className={`flex flex-col items-center relative group ${
+                      !clickable ? "cursor-not-allowed opacity-60" : ""
+                    }`}
                   >
                     <div
                       className={`w-12 h-12 rounded-full flex items-center justify-center font-bold text-base transition-all ${
@@ -690,7 +793,7 @@ export default function CreateEvent() {
                           ? "bg-indigo-600 text-white ring-4 ring-indigo-200 scale-110"
                           : isCompleted || isPast
                           ? "bg-green-500 text-white"
-                          : "bg-gray-200 text-gray-500 hover:scale-105 cursor-pointer"
+                          : "bg-gray-200 text-gray-500 hover:scale-105"
                       }`}
                     >
                       {isCompleted || isPast ? (
@@ -725,7 +828,7 @@ export default function CreateEvent() {
                   </button>
 
                   {index < steps.length - 1 && (
-                    <div className="flex-1 h-1 mx-2 relative">
+                    <div className="flex-1 h-1 mx-2 relative hidden md:block">
                       <div
                         className={`h-full rounded transition-colors ${
                           getCurrentStepIndex() > index ||
@@ -744,11 +847,8 @@ export default function CreateEvent() {
         </div>
 
         {/* Form Content */}
-        <div
-          ref={formCardRef}
-          className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 mb-4 min-h-[500px]"
-        >
-          {/* STEP 1: BASIC */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 mb-4 min-h-[500px]">
+          {/* BASIC */}
           {currentStep === "basic" && (
             <div className="space-y-4">
               <div>
@@ -857,7 +957,7 @@ export default function CreateEvent() {
             </div>
           )}
 
-          {/* STEP 2: SCHEDULE */}
+          {/* SCHEDULE */}
           {currentStep === "schedule" && (
             <div className="space-y-4">
               <div>
@@ -996,7 +1096,7 @@ export default function CreateEvent() {
             </div>
           )}
 
-          {/* STEP 3: MEDIA */}
+          {/* MEDIA */}
           {currentStep === "media" && (
             <div className="space-y-4">
               <div>
@@ -1140,7 +1240,7 @@ export default function CreateEvent() {
             </div>
           )}
 
-          {/* STEP 4: TICKETS */}
+          {/* TICKETS */}
           {currentStep === "tickets" && (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
@@ -1210,9 +1310,9 @@ export default function CreateEvent() {
                         strokeLinejoin="round"
                         strokeWidth={2}
                         d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 
-                           00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 
-                           2 0 002-2v-3a2 2 0 110-4V7a2 2 0 
-                           00-2-2H5z"
+                           00-2 2v3a2 2 0 110 4v3a2 2 0 
+                           002 2h14a2 2 0 002-2v-3a2 2 0 
+                           110-4V7a2 2 0 00-2-2H5z"
                       />
                     </svg>
                   </div>
@@ -1236,7 +1336,6 @@ export default function CreateEvent() {
                             : "border-gray-200"
                         }`}
                       >
-                        {/* Header */}
                         <div
                           className="flex items-center justify-between p-3 cursor-pointer hover:bg-gray-50"
                           onClick={() =>
@@ -1322,10 +1421,8 @@ export default function CreateEvent() {
                           </div>
                         </div>
 
-                        {/* Expanded content */}
                         {ticket.isExpanded && (
                           <div className="border-t border-gray-200 p-4 bg-gray-50 space-y-4">
-                            {/* Main Ticket Details */}
                             <div className="bg-white rounded-lg p-4 border-2 border-indigo-200 mb-2">
                               <h4 className="text-sm font-bold text-gray-700 mb-3 flex items-center gap-2">
                                 <svg
@@ -1459,7 +1556,6 @@ export default function CreateEvent() {
                               </div>
                             </div>
 
-                            {/* Sub-tickets / Addons */}
                             <div>
                               <div className="flex items-center justify-between mb-2">
                                 <h4 className="text-xs font-bold text-gray-700 uppercase tracking-wide flex items-center gap-2">
@@ -1501,7 +1597,6 @@ export default function CreateEvent() {
                                   Addons
                                 </button>
                               </div>
-
                               {ticket.subTickets.length > 0 && (
                                 <div className="space-y-2">
                                   {ticket.subTickets.map((sub) => (
@@ -1591,7 +1686,7 @@ export default function CreateEvent() {
             </div>
           )}
 
-          {/* STEP 5: REVIEW */}
+          {/* REVIEW */}
           {currentStep === "review" && (
             <div className="space-y-4">
               <div>
@@ -1752,7 +1847,7 @@ export default function CreateEvent() {
             </div>
           )}
 
-          {/* STEP 6: PREVIEW */}
+          {/* PREVIEW */}
           {currentStep === "preview" && (
             <div className="space-y-4">
               <div>
@@ -1765,7 +1860,6 @@ export default function CreateEvent() {
               </div>
 
               <div className="border-2 border-gray-200 rounded-xl overflow-hidden">
-                {/* Banner */}
                 {(bannerImageUrl || category) && (
                   <img
                     src={
@@ -1777,7 +1871,6 @@ export default function CreateEvent() {
                   />
                 )}
 
-                {/* Content */}
                 <div className="p-6">
                   <div className="flex items-start justify-between mb-4">
                     <div>
@@ -1861,7 +1954,6 @@ export default function CreateEvent() {
                     </div>
                   </div>
 
-                  {/* Map – same behaviour as EventDetails location tab */}
                   {locationText && city && (
                     <div className="mb-6">
                       <h3 className="text-sm font-semibold text-gray-800 mb-2 flex items-center gap-2">
@@ -1961,7 +2053,7 @@ export default function CreateEvent() {
         </div>
 
         {/* Navigation Buttons */}
-        <div className="flex gap-3 justify-between">
+        <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-between">
           {currentStep !== "basic" && (
             <button
               type="button"
@@ -1985,7 +2077,7 @@ export default function CreateEvent() {
             </button>
           )}
 
-          <div className="flex gap-3 ml-auto">
+          <div className="flex gap-3 sm:ml-auto">
             <button
               type="button"
               onClick={() => navigate("/organizer/events")}

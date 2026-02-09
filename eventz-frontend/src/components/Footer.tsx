@@ -1,40 +1,29 @@
 export default function Footer() {
   return (
     <footer className="mt-20 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-slate-300 border-t border-slate-700">
-      {/* Reduced max-width to max-w-4xl for narrower footer */}
-      <div className="max-w-4xl mx-auto px-6 sm:px-8 py-10 lg:py-12">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8 sm:py-10 lg:py-12">
         {/* Main Footer Content */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8">
           {/* Brand Section */}
           <div className="sm:col-span-2 lg:col-span-1">
             <div className="flex items-center gap-2 mb-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-lg flex items-center justify-center shadow-lg">
-                <svg
-                  className="w-6 h-6 text-white"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                  />
-                </svg>
-              </div>
-              <h3 className="text-xl font-bold text-white">Eventz</h3>
+              
+              <h3 className="text-lg sm:text-xl font-bold text-white">
+                Eventz
+              </h3>
             </div>
-            <p className="text-sm text-slate-400 leading-relaxed mb-4 max-w-xs">
-              Discover, register, and manage events effortlessly. Your gateway to amazing experiences.
+            <p className="text-xs sm:text-sm text-slate-400 leading-relaxed mb-4 max-w-xs">
+              Discover, register, and manage events effortlessly. Your gateway
+              to amazing experiences.
             </p>
-            {/* Social Links */}
+
+            {/* Social Links (no shadow, no scale) */}
             <div className="flex gap-2.5">
               <a
                 href="https://facebook.com"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="w-9 h-9 bg-slate-700/50 hover:bg-indigo-600 rounded-lg flex items-center justify-center transition-all duration-300 hover:scale-110"
+                className="w-8 h-8 sm:w-9 sm:h-9 bg-slate-700/50 hover:bg-indigo-600 rounded-lg flex items-center justify-center transition-colors duration-200"
                 aria-label="Facebook"
               >
                 <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
@@ -45,7 +34,7 @@ export default function Footer() {
                 href="https://twitter.com"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="w-9 h-9 bg-slate-700/50 hover:bg-indigo-600 rounded-lg flex items-center justify-center transition-all duration-300 hover:scale-110"
+                className="w-8 h-8 sm:w-9 sm:h-9 bg-slate-700/50 hover:bg-indigo-600 rounded-lg flex items-center justify-center transition-colors duration-200"
                 aria-label="Twitter"
               >
                 <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
@@ -56,7 +45,7 @@ export default function Footer() {
                 href="https://instagram.com"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="w-9 h-9 bg-slate-700/50 hover:bg-indigo-600 rounded-lg flex items-center justify-center transition-all duration-300 hover:scale-110"
+                className="w-8 h-8 sm:w-9 sm:h-9 bg-slate-700/50 hover:bg-indigo-600 rounded-lg flex items-center justify-center transition-colors duration-200"
                 aria-label="Instagram"
               >
                 <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
@@ -67,7 +56,7 @@ export default function Footer() {
                 href="https://linkedin.com"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="w-9 h-9 bg-slate-700/50 hover:bg-indigo-600 rounded-lg flex items-center justify-center transition-all duration-300 hover:scale-110"
+                className="w-8 h-8 sm:w-9 sm:h-9 bg-slate-700/50 hover:bg-indigo-600 rounded-lg flex items-center justify-center transition-colors duration-200"
                 aria-label="LinkedIn"
               >
                 <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
@@ -79,18 +68,16 @@ export default function Footer() {
 
           {/* Quick Links */}
           <div>
-            <h4 className="font-bold text-white mb-3 text-sm uppercase tracking-wider">
+            <h4 className="font-bold text-white mb-3 text-xs sm:text-sm uppercase tracking-wider">
               Quick Links
             </h4>
-            <ul className="space-y-2 text-sm">
+            <ul className="space-y-2 text-xs sm:text-sm">
               <li>
                 <a
                   href="/"
                   className="hover:text-indigo-400 transition-colors flex items-center gap-2 group"
                 >
-                  <span className="text-indigo-500 group-hover:translate-x-1 transition-transform">
-                    →
-                  </span>{" "}
+                  <span className="text-indigo-500 group-hover:translate-x-1 transition-transform" />
                   Browse Events
                 </a>
               </li>
@@ -99,9 +86,7 @@ export default function Footer() {
                   href="/about"
                   className="hover:text-indigo-400 transition-colors flex items-center gap-2 group"
                 >
-                  <span className="text-indigo-500 group-hover:translate-x-1 transition-transform">
-                    →
-                  </span>{" "}
+                  <span className="text-indigo-500 group-hover:translate-x-1 transition-transform" />
                   About Us
                 </a>
               </li>
@@ -110,9 +95,7 @@ export default function Footer() {
                   href="/organizer/login"
                   className="hover:text-indigo-400 transition-colors flex items-center gap-2 group"
                 >
-                  <span className="text-indigo-500 group-hover:translate-x-1 transition-transform">
-                    →
-                  </span>{" "}
+                  <span className="text-indigo-500 group-hover:translate-x-1 transition-transform" />
                   For Organizers
                 </a>
               </li>
@@ -121,73 +104,25 @@ export default function Footer() {
                   href="/contact"
                   className="hover:text-indigo-400 transition-colors flex items-center gap-2 group"
                 >
-                  <span className="text-indigo-500 group-hover:translate-x-1 transition-transform">
-                    →
-                  </span>{" "}
+                  <span className="text-indigo-500 group-hover:translate-x-1 transition-transform" />
                   Contact Us
                 </a>
               </li>
             </ul>
           </div>
 
-          {/* Categories */}
-          <div>
-            <h4 className="font-bold text-white mb-3 text-sm uppercase tracking-wider">
-              Explore Categories
-            </h4>
-            <ul className="space-y-2 text-sm">
-              <li>
-                <a
-                  href="/?category=technology"
-                  className="hover:text-indigo-400 transition-colors flex items-center gap-2"
-                >
-                  💻 Technology
-                </a>
-              </li>
-              <li>
-                <a
-                  href="/?category=science"
-                  className="hover:text-indigo-400 transition-colors flex items-center gap-2"
-                >
-                  🔬 Science
-                </a>
-              </li>
-              <li>
-                <a
-                  href="/?category=arts"
-                  className="hover:text-indigo-400 transition-colors flex items-center gap-2"
-                >
-                  🎨 Arts
-                </a>
-              </li>
-              <li>
-                <a
-                  href="/?category=sports"
-                  className="hover:text-indigo-400 transition-colors flex items-center gap-2"
-                >
-                  ⚽ Sports
-                </a>
-              </li>
-              <li>
-                <a
-                  href="/?category=business"
-                  className="hover:text-indigo-400 transition-colors flex items-center gap-2"
-                >
-                  💼 Business
-                </a>
-              </li>
-            </ul>
-          </div>
+          {/* (empty column for future sections / keep layout balanced on lg) */}
+          <div className="hidden lg:block" />
 
           {/* Contact */}
           <div>
-            <h4 className="font-bold text-white mb-3 text-sm uppercase tracking-wider">
+            <h4 className="font-bold text-white mb-3 text-xs sm:text-sm uppercase tracking-wider">
               Stay Connected
             </h4>
-            <div className="space-y-2.5 text-sm">
+            <div className="space-y-2.5 text-xs sm:text-sm">
               <a
                 href="mailto:interactwitai@gmail.com"
-                className="flex items-center gap-2 hover:text-indigo-400 transition-colors group"
+                className="flex items-center gap-2 hover:text-indigo-400 transition-colors"
               >
                 <svg
                   className="w-4 h-4 text-indigo-500 flex-shrink-0"
@@ -206,7 +141,7 @@ export default function Footer() {
               </a>
               <a
                 href="tel:+917506727976"
-                className="flex items-center gap-2 hover:text-indigo-400 transition-colors group"
+                className="flex items-center gap-2 hover:text-indigo-400 transition-colors"
               >
                 <svg
                   className="w-4 h-4 text-indigo-500 flex-shrink-0"
@@ -228,12 +163,10 @@ export default function Footer() {
         </div>
 
         {/* Divider */}
-        <div className="border-t border-slate-700/50 mt-8 pt-6">
+        <div className="border-t border-slate-700/50 mt-8 pt-5">
           <div className="flex flex-col sm:flex-row justify-between items-center gap-3">
-            <p className="text-xs text-slate-400 text-center sm:text-left">
-              © {new Date().getFullYear()} Eventz. All rights reserved.
-            </p>
-            <div className="flex flex-wrap justify-center gap-5 text-xs text-slate-400">
+            
+            <div className="flex flex-wrap justify-center gap-4 text-[11px] sm:text-xs text-slate-400">
               <a
                 href="/privacy"
                 className="hover:text-indigo-400 transition-colors"

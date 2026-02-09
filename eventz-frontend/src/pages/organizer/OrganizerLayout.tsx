@@ -178,49 +178,41 @@ export default function OrganizerLayout() {
         }`}
       >
         {/* Header with Gradient */}
-        <div className="p-6 border-b border-slate-200/80 bg-gradient-to-r from-indigo-50/50 to-purple-50/50">
-          <div className="flex items-center justify-between mb-1">
-            <div className="flex items-center gap-2 group">
-              <div className="w-10 h-10 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-xl flex items-center justify-center shadow-lg group-hover:shadow-xl group-hover:scale-105 transition-all duration-300">
-                <svg
-                  className="w-6 h-6 text-white"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                  />
-                </svg>
-              </div>
-              <h2 className="text-xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-                Eventz
-              </h2>
-            </div>
-            <button
-              onClick={() => setIsSidebarOpen(false)}
-              className="lg:hidden text-slate-400 hover:text-slate-600 p-1 hover:bg-slate-100 rounded-lg transition-all duration-200"
-            >
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              </svg>
-            </button>
-          </div>
-          <p className="text-xs text-slate-500 font-medium">Organizer Panel</p>
-        </div>
+{/* Header with Gradient */}
+<div className="p-6 border-b border-slate-200/80 bg-gradient-to-r from-indigo-50/50 to-purple-50/50">
+  <div className="flex items-center justify-between mb-1">
+    <div className="flex items-center gap-2 group">
+      <NavLink
+        to="/"
+        onClick={() => setIsSidebarOpen(false)}
+        className="flex items-center gap-2"
+      >
+        <h2 className="text-xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+          Eventz
+        </h2>
+      </NavLink>
+    </div>
+    <button
+      onClick={() => setIsSidebarOpen(false)}
+      className="lg:hidden text-slate-400 hover:text-slate-600 p-1 hover:bg-slate-100 rounded-lg transition-all duration-200"
+    >
+      <svg
+        className="w-5 h-5"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={2}
+          d="M6 18L18 6M6 6l12 12"
+        />
+      </svg>
+    </button>
+  </div>
+  <p className="text-xs text-slate-500 font-medium">Organizer Panel</p>
+</div>
 
         {/* Navigation */}
         <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">

@@ -58,7 +58,9 @@ function getShortDescription(event: any): string {
   const normalizedCategory =
     rawCategory.charAt(0).toUpperCase() + rawCategory.slice(1).toLowerCase();
 
-  return categoryFallbackCopy[normalizedCategory] ?? categoryFallbackCopy.default;
+  return (
+    categoryFallbackCopy[normalizedCategory] ?? categoryFallbackCopy.default
+  );
 }
 
 /* ---------- HEIGHT BASED ON DESCRIPTION ---------- */
@@ -102,6 +104,23 @@ const hexToRgb = (hex: string) => {
     : { r: 79, g: 70, b: 229 };
 };
 
+/* format banner date/time nicely */
+const formatEventDateTime = (date: string, time: string) => {
+  if (!date && !time) return "";
+  if (!date) return time || "";
+  try {
+    const d = new Date(date);
+    const datePart = d.toLocaleDateString("en-IN", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
+    return time ? `${datePart} · ${time}` : datePart;
+  } catch {
+    return `${date} ${time || ""}`;
+  }
+};
+
 /* ---------- COMPONENT ---------- */
 export default function EventDetails() {
   const { id } = useParams();
@@ -120,6 +139,11 @@ export default function EventDetails() {
   const [selectedSubTicket, setSelectedSubTicket] = useState<string | null>(
     null
   );
+
+  /* scroll to top when page opens */
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, []);
 
   useEffect(() => {
     if (!id) return;
@@ -207,6 +231,10 @@ export default function EventDetails() {
 
   const aboutMinHeightClass = getAboutMinHeightClass(event.description);
 
+  const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+    `${event.location}, ${event.city}`
+  )}`;
+
   return (
     <PublicLayout>
       <style>
@@ -238,7 +266,7 @@ export default function EventDetails() {
             />
             <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/50 to-black/70" />
 
-            <div className="relative z-10 h-full flex items end px-6 pb-5">
+            <div className="relative z-10 h-full flex items-end px-6 pb-5">
               <div className="w-full">
                 <div className="flex items-center gap-3 mb-2">
                   <span
@@ -249,7 +277,7 @@ export default function EventDetails() {
                   </span>
                   {status === "LIVE" && (
                     <span className="px-3 py-1 bg-red-500 text-white rounded-full text-xs font-bold uppercase flex items-center gap-1">
-                      <span className="w-2 h-2 bg-white rounded-full animate-pulse"></span>
+                      <span className="w-2 h-2 bg-white rounded-full animate-pulse" />
                       LIVE
                     </span>
                   )}
@@ -259,53 +287,64 @@ export default function EventDetails() {
                   {event.title}
                 </h1>
 
-                {/* HIGHLIGHTED LOCATION + TIME */}
-                <div className="flex flex-wrap items-center gap-4 text-sm">
-                  {/* Location */}
-                  <div className="flex items-center gap-1.5 text-indigo-100 font-semibold">
-                    <svg
-                      className="w-4 h-4 text-indigo-200"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M17.657 16.657L13.414 20.9a1.998 1.998 0 
-                           01-2.827 0l-4.244-4.243a8 8 0 
-                           1111.314 0z"
-                      />
-                    </svg>
-                    <span className="text-white font-semibold">
+                {/* LOCATION + FORMATTED DATE/TIME WITH COLORED ICONS */}
+                <div className="flex flex-wrap items-center gap-3 text-xs sm:text-sm">
+                  {/* Location pill */}
+                  <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-white/10 text-white">
+                    <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-emerald-500/90">
+                      <svg
+                        className="w-3 h-3 text-white"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M17.657 16.657L13.414 20.9a1.998 1.998 
+                             0 01-2.827 0l-4.244-4.243a8 8 0 
+                             1111.314 0z"
+                        />
+                      </svg>
+                    </span>
+                    <span className="font-medium">
                       {event.location}, {event.city}
                     </span>
                   </div>
 
-                  {/* Time */}
-                  <div className="flex items-center gap-1.5 text-indigo-100 font-semibold">
-                    <svg
-                      className="w-4 h-4 text-indigo-200"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M12 8v4l3 3m6-3a9 9 0 
-                           11-18 0 9 9 0 0118 0z"
-                      />
-                    </svg>
-                    <span className="text-white font-semibold">
-                      {event.startTime}
+                  {/* Date/time pill */}
+                  <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-white/10 text-white/90">
+                    <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-sky-500/90">
+                      <svg
+                        className="w-3 h-3 text-white"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 
+                             002-2V7a2 2 0 00-2-2H5a2 2 0 
+                             00-2 2v12a2 2 0 002 2z"
+                        />
+                      </svg>
+                    </span>
+                    <span className="font-medium">
+                      {formatEventDateTime(event.startDate, event.startTime)}
+                      {event.endDate && (
+                        <>
+                          {" — "}
+                          {formatEventDateTime(event.endDate, event.endTime)}
+                        </>
+                      )}
                     </span>
                   </div>
 
                   {countdown && (
-                    <span className="px-2 py-1 bg-white/20 rounded text-xs font-semibold text-amber-200">
+                    <span className="px-2 py-1 rounded-full bg-amber-400/20 text-amber-100 text-[11px] font-semibold">
                       🎉 Starts in {countdown}
                     </span>
                   )}
@@ -411,8 +450,8 @@ export default function EventDetails() {
                 )}
 
                 {activeTab === "location" && (
-                  <div>
-                    <h2 className="text-xl font-bold mb-3 flex items-center gap-2">
+                  <div className="space-y-3">
+                    <h2 className="text-xl font-bold flex items-center gap-2">
                       <svg
                         className="w-5 h-5"
                         style={{ color: themeColor }}
@@ -431,15 +470,47 @@ export default function EventDetails() {
                       </svg>
                       Event Location
                     </h2>
+
                     <div
-                      className="mb-3 p-3 rounded-lg"
+                      className="mb-2 p-3 rounded-lg flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2"
                       style={{ backgroundColor: `${themeColor}10` }}
                     >
-                      <p className="font-semibold text-gray-900">
-                        {event.location}
-                      </p>
-                      <p className="text-sm text-gray-600">{event.city}</p>
+                      <div>
+                        <p className="font-semibold text-gray-900">
+                          {event.location}
+                        </p>
+                        <p className="text-sm text-gray-600">{event.city}</p>
+                      </div>
+
+                      <a
+                        href={googleMapsUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-sm font-semibold text-indigo-600 hover:text-indigo-700"
+                      >
+                        <svg
+                          className="w-4 h-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M10 6h8m0 0v8m0-8L9 15"
+                          />
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M5 19h6a2 2 0 002-2v-6"
+                          />
+                        </svg>
+                        View in Google Maps
+                      </a>
                     </div>
+
                     <div
                       className="rounded-xl overflow-hidden border-2"
                       style={{ borderColor: themeColor }}
@@ -541,11 +612,10 @@ export default function EventDetails() {
                 <div className="p-3 space-y-3 max-h-[340px] overflow-y-auto">
                   {event.tickets.map((ticket: any) => {
                     const isSelected = selectedTicket === ticket.name;
-                    const hasSubTickets = ticket.subTickets?.length > 0;
+                    const ticketHasSub = ticket.subTickets?.length > 0;
 
                     return (
                       <div key={ticket.name}>
-                        {/* Parent Ticket */}
                         <button
                           onClick={() => {
                             setSelectedTicket(ticket.name);
@@ -575,8 +645,7 @@ export default function EventDetails() {
                           </div>
                         </button>
 
-                        {/* Sub-Tickets */}
-                        {isSelected && hasSubTickets && (
+                        {isSelected && ticketHasSub && (
                           <div
                             className="mt-2 ml-3 space-y-2 p-2 rounded-lg animate-slide-up"
                             style={{
