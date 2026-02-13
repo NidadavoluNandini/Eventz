@@ -1,4 +1,3 @@
-// src/events/dto/create-event.dto.ts
 import {
   IsString,
   IsDateString,
@@ -101,6 +100,104 @@ class ThemeColorDto {
   class?: string;
 }
 
+/* ---------- ATTENDEE FIELD CONFIG DTO ---------- */
+class AttendeeOptionalFieldsDto {
+  @IsOptional()
+  @IsBoolean()
+  linkedin?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  gender?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  altPhone?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  altEmail?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  dob?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  country?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  state?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  postalCode?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  organization?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  designation?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  collegeId?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  employeeId?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  tShirtSize?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  emergencyContactName?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  emergencyContactPhone?: boolean;
+}
+
+class AttendeeFieldConfigDto {
+  @IsArray()
+  @IsString({ each: true })
+  alwaysRequired: string[];
+
+  @IsObject()
+  @ValidateNested()
+  @Type(() => AttendeeOptionalFieldsDto)
+  optional: AttendeeOptionalFieldsDto;
+}
+
+/* ---------- PAYMENT SETTINGS DTO ---------- */
+class PaymentSettingsDto {
+  @IsOptional()
+  @IsBoolean()
+  collectPaymentCharges?: boolean;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  platformFeePercent?: number;
+}
+
+/* ---------- OTHER ATTENDEES CONFIG DTO ---------- */
+class OtherAttendeesConfigDto {
+  @IsOptional()
+  @IsBoolean()
+  enabled?: boolean;
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  requiredFields?: string[]; // e.g. ['name','email','phone']
+}
+
 /* ---------- CREATE EVENT DTO ---------- */
 export class CreateEventDto {
   @IsString()
@@ -130,12 +227,10 @@ export class CreateEventDto {
   @IsString()
   category: string;
 
-  // Hero banner (S3 URL, optional)
   @IsOptional()
   @IsString()
   bannerImageUrl?: string;
 
-  // Gallery images (S3 URLs, optional)
   @IsOptional()
   @IsArray()
   @IsString({ each: true })
@@ -155,4 +250,22 @@ export class CreateEventDto {
   @IsOptional()
   @IsBoolean()
   registrationOpen?: boolean;
+
+  @IsOptional()
+  @IsObject()
+  @ValidateNested()
+  @Type(() => AttendeeFieldConfigDto)
+  attendeeFieldConfig?: AttendeeFieldConfigDto;
+
+  @IsOptional()
+  @IsObject()
+  @ValidateNested()
+  @Type(() => PaymentSettingsDto)
+  paymentSettings?: PaymentSettingsDto;
+
+  @IsOptional()
+  @IsObject()
+  @ValidateNested()
+  @Type(() => OtherAttendeesConfigDto)
+  otherAttendeesConfig?: OtherAttendeesConfigDto;
 }

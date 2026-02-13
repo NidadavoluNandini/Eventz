@@ -17,6 +17,25 @@ const CATEGORIES = [
   "Business",
   "Health",
 ];
+type TicketFormType = {
+  type?: string;
+  name: string;
+  description?: string;
+  price?: number;
+  quantity?: number;
+  available?: number;
+  gst?: number;
+  finalPrice?: number;
+  gstIncluded?: boolean;
+  subTickets?: {
+    name: string;
+    price: number;
+    quantity?: number;
+    gst?: number;
+    finalPrice: number;
+    gstIncluded?: boolean;
+  }[];
+};
 
 const THEME_COLORS = [
   { name: "Blue", value: "#4F46E5", class: "bg-indigo-600" },
@@ -68,7 +87,15 @@ interface Ticket {
   isExpanded: boolean;
 }
 
-type FormStep = "basic" | "schedule" | "media" | "tickets" | "review" | "preview";
+type FormStep =
+  | "userInfo"
+  | "basic"
+  | "schedule"
+  | "media"
+  | "tickets"
+  | "payment"
+  | "review"
+  | "preview";
 
 const geocodeLocation = async (
   location: string,
@@ -98,7 +125,7 @@ export default function CreateEvent() {
   const existingEvent = locationHook.state?.eventData || null;
 
   const [isLoading, setIsLoading] = useState(false);
-  const [currentStep, setCurrentStep] = useState<FormStep>("basic");
+  const [currentStep, setCurrentStep] = useState<FormStep>("userInfo");
   const [completedSections, setCompletedSections] = useState<Set<FormStep>>(
     new Set()
   );
@@ -122,7 +149,27 @@ export default function CreateEvent() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
+  // USER INFO
+const [userFieldConfig, setUserFieldConfig] = useState({
+  linkedin: false,
+  gender: false,
+  altPhone: false,
+  altEmail: false,
+  dob: false,
+  country: false,
+  state: false,
+  postalCode: false,
+  organization: false,
+  designation: false,
+  collegeId: false,
+  employeeId: false,
+  tShirtSize: false,
+  emergencyContactName: false,
+  emergencyContactPhone: false,
+});
+
   // BASIC
+  
   const [title, setTitle] = useState(existingEvent?.title || "");
   const [description, setDescription] = useState(
     existingEvent?.description || ""
@@ -173,9 +220,7 @@ export default function CreateEvent() {
       finalPrice: t.finalPrice ?? 0,
       subTickets:
         t.subTickets?.map((s: any) => ({
-          id: `sub-${Date.now()}-${Math.random()
-            .toString(36)
-            .substr(2, 9)}`,
+          id: `sub-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
           name: s.name,
           price: s.price ?? 0,
           quantity: s.quantity ?? 0,
@@ -186,10 +231,43 @@ export default function CreateEvent() {
     })) || []
   );
 
+  // PAYMENT SETTINGS
+  const [paymentSettings, setPaymentSettings] = useState({
+    collectPaymentCharges: false,
+    platformFeePercent: 0,
+  });
+
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [previewMapCenter, setPreviewMapCenter] = useState<[number, number]>([
     20.5937, 78.9629,
   ]);
+const [form, setForm] = useState({
+  title: '',
+  description: '',
+  startDate: '',
+  endDate: '',
+  startTime: '',
+  endTime: '',
+  location: '',
+  city: '',
+  category: '',
+  bannerImageUrl: '',
+  mediaUrls: [] as string[],
+  tickets: [] as TicketFormType[],
+  registrationOpen: true,
+  attendeeFieldConfig: {
+    alwaysRequired: ['firstName', 'lastName', 'email', 'phone'],
+    optional: { /* ...existing booleans... */ },
+  },
+  paymentSettings: {
+    collectPaymentCharges: false,
+    platformFeePercent: 0,
+  },
+  otherAttendeesConfig: {
+    enabled: false,
+    requiredFields: ['name', 'email', 'phone'], // default trio
+  },
+});
 
   const formatDate = (date: string) => {
     const d = new Date(date);
@@ -200,9 +278,17 @@ export default function CreateEvent() {
     });
   };
 
-  const calculateFinalPrice = (price: number, gst: number): number => {
+  const calculateFinalPrice = (
+    price: number,
+    gst: number,
+    platformFeePercent?: number
+  ): number => {
     if (!price || price <= 0) return 0;
-    return Number((price + (price * gst) / 100).toFixed(2));
+    let base = price + (price * gst) / 100;
+    if (platformFeePercent && platformFeePercent > 0) {
+      base += (price * platformFeePercent) / 100;
+    }
+    return Number(base.toFixed(2));
   };
 
   const markSectionComplete = (section: FormStep) => {
@@ -213,27 +299,50 @@ export default function CreateEvent() {
     completedSections.has(section);
 
   const canNavigateToStep = (step: FormStep) => {
-    if (step === "basic") return true;
-    if (step === "schedule") return isSectionCompleted("basic");
+    if (step === "userInfo") return true;
+    if (step === "basic") return isSectionCompleted("userInfo");
+    if (step === "schedule")
+      return isSectionCompleted("userInfo") && isSectionCompleted("basic");
     if (step === "media")
-      return isSectionCompleted("basic") && isSectionCompleted("schedule");
+      return (
+        isSectionCompleted("userInfo") &&
+        isSectionCompleted("basic") &&
+        isSectionCompleted("schedule")
+      );
     if (step === "tickets")
       return (
+        isSectionCompleted("userInfo") &&
         isSectionCompleted("basic") &&
         isSectionCompleted("schedule") &&
         isSectionCompleted("media")
       );
-    if (step === "review" || step === "preview")
+    if (step === "payment")
       return (
+        isSectionCompleted("userInfo") &&
         isSectionCompleted("basic") &&
         isSectionCompleted("schedule") &&
         isSectionCompleted("media") &&
         isSectionCompleted("tickets")
       );
+    if (step === "review" || step === "preview")
+      return (
+        isSectionCompleted("userInfo") &&
+        isSectionCompleted("basic") &&
+        isSectionCompleted("schedule") &&
+        isSectionCompleted("media") &&
+        isSectionCompleted("tickets") &&
+        isSectionCompleted("payment")
+      );
     return false;
   };
 
   // VALIDATION
+
+const validateUserInfoConfig = (): boolean => {
+  // nothing mandatory except the implicit 4 core fields
+  markSectionComplete("userInfo");
+  return true;
+};
 
   const validateBasicInfo = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -288,6 +397,22 @@ export default function CreateEvent() {
     setErrors(newErrors);
     const isValid = Object.keys(newErrors).length === 0;
     if (isValid) markSectionComplete("tickets");
+    return isValid;
+  };
+
+  const validatePaymentInfo = (): boolean => {
+    const newErrors: Record<string, string> = {};
+    if (
+      paymentSettings.collectPaymentCharges &&
+      (paymentSettings.platformFeePercent < 0 ||
+        paymentSettings.platformFeePercent > 100)
+    ) {
+      newErrors.platformFeePercent =
+        "Platform fee percentage must be between 0 and 100";
+    }
+    setErrors(newErrors);
+    const isValid = Object.keys(newErrors).length === 0;
+    if (isValid) markSectionComplete("payment");
     return isValid;
   };
 
@@ -387,7 +512,12 @@ export default function CreateEvent() {
       }
     }
 
-    if (currentStep === "basic") {
+    if (currentStep === "userInfo") {
+      if (validateUserInfoConfig()) {
+        setCurrentStep("basic");
+        scrollTop();
+      }
+    } else if (currentStep === "basic") {
       if (validateBasicInfo()) {
         setCurrentStep("schedule");
         scrollTop();
@@ -403,6 +533,11 @@ export default function CreateEvent() {
       scrollTop();
     } else if (currentStep === "tickets") {
       if (validateTickets()) {
+        setCurrentStep("payment");
+        scrollTop();
+      }
+    } else if (currentStep === "payment") {
+      if (validatePaymentInfo()) {
         markSectionComplete("review");
         if (locationText && city) {
           setPreviewMapCenter(await geocodeLocation(locationText, city));
@@ -425,10 +560,12 @@ export default function CreateEvent() {
 
   const handleBack = () => {
     setErrors({});
-    if (currentStep === "schedule") setCurrentStep("basic");
+    if (currentStep === "basic") setCurrentStep("userInfo");
+    else if (currentStep === "schedule") setCurrentStep("basic");
     else if (currentStep === "media") setCurrentStep("schedule");
     else if (currentStep === "tickets") setCurrentStep("media");
-    else if (currentStep === "review") setCurrentStep("tickets");
+    else if (currentStep === "payment") setCurrentStep("tickets");
+    else if (currentStep === "review") setCurrentStep("payment");
     else if (currentStep === "preview") setCurrentStep("review");
     scrollTop();
   };
@@ -468,9 +605,7 @@ export default function CreateEvent() {
       prevTickets.map((ticket) => {
         if (ticket.id !== ticketId) return ticket;
         const newSubTicket: SubTicket = {
-          id: `sub-${Date.now()}-${Math.random()
-            .toString(36)
-            .substr(2, 9)}`,
+          id: `sub-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
           name: "",
           price: 0,
           quantity: 0,
@@ -518,7 +653,10 @@ export default function CreateEvent() {
             } else {
               updatedTicket.finalPrice = calculateFinalPrice(
                 price,
-                updatedTicket.gst
+                updatedTicket.gst,
+                paymentSettings.collectPaymentCharges
+                  ? paymentSettings.platformFeePercent
+                  : 0
               );
             }
             break;
@@ -528,7 +666,10 @@ export default function CreateEvent() {
             updatedTicket.gst = gst;
             updatedTicket.finalPrice = calculateFinalPrice(
               ticket.price,
-              gst
+              gst,
+              paymentSettings.collectPaymentCharges
+                ? paymentSettings.platformFeePercent
+                : 0
             );
             break;
           }
@@ -570,7 +711,10 @@ export default function CreateEvent() {
                 } else {
                   updatedSub.finalPrice = calculateFinalPrice(
                     price,
-                    updatedSub.gst
+                    updatedSub.gst,
+                    paymentSettings.collectPaymentCharges
+                      ? paymentSettings.platformFeePercent
+                      : 0
                   );
                 }
                 break;
@@ -580,7 +724,10 @@ export default function CreateEvent() {
                 updatedSub.gst = gst;
                 updatedSub.finalPrice = calculateFinalPrice(
                   sub.price,
-                  gst
+                  gst,
+                  paymentSettings.collectPaymentCharges
+                    ? paymentSettings.platformFeePercent
+                    : 0
                 );
                 break;
               }
@@ -602,78 +749,87 @@ export default function CreateEvent() {
 
   // SUBMIT
 
-  const handleSubmit = async () => {
-    if (!validateTickets()) return;
+const handleSubmit = async () => {
+  if (!validateTickets()) return;
+  if (!validatePaymentInfo()) return;
 
-    setIsLoading(true);
-    const payload = {
-      title,
-      description,
-      category,
-      city,
-      location: locationText,
-      startDate,
-      endDate,
-      startTime,
-      endTime,
-      themeColor: {
-        name: themeColor.name,
-        value: themeColor.value,
-        class: themeColor.class,
-      },
-      bannerImageUrl: bannerImageUrl || undefined,
-      mediaUrls,
-      tickets: tickets.map((t) => ({
-        name: t.name,
-        price: t.price,
-        gst: t.gst,
-        finalPrice: t.finalPrice,
-        gstIncluded: true,
-        subTickets:
-          t.subTickets.length > 0
-            ? t.subTickets.map((sub) => ({
-                name: sub.name,
-                price: sub.price,
-                gst: sub.gst,
-                finalPrice: sub.finalPrice,
-                gstIncluded: true,
-              }))
-            : undefined,
-      })),
-      status: "PUBLISHED",
-    };
-
-    try {
-      if (editMode && existingEvent?._id) {
-        await updateEvent(existingEvent._id, payload);
-        showToast("success", "Event updated successfully!");
-      } else {
-        await createEvent(payload);
-        showToast("success", "Event created successfully!");
-      }
-
-      setShowSuccessModal(true);
-      setTimeout(() => {
-    navigate("/organizer/events");
-  }, 1000);
-    } catch (err: any) {
-      console.error("EVENT SAVE ERROR", err?.response?.data || err);
-      const message =
-        err?.response?.data?.message?.join?.(", ") ||
-        "Failed to save event";
-      showToast("error", message);
-    } finally {
-      setIsLoading(false);
-    }
+  setIsLoading(true);
+  const payload = {
+    title,
+    description,
+    category,
+    city,
+    location: locationText,
+    startDate,
+    endDate,
+    startTime,
+    endTime,
+    themeColor: {
+      name: themeColor.name,
+      value: themeColor.value,
+      class: themeColor.class,
+    },
+    bannerImageUrl: bannerImageUrl || undefined,
+    mediaUrls,
+    tickets: tickets.map((t) => ({
+      name: t.name,
+      price: t.price,
+      gst: t.gst,
+      finalPrice: t.finalPrice,
+      gstIncluded: true,
+      subTickets:
+        t.subTickets.length > 0
+          ? t.subTickets.map((sub) => ({
+              name: sub.name,
+              price: sub.price,
+              gst: sub.gst,
+              finalPrice: sub.finalPrice,
+              gstIncluded: true,
+            }))
+          : undefined,
+    })),
+    status: "PUBLISHED",
+    attendeeFieldConfig: {
+      alwaysRequired: ["firstName", "lastName", "email", "phone"],
+      optional: userFieldConfig,
+    },
+    paymentSettings,
+    otherAttendeesConfig: form.otherAttendeesConfig, // ✅ add this line
   };
 
+  try {
+    if (editMode && existingEvent?._id) {
+      await updateEvent(existingEvent._id, payload);
+      showToast("success", "Event updated successfully!");
+    } else {
+      await createEvent(payload);
+      showToast("success", "Event created successfully!");
+    }
+
+    setShowSuccessModal(true);
+    setTimeout(() => {
+      navigate("/organizer/events");
+    }, 1000);
+  } catch (err: any) {
+    console.error("EVENT SAVE ERROR", err?.response?.data || err);
+    const message =
+      err?.response?.data?.message?.join?.(", ") || "Failed to save event";
+    showToast("error", message);
+  } finally {
+    setIsLoading(false);
+  }
+};
+
+
   const steps = [
-    { id: "basic" as FormStep, label: "Basic Info", number: 1 },
-    { id: "schedule" as FormStep, label: "Schedule", number: 2 },
-    { id: "media" as FormStep, label: "Media", number: 3 },
-    { id: "tickets" as FormStep, label: "Tickets", number: 4 },
-    { id: "review" as FormStep, label: "Review", number: 5 },
-    { id: "preview" as FormStep, label: "Preview", number: 6 },
+    { id: "userInfo" as FormStep, label: "User Info", number: 1 },
+    { id: "basic" as FormStep, label: "Basic Info", number: 2 },
+    { id: "schedule" as FormStep, label: "Schedule", number: 3 },
+    { id: "media" as FormStep, label: "Media", number: 4 },
+    { id: "tickets" as FormStep, label: "Tickets", number: 5 },
+    { id: "payment" as FormStep, label: "Payment Info", number: 6 },
+    { id: "review" as FormStep, label: "Review", number: 7 },
+    { id: "preview" as FormStep, label: "Preview", number: 8 },
   ];
 
   const getCurrentStepIndex = () =>
@@ -847,7 +1003,85 @@ export default function CreateEvent() {
         </div>
 
         {/* Form Content */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 mb-4 min-h-[500px]">
+<div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 mb-4 min-h-[500px]">
+          {/* USER INFO */}
+{/* UserInfo step: just selection, no text inputs */}
+{currentStep === "userInfo" && (
+  <div className="space-y-4">
+    <div>
+      <h2 className="text-lg font-semibold text-gray-800 mb-1">
+        Attendee Fields Configuration
+      </h2>
+      <p className="text-sm text-gray-500">
+        First name, last name, email, and phone will always be required on the registration form. Select any extra fields you want to collect from attendees.
+      </p>
+    </div>
+
+    <div className="grid md:grid-cols-2 gap-4">
+      <div>
+        <h3 className="text-xs font-semibold text-gray-700 mb-2 uppercase tracking-wide">
+          Always required
+        </h3>
+        <ul className="space-y-1 text-sm text-gray-600 border border-gray-200 rounded-lg p-3 bg-gray-50">
+          <li>• First Name</li>
+          <li>• Last Name</li>
+          <li>• Email</li>
+          <li>• Phone Number</li>
+        </ul>
+      </div>
+
+      <div>
+        <h3 className="text-xs font-semibold text-gray-700 mb-2 uppercase tracking-wide">
+          Optional fields
+        </h3>
+        <div className="space-y-2 text-sm">
+          {[
+            { key: "linkedin", label: "LinkedIn Profile URL" },
+            { key: "gender", label: "Gender" },
+            { key: "altPhone", label: "Alternate Phone" },
+            { key: "altEmail", label: "Alternate Email" },
+            { key: "dob", label: "Date of Birth" },
+            { key: "country", label: "Country" },
+            { key: "state", label: "State" },
+            { key: "postalCode", label: "Postal Code" },
+            { key: "organization", label: "Organization / College" },
+            { key: "designation", label: "Designation / Role" },
+            { key: "collegeId", label: "College ID" },
+            { key: "employeeId", label: "Employee ID" },
+            { key: "tShirtSize", label: "T-shirt Size" },
+            {
+              key: "emergencyContactName",
+              label: "Emergency Contact Name",
+            },
+            {
+              key: "emergencyContactPhone",
+              label: "Emergency Contact Phone",
+            },
+          ].map((f) => (
+            <label
+              key={f.key}
+              className="flex items-center gap-2 cursor-pointer"
+            >
+              <input
+                type="checkbox"
+                className="h-4 w-4 text-indigo-600 border-gray-300 rounded"
+                checked={userFieldConfig[f.key as keyof typeof userFieldConfig]}
+                onChange={(e) =>
+                  setUserFieldConfig((prev) => ({
+                    ...prev,
+                    [f.key]: e.target.checked,
+                  }))
+                }
+              />
+              <span className="text-gray-700">{f.label}</span>
+            </label>
+          ))}
+        </div>
+      </div>
+    </div>
+  </div>
+)}
+
           {/* BASIC */}
           {currentStep === "basic" && (
             <div className="space-y-4">
@@ -937,7 +1171,9 @@ export default function CreateEvent() {
                     <button
                       key={color.value}
                       type="button"
-                      onClick={() => setThemeColor(color)}
+                      onClick={() =>
+                        setThemeColor(color as any)
+                      }
                       className={`w-8 h-8 rounded-full ${color.class} transition-all flex-shrink-0 ${
                         themeColor.value === color.value
                           ? "ring-1 ring-offset-4 ring-indigo-350 scale-100"
@@ -1120,7 +1356,9 @@ export default function CreateEvent() {
                     type="button"
                     className="px-4 py-2 bg-indigo-600 text-white text-sm rounded-lg font-semibold hover:bg-indigo-700 transition"
                     onClick={() =>
-                      document.getElementById("banner-input")?.click()
+                      document
+                        .getElementById("banner-input")
+                        ?.click()
                     }
                   >
                     Choose File
@@ -1167,7 +1405,9 @@ export default function CreateEvent() {
                     type="button"
                     className="px-4 py-2 bg-indigo-600 text-white text-sm rounded-lg font-semibold hover:bg-indigo-700 transition"
                     onClick={() =>
-                      document.getElementById("gallery-input")?.click()
+                      document
+                        .getElementById("gallery-input")
+                        ?.click()
                     }
                   >
                     Choose Files
@@ -1240,7 +1480,12 @@ export default function CreateEvent() {
             </div>
           )}
 
+
+          
+
           {/* TICKETS */}
+
+          
           {currentStep === "tickets" && (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
@@ -1686,6 +1931,117 @@ export default function CreateEvent() {
             </div>
           )}
 
+          {/* PAYMENT INFO */}
+          {currentStep === "payment" && (
+            <div className="space-y-4">
+              <div>
+                <h2 className="text-lg font-semibold text-gray-800 mb-1">
+                  Payment Preferences
+                </h2>
+                <p className="text-sm text-gray-500">
+                  Configure whether you want to collect additional platform
+                  charges from attendees.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <input
+                  id="collectCharges"
+                  type="checkbox"
+                  className="h-4 w-4 text-indigo-600 border-gray-300 rounded"
+                  checked={paymentSettings.collectPaymentCharges}
+                  onChange={(e) =>
+                    setPaymentSettings((p) => ({
+                      ...p,
+                      collectPaymentCharges: e.target.checked,
+                    }))
+                  }
+                />
+                <label
+                  htmlFor="collectCharges"
+                  className="text-sm font-medium text-gray-700"
+                >
+                  Collect additional platform charges from attendees
+                </label>
+              </div>
+
+              {paymentSettings.collectPaymentCharges && (
+                <div className="max-w-sm">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Platform Fee Percentage (%)
+                  </label>
+                  <input
+                    type="number"
+                    min={0}
+                    max={100}
+                    className={`w-full px-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none ${
+                      errors.platformFeePercent
+                        ? "border-red-500"
+                        : "border-gray-300"
+                    }`}
+                    value={paymentSettings.platformFeePercent}
+                    onChange={(e) =>
+                      setPaymentSettings((p) => ({
+                        ...p,
+                        platformFeePercent: Number(
+                          e.target.value || 0
+                        ),
+                      }))
+                    }
+                    placeholder="e.g. 5"
+                  />
+                  {errors.platformFeePercent && (
+                    <p className="text-red-500 text-xs mt-1">
+                      {errors.platformFeePercent}
+                    </p>
+                  )}
+                  <p className="text-xs text-gray-500 mt-2">
+                    This percentage will be added on top of ticket price and
+                    considered together with GST at registration.
+                  </p>
+                </div>
+              )}
+              {/* OTHER ATTENDEES CONFIG */}
+<div className="mt-4 rounded-lg border border-gray-200 bg-gray-50 p-4">
+  <div className="flex items-center justify-between gap-3">
+    <div>
+      <p className="text-sm font-semibold text-gray-800">
+        Other attendees
+      </p>
+      <p className="text-xs text-gray-500">
+        When enabled, ask details for additional attendees if quantity &gt; 1.
+      </p>
+    </div>
+
+    <button
+      type="button"
+      onClick={() =>
+        setForm((prev) => ({
+          ...prev,
+          otherAttendeesConfig: {
+            enabled: !prev.otherAttendeesConfig?.enabled,
+            requiredFields:
+              prev.otherAttendeesConfig?.requiredFields ??
+              ['name', 'email', 'phone'],
+          },
+        }))
+      }
+      className={`relative inline-flex h-5 w-9 items-center rounded-full transition ${
+        form.otherAttendeesConfig?.enabled ? 'bg-indigo-600' : 'bg-gray-300'
+      }`}
+    >
+      <span
+        className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition ${
+          form.otherAttendeesConfig?.enabled ? 'translate-x-4' : 'translate-x-1'
+        }`}
+      />
+    </button>
+  </div>
+</div>
+
+            </div>
+          )}
+
           {/* REVIEW */}
           {currentStep === "review" && (
             <div className="space-y-4">
@@ -1698,7 +2054,33 @@ export default function CreateEvent() {
                 </p>
               </div>
 
-              <div className="space-y-3">
+             <div className="space-y-3">
+  <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+    <div className="flex items-center justify-between mb-2">
+      <h3 className="font-semibold text-gray-800 flex items-center gap-2">
+        <span className="text-xl">👤</span> User Information Fields
+      </h3>
+    </div>
+    <div className="space-y-1 text-sm">
+      <p>
+        <span className="font-medium text-gray-700">
+          Always required:
+        </span>{" "}
+        First Name, Last Name, Email, Phone
+      </p>
+      <p>
+        <span className="font-medium text-gray-700">
+          Optional fields enabled:
+        </span>{" "}
+        {Object.entries(userFieldConfig)
+          .filter(([_, enabled]) => enabled)
+          .map(([key]) => key)
+          .join(", ") || "None"}
+      </p>
+    </div>
+  </div>
+
+
                 <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
                   <div className="flex items-center justify-between mb-2">
                     <h3 className="font-semibold text-gray-800 flex items-center gap-2">
@@ -1741,7 +2123,9 @@ export default function CreateEvent() {
                     </h3>
                     <button
                       type="button"
-                      onClick={() => goToStep("schedule", true)}
+                      onClick={() =>
+                        goToStep("schedule", true)
+                      }
                       className="text-xs font-semibold text-indigo-600 hover:text-indigo-700"
                     >
                       Edit
@@ -1836,11 +2220,45 @@ export default function CreateEvent() {
                         {t.subTickets.length > 0 && (
                           <p className="text-xs text-gray-600 ml-4">
                             {t.subTickets.length} addon option
-                            {t.subTickets.length > 1 ? "s" : ""}
+                            {t.subTickets.length > 1 ? "s" : ""}{" "}
                           </p>
                         )}
                       </div>
                     ))}
+                  </div>
+                </div>
+
+                <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="font-semibold text-gray-800 flex items-center gap-2">
+                      <span className="text-xl">💰</span> Payment
+                      Preferences
+                    </h3>
+                    <button
+                      type="button"
+                      onClick={() => goToStep("payment", true)}
+                      className="text-xs font-semibold text-indigo-600 hover:text-indigo-700"
+                    >
+                      Edit
+                    </button>
+                  </div>
+                  <div className="space-y-1 text-sm">
+                    <p>
+                      <span className="font-medium text-gray-700">
+                        Collect charges:
+                      </span>{" "}
+                      {paymentSettings.collectPaymentCharges
+                        ? "Yes"
+                        : "No"}
+                    </p>
+                    {paymentSettings.collectPaymentCharges && (
+                      <p>
+                        <span className="font-medium text-gray-700">
+                          Platform fee:
+                        </span>{" "}
+                        {paymentSettings.platformFeePercent}%
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -1978,7 +2396,9 @@ export default function CreateEvent() {
                         <p className="font-semibold text-gray-900">
                           {locationText}
                         </p>
-                        <p className="text-sm text-gray-600">{city}</p>
+                        <p className="text-sm text-gray-600">
+                          {city}
+                        </p>
                       </div>
                       <div className="rounded-xl overflow-hidden border-2 border-indigo-500/60">
                         <MapContainer
@@ -2013,7 +2433,8 @@ export default function CreateEvent() {
                             {t.subTickets.length > 0 && (
                               <p className="text-xs text-gray-500 mt-1">
                                 {t.subTickets.length} addon option
-                                {t.subTickets.length > 1 ? "s" : ""} available
+                                {t.subTickets.length > 1 ? "s" : ""}{" "}
+                                available
                               </p>
                             )}
                           </div>
@@ -2054,7 +2475,7 @@ export default function CreateEvent() {
 
         {/* Navigation Buttons */}
         <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-between">
-          {currentStep !== "basic" && (
+          {currentStep !== "userInfo" && (
             <button
               type="button"
               onClick={handleBack}

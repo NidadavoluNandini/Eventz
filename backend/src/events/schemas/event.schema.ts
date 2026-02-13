@@ -1,10 +1,7 @@
-// src/events/schemas/event.schema.ts
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Types, HydratedDocument } from 'mongoose';
 
-/* =====================================================
-   SUB TICKET (no GST)
-   ==================================================== */
+/* ---------- SUB TICKET ---------- */
 @Schema({ _id: false })
 export class SubTicket {
   @Prop({ required: true })
@@ -16,15 +13,12 @@ export class SubTicket {
   @Prop({ default: 0 })
   quantity?: number;
 
-  // finalPrice can just mirror price; keep if you want analytics
   @Prop({ required: true })
   finalPrice: number;
 }
 export const SubTicketSchema = SchemaFactory.createForClass(SubTicket);
 
-/* =====================================================
-   MAIN TICKET
-   ==================================================== */
+/* ---------- MAIN TICKET ---------- */
 @Schema()
 export class Ticket {
   @Prop()
@@ -59,9 +53,7 @@ export class Ticket {
 }
 export const TicketSchema = SchemaFactory.createForClass(Ticket);
 
-/* =====================================================
-   THEME COLOR
-   ==================================================== */
+/* ---------- THEME COLOR ---------- */
 @Schema({ _id: false })
 export class ThemeColor {
   @Prop({ required: true })
@@ -75,9 +67,63 @@ export class ThemeColor {
 }
 export const ThemeColorSchema = SchemaFactory.createForClass(ThemeColor);
 
-/* =====================================================
-   EVENT
-   ==================================================== */
+/* ---------- ATTENDEE FIELD CONFIG ---------- */
+@Schema({ _id: false })
+export class AttendeeFieldConfig {
+  @Prop({ type: [String], default: ['firstName', 'lastName', 'email', 'phone'] })
+  alwaysRequired: string[];
+
+  @Prop({
+    type: Object,
+    default: {},
+  })
+  optional: Record<
+    | 'linkedin'
+    | 'gender'
+    | 'altPhone'
+    | 'altEmail'
+    | 'dob'
+    | 'country'
+    | 'state'
+    | 'postalCode'
+    | 'organization'
+    | 'designation'
+    | 'collegeId'
+    | 'employeeId'
+    | 'tShirtSize'
+    | 'emergencyContactName'
+    | 'emergencyContactPhone',
+    boolean
+  >;
+}
+export const AttendeeFieldConfigSchema =
+  SchemaFactory.createForClass(AttendeeFieldConfig);
+
+/* ---------- PAYMENT SETTINGS ---------- */
+@Schema({ _id: false })
+export class PaymentSettings {
+  @Prop({ default: false })
+  collectPaymentCharges: boolean;
+
+  @Prop({ default: 0 })
+  platformFeePercent: number;
+}
+export const PaymentSettingsSchema =
+  SchemaFactory.createForClass(PaymentSettings);
+
+/* ---------- OTHER ATTENDEES CONFIG ---------- */
+@Schema({ _id: false })
+export class OtherAttendeesConfig {
+  @Prop({ default: false })
+  enabled: boolean; // from checkbox
+
+  @Prop({ type: [String], default: [] })
+  requiredFields: string[]; // e.g. ['name', 'email', 'phone']
+}
+export const OtherAttendeesConfigSchema =
+  SchemaFactory.createForClass(OtherAttendeesConfig);
+
+/* ---------- EVENT ---------- */
 export enum EventStatus {
   DRAFT = 'DRAFT',
   PUBLISHED = 'PUBLISHED',
@@ -101,10 +147,10 @@ export class Event {
   endDate: Date;
 
   @Prop({ required: true })
-  startTime: string; // "HH:MM"
+  startTime: string;
 
   @Prop({ required: true })
-  endTime: string; // "HH:MM"
+  endTime: string;
 
   @Prop({ required: true })
   location: string;
@@ -115,11 +161,9 @@ export class Event {
   @Prop({ required: true })
   category: string;
 
-  // Hero banner image (optional, S3 URL)
   @Prop()
   bannerImageUrl?: string;
 
-  // Other gallery images (S3 URLs)
   @Prop({ type: [String], default: [] })
   mediaUrls: string[];
 
@@ -129,7 +173,6 @@ export class Event {
   @Prop({ type: [TicketSchema], default: [] })
   tickets: Ticket[];
 
-  // manual toggle from organizer dashboard
   @Prop({ default: false })
   registrationOpen: boolean;
 
@@ -143,7 +186,15 @@ export class Event {
   @Prop({ type: Types.ObjectId, ref: 'Organizer', required: true })
   organizerId: Types.ObjectId;
 
-  // analytics
+  @Prop({ type: AttendeeFieldConfigSchema, default: null })
+  attendeeFieldConfig?: AttendeeFieldConfig;
+
+  @Prop({ type: PaymentSettingsSchema, default: null })
+  paymentSettings?: PaymentSettings;
+
+  @Prop({ type: OtherAttendeesConfigSchema, default: null })
+  otherAttendeesConfig?: OtherAttendeesConfig;
+
   @Prop({ default: 0 })
   totalRevenue: number;
 

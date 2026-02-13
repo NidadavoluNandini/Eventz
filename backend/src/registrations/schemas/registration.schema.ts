@@ -32,31 +32,82 @@ export class Registration extends Document {
   @Prop()
   userPhone: string;
 
+  // Optional attendee extra fields (controlled by event.attendeeFieldConfig.optional)
+  @Prop()
+  linkedin?: string;
+
+  @Prop()
+  gender?: string;
+
+  @Prop()
+  altPhone?: string;
+
+  @Prop()
+  altEmail?: string;
+
+  @Prop()
+  dob?: Date;
+
+  @Prop()
+  country?: string;
+
+  @Prop()
+  state?: string;
+
+  @Prop()
+  postalCode?: string;
+
+  @Prop()
+  organization?: string;
+
+  @Prop()
+  designation?: string;
+
+  @Prop()
+  collegeId?: string;
+
+  @Prop()
+  employeeId?: string;
+
+  @Prop()
+  tShirtSize?: string;
+
+  @Prop()
+  emergencyContactName?: string;
+
+  @Prop()
+  emergencyContactPhone?: string;
+
   // ===============================
   // TICKET INFO
   // ===============================
   @Prop({ required: true })
   ticketName: string; // Free, Early Bird, VIP
-  @Prop() // ✅ Make sure this exists
+
+  @Prop()
   subTicketName?: string;
-  @Prop({ required: true })
-  basePricePerTicket: number; // 👈 ₹200
 
   @Prop({ required: true })
-  quantity: number; // 👈 10
+  basePricePerTicket: number;
 
   @Prop({ required: true })
-  gstRate: number; // 👈 18
+  quantity: number;
 
   @Prop({ required: true })
-  gstAmount: number; // 👈 ₹360 (TOTAL GST)
+  gstRate: number;
 
   @Prop({ required: true })
-  totalAmount: number; // 👈 ₹2360 (FINAL PAYABLE)
+  gstAmount: number;
+
+  @Prop({ required: true })
+  totalAmount: number; // final: base + GST + platform
 
   // ⚠️ KEEP for backward compatibility
   @Prop({ required: true })
-  ticketPrice: number; // SAME as totalAmount (DO NOT recompute)
+  ticketPrice: number; // per-ticket final or legacy total
+
+  @Prop({ default: 0 })
+  platformFee: number; // NEW: total platform fee for this registration
 
   // ===============================
   // OTP
@@ -104,6 +155,18 @@ export class Registration extends Document {
   // ===============================
   @Prop({ default: false })
   ticketSent: boolean;
+  @Prop({
+  type: [
+    {
+      name: { type: String, required: true },
+      email: { type: String, required: true },
+      phone: { type: String, required: true },
+    },
+  ],
+  default: [],
+})
+otherAttendees?: { name: string; email: string; phone: string }[];
+
 }
 
 export const RegistrationSchema =

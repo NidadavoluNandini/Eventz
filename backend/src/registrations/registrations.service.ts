@@ -13,13 +13,31 @@ import {
   RegistrationStatus,
   PaymentStatus,
 } from './schemas/registration.schema';
-
 import { Event } from '../events/schemas/event.schema';
 
 import { EmailService } from '../notifications/email.service';
 import { SmsService } from '../notifications/sms.service';
 import { TicketsService } from '../tickets/tickets.service';
 import { InvoiceService } from '../payments/invoice.service';
+import { OtherAttendeesDto } from './dto/other-attendees.dto';
+
+type ExtraUserInfoDto = {
+  linkedin?: string;
+  gender?: string;
+  altPhone?: string;
+  altEmail?: string;
+  dob?: string | Date;
+  country?: string;
+  state?: string;
+  postalCode?: string;
+  organization?: string;
+  designation?: string;
+  collegeId?: string;
+  employeeId?: string;
+  tShirtSize?: string;
+  emergencyContactName?: string;
+  emergencyContactPhone?: string;
+};
 
 @Injectable()
 export class RegistrationsService {
@@ -39,18 +57,18 @@ export class RegistrationsService {
   // =====================================================
   // STEP 1: INITIATE REGISTRATION (SEND OTP)
   // =====================================================
-// =====================================================
-// STEP 1: INITIATE REGISTRATION (SEND OTP)
-// =====================================================
-async initiateRegistration(dto: {
-  eventId: string;
-  userName: string;
-  userEmail: string;
-  userPhone: string;
-  ticketName: string;
-  subTicketName?: string;
-  quantity: number;
-}) {
+async initiateRegistration(
+  dto: {
+    eventId: string;
+    userName: string;
+    userEmail: string;
+    userPhone: string;
+    ticketName: string;
+    subTicketName?: string;
+    quantity: number;
+  } & ExtraUserInfoDto &
+    OtherAttendeesDto,
+) {
   const event = await this.eventModel.findById(dto.eventId);
   if (!event) throw new NotFoundException('Event not found');
 
@@ -58,8 +76,42 @@ async initiateRegistration(dto: {
     throw new BadRequestException('Event not open for registration');
   }
 
-  const ticket = event.tickets.find((t) => t.name === dto.ticketName);
+  // 1) Enforce mandatory attendee fields from event.attendeeFieldConfig.optional
+  const optConfig = event.attendeeFieldConfig?.optional || {};
+  const missing: string[] = [];
 
+  const requiredChecks: Array<[keyof ExtraUserInfoDto, string]> = [
+    ['linkedin', 'LinkedIn URL'],
+    ['gender', 'Gender'],
+    ['altPhone', 'Alternate phone'],
+    ['altEmail', 'Alternate email'],
+    ['dob', 'Date of birth'],
+    ['country', 'Country'],
+    ['state', 'State'],
+    ['postalCode', 'Postal code'],
+    ['organization', 'Organization'],
+    ['designation', 'Designation'],
+    ['collegeId', 'College ID'],
+    ['employeeId', 'Employee ID'],
+    ['tShirtSize', 'T-shirt size'],
+    ['emergencyContactName', 'Emergency contact name'],
+    ['emergencyContactPhone', 'Emergency contact phone'],
+  ];
+
+  for (const [fieldKey, label] of requiredChecks) {
+    if (optConfig[fieldKey] && !dto[fieldKey]) {
+      missing.push(label);
+    }
+  }
+
+  if (missing.length > 0) {
+    throw new BadRequestException(
+      `Missing required attendee fields: ${missing.join(', ')}`,
+    );
+  }
+
+  // 2) Ticket price logic – use base prices from event tickets + subTicket
+  const ticket = event.tickets.find((t) => t.name === dto.ticketName);
   if (!ticket) {
     throw new BadRequestException('Invalid ticket selected');
   }
@@ -67,55 +119,75 @@ async initiateRegistration(dto: {
   const quantity = dto.quantity && dto.quantity > 0 ? dto.quantity : 1;
 
   let basePricePerTicket = 0;
-  let gstRate = 0;
+  let gstRate = ticket.gst || 0;
 
-  // PARENT TICKET PRICE (0 is valid free price if configured)
-  if (ticket.price !== undefined && ticket.price !== null) {
+  // === FIXED BASE PRICE LOGIC ===
+  // Treat ticket.price as pure base (e.g. 100), finalPrice as display-only (base+GST)
+  if (ticket.price != null) {
     basePricePerTicket = ticket.price;
-    gstRate = ticket.gst || 0;
+  } else if (ticket.finalPrice != null && ticket.finalPrice > 0) {
+    // Fallback if only finalPrice is set: derive base from finalPrice and gstRate
+    basePricePerTicket = Math.round(
+      ticket.finalPrice / (1 + (gstRate || 0) / 100),
+    );
   }
 
-  // OPTIONAL SUB-TICKET
   let subTicketPrice: number | undefined;
   if (dto.subTicketName && ticket.subTickets?.length) {
     const subTicket = ticket.subTickets.find(
       (s) => s.name === dto.subTicketName,
     );
-
     if (!subTicket) {
       throw new BadRequestException('Invalid sub-ticket selected');
     }
 
-    subTicketPrice = subTicket.price;
-    if (subTicketPrice !== undefined && subTicketPrice !== null) {
+    // For sub-ticket we assume price is base, finalPrice is display-only
+    if (subTicket.price != null) {
+      subTicketPrice = subTicket.price;
+    } else if (subTicket.finalPrice != null && subTicket.finalPrice > 0) {
+      subTicketPrice = subTicket.finalPrice;
+    }
+
+    if (subTicketPrice != null) {
       basePricePerTicket += subTicketPrice;
-      // gstRate: keep parent GST or adjust here if required
     }
   }
 
-  // NEW: only treat as "not configured" when neither parent nor selected sub have any price set
   const parentPriceConfigured =
-    ticket.price !== undefined && ticket.price !== null;
+    ticket.finalPrice != null || ticket.price != null;
   const subPriceConfigured =
-    dto.subTicketName != null &&
-    subTicketPrice !== undefined &&
-    subTicketPrice !== null;
+    dto.subTicketName != null && subTicketPrice != null;
 
   if (!parentPriceConfigured && !subPriceConfigured) {
     throw new BadRequestException('Ticket price not configured');
   }
 
+  // base for all tickets (no GST/platform yet)
   const baseTotal = basePricePerTicket * quantity;
-  const gstAmount = Math.round((baseTotal * gstRate) / 100);
-  const totalAmount = baseTotal + gstAmount;
 
-  // BLOCK DUPLICATES
+  // GST ONLY on base
+  const gstAmount = Math.round((baseTotal * (gstRate || 0)) / 100);
+
+  // Platform fee percent from event settings (mirror frontend)
+  const platformPercent = event.paymentSettings?.collectPaymentCharges
+    ? event.paymentSettings.platformFeePercent ?? 0
+    : 0;
+
+  // Platform fee on (base + GST)
+  const basePlusGstTotal = baseTotal + gstAmount;
+  const platformFee = Math.round(
+    (basePlusGstTotal * platformPercent) / 100,
+  );
+
+  // Final amount: base + GST + platform
+  const finalAmount = baseTotal + gstAmount + platformFee;
+
+  // 3) Prevent duplicate completed registration
   const completed = await this.registrationModel.findOne({
     eventId: new Types.ObjectId(dto.eventId),
     status: RegistrationStatus.COMPLETED,
     $or: [{ userEmail: dto.userEmail }, { userPhone: dto.userPhone }],
   });
-
   if (completed) {
     throw new ConflictException('You have already registered');
   }
@@ -124,7 +196,29 @@ async initiateRegistration(dto: {
   const otp = otpNumber.toString();
   const otpExpiresAt = new Date(Date.now() + 5 * 60 * 1000);
 
-  // REUSE PENDING REGISTRATION
+  const paymentStatusForAmount =
+    finalAmount === 0 ? PaymentStatus.NOT_REQUIRED : PaymentStatus.PENDING;
+
+  const {
+    otherAttendees,      // <-- from OtherAttendeesDto
+    linkedin,
+    gender,
+    altPhone,
+    altEmail,
+    dob,
+    country,
+    state,
+    postalCode,
+    organization,
+    designation,
+    collegeId,
+    employeeId,
+    tShirtSize,
+    emergencyContactName,
+    emergencyContactPhone,
+  } = dto;
+
+  // 4) Reuse pending registration if exists
   const existingPending = await this.registrationModel.findOne({
     eventId: new Types.ObjectId(dto.eventId),
     status: { $ne: RegistrationStatus.COMPLETED },
@@ -134,20 +228,46 @@ async initiateRegistration(dto: {
   if (existingPending) {
     existingPending.ticketName = dto.ticketName;
     existingPending.subTicketName = dto.subTicketName || undefined;
+
     existingPending.basePricePerTicket = basePricePerTicket;
     existingPending.quantity = quantity;
     existingPending.gstRate = gstRate;
     existingPending.gstAmount = gstAmount;
-    existingPending.totalAmount = totalAmount;
-    existingPending.ticketPrice = totalAmount;
+    existingPending.platformFee = platformFee;
+    existingPending.totalAmount = finalAmount;
+    existingPending.ticketPrice = finalAmount / quantity;
+
+    existingPending.linkedin = linkedin ?? existingPending.linkedin;
+    existingPending.gender = gender ?? existingPending.gender;
+    existingPending.altPhone = altPhone ?? existingPending.altPhone;
+    existingPending.altEmail = altEmail ?? existingPending.altEmail;
+    existingPending.dob = dob ? new Date(dob) : existingPending.dob;
+    existingPending.country = country ?? existingPending.country;
+    existingPending.state = state ?? existingPending.state;
+    existingPending.postalCode =
+      postalCode ?? existingPending.postalCode;
+    existingPending.organization =
+      organization ?? existingPending.organization;
+    existingPending.designation =
+      designation ?? existingPending.designation;
+    existingPending.collegeId = collegeId ?? existingPending.collegeId;
+    existingPending.employeeId =
+      employeeId ?? existingPending.employeeId;
+    existingPending.tShirtSize =
+      tShirtSize ?? existingPending.tShirtSize;
+    existingPending.emergencyContactName =
+      emergencyContactName ?? existingPending.emergencyContactName;
+    existingPending.emergencyContactPhone =
+      emergencyContactPhone ?? existingPending.emergencyContactPhone;
+
+    // NEW: persist other attendees on reuse as well
+    existingPending.otherAttendees =
+      otherAttendees ?? existingPending.otherAttendees ?? [];
 
     existingPending.otp = otpNumber;
     existingPending.otpExpiresAt = otpExpiresAt;
     existingPending.status = RegistrationStatus.PENDING_OTP;
-    existingPending.paymentStatus =
-      totalAmount === 0
-        ? PaymentStatus.NOT_REQUIRED
-        : PaymentStatus.PENDING;
+    existingPending.paymentStatus = paymentStatusForAmount;
 
     await existingPending.save();
     await this.sendOtp(dto.userEmail, dto.userPhone, otp);
@@ -159,12 +279,31 @@ async initiateRegistration(dto: {
     };
   }
 
-  // CREATE REGISTRATION
+  // 5) Create new registration
   const registration = await this.registrationModel.create({
     eventId: new Types.ObjectId(dto.eventId),
     userName: dto.userName,
     userEmail: dto.userEmail,
     userPhone: dto.userPhone,
+
+    linkedin,
+    gender,
+    altPhone,
+    altEmail,
+    dob: dob ? new Date(dob) : undefined,
+    country,
+    state,
+    postalCode,
+    organization,
+    designation,
+    collegeId,
+    employeeId,
+    tShirtSize,
+    emergencyContactName,
+    emergencyContactPhone,
+
+    // NEW: save array here
+    otherAttendees: otherAttendees || [],
 
     ticketName: dto.ticketName,
     subTicketName: dto.subTicketName || undefined,
@@ -172,15 +311,12 @@ async initiateRegistration(dto: {
     quantity,
     gstRate,
     gstAmount,
-    totalAmount,
-    ticketPrice: totalAmount,
+    platformFee,
+    totalAmount: finalAmount,
+    ticketPrice: finalAmount / quantity,
 
     status: RegistrationStatus.PENDING_OTP,
-    paymentStatus:
-      totalAmount === 0
-        ? PaymentStatus.NOT_REQUIRED
-        : PaymentStatus.PENDING,
-
+    paymentStatus: paymentStatusForAmount,
     otp: otpNumber,
     otpExpiresAt,
   });
@@ -192,6 +328,8 @@ async initiateRegistration(dto: {
     registrationId: registration._id,
   };
 }
+
+
 
   // =====================================================
   // STEP 2: VERIFY OTP
@@ -228,7 +366,6 @@ async initiateRegistration(dto: {
       await registration.save();
 
       await this.ticketsService.generateAndSendTicket(registration);
-
       registration.ticketSent = true;
       await registration.save();
 
@@ -279,7 +416,6 @@ async initiateRegistration(dto: {
     await registration.save();
 
     await this.ticketsService.generateAndSendTicket(registration);
-
     registration.ticketSent = true;
     await registration.save();
 
@@ -303,26 +439,24 @@ async initiateRegistration(dto: {
     return { message: 'OTP resent successfully' };
   }
 
-// RegistrationsService
-// registrations.service.ts
-async findByEvent(eventId: string, organizerId: string) {
-  const event = await this.eventModel.findById(eventId);
-  if (!event) throw new NotFoundException('Event not found');
+  async findByEvent(eventId: string, organizerId: string) {
+    const event = await this.eventModel.findById(eventId);
+    if (!event) throw new NotFoundException('Event not found');
 
-  if (event.organizerId.toString() !== organizerId) {
-    throw new ForbiddenException('Access denied');
+    if (event.organizerId.toString() !== organizerId) {
+      throw new ForbiddenException('Access denied');
+    }
+
+    const regs = await this.registrationModel
+      .find({ eventId: new Types.ObjectId(eventId) })
+      .select(
+        'userName userEmail userPhone ticketName subTicketName status paymentStatus createdAt',
+      )
+      .sort({ createdAt: -1 })
+      .lean();
+
+    return regs;
   }
-
-  const regs = await this.registrationModel
-    .find({ eventId: new Types.ObjectId(eventId) })
-    .select(
-      'userName userEmail userPhone ticketName subTicketName status paymentStatus createdAt',
-    )
-    .sort({ createdAt: -1 })
-    .lean();
-
-  return regs;
-}
 
   async findByUser(phone: string) {
     return this.registrationModel
@@ -340,28 +474,26 @@ async findByEvent(eventId: string, organizerId: string) {
       status: RegistrationStatus.PENDING_PAYMENT,
     });
   }
-async getAttendeesByEvent(eventId: string) {
+
+  async getAttendeesByEvent(eventId: string) {
     return this.registrationModel
       .find({
         eventId,
-        status: "COMPLETED",
-        paymentStatus: "PAID",
+        status: 'COMPLETED',
+        paymentStatus: 'PAID',
       })
       .select(
-        "registrationNumber userName userEmail userPhone ticketName basePricePerTicket quantity gstRate gstAmount totalAmount createdAt"
+        'registrationNumber userName userEmail userPhone ticketName basePricePerTicket quantity gstRate gstAmount totalAmount createdAt',
       )
       .sort({ createdAt: -1 })
       .lean();
   }
+
   // =====================================================
   // HELPERS
   // =====================================================
   private async sendOtp(email: string, phone: string, otp: string) {
-     await this.emailService.sendOtpEmail(email, otp);
-
+    await this.emailService.sendOtpEmail(email, otp);
     await this.smsService.sendSms(phone, `OTP: ${otp}`);
   }
-
-
-
 }

@@ -1,4 +1,3 @@
-// src/payments/payments-integration.service.ts
 import {
   Injectable,
   BadRequestException,
@@ -33,11 +32,6 @@ export class PaymentsIntegrationService {
     private readonly emailService: EmailService,
   ) {}
 
-  private calculateGST(basePrice: number, gstPercent: number): number {
-    if (!gstPercent) return 0;
-    return Math.round((basePrice * gstPercent) / 100);
-  }
-
   // =====================================================
   // CREATE RAZORPAY ORDER
   // =====================================================
@@ -51,41 +45,8 @@ export class PaymentsIntegrationService {
       throw new BadRequestException('Payment not required');
     }
 
-    const event = await this.eventModel.findById(registration.eventId);
-    if (!event) {
-      throw new NotFoundException('Event not found');
-    }
-
-    const ticket = event.tickets.find(
-      (t) => t.name === registration.ticketName,
-    );
-    if (!ticket) {
-      throw new NotFoundException('Ticket not found');
-    }
-
-    const quantity = registration.quantity || 1;
-
-    // Parent ticket: GST applies (per ticket)
-    const parentPrice = ticket.price || 0;
-    const parentGSTPercent = ticket.gst || 0;
-    const parentGSTAmount = this.calculateGST(parentPrice, parentGSTPercent);
-    const parentFinal = parentPrice + parentGSTAmount;
-
-    // Sub-ticket: NO GST (per ticket)
-    let subPrice = 0;
-    if (registration.subTicketName) {
-      const subTicket = ticket.subTickets?.find(
-        (s) => s.name === registration.subTicketName,
-      );
-      if (subTicket) {
-        subPrice = subTicket.price || 0;
-      }
-    }
-
-    // Total for all tickets
-    const totalAmountPerTicket = parentFinal + subPrice;
-    const totalAmount = totalAmountPerTicket * quantity;
-
+    // Use TOTAL amount computed and stored by RegistrationsService
+    const totalAmount = registration.totalAmount; // FIX: use totalAmount, not ticketPrice
     if (!totalAmount || totalAmount <= 0) {
       throw new BadRequestException('Invalid payment amount');
     }
@@ -96,7 +57,7 @@ export class PaymentsIntegrationService {
     );
 
     registration.razorpayOrderId = order.id;
-    registration.ticketPrice = totalAmount;
+    // ticketPrice remains as set at initiateRegistration/verifyOtp
     await registration.save();
 
     return {

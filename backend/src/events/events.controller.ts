@@ -60,12 +60,14 @@ export class EventsController {
   }
 
   // ✅ UPDATE EVENT
-  @Put(':id')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('ORGANIZER')
-  updateEvent(@Param('id') id: string, @Body() dto: UpdateEventDto, @Req() req) {
-    return this.eventsService.update(id, dto);
-  }
+ @Put(':id')
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles('ORGANIZER')
+@UsePipes(new ValidationPipe({ whitelist: true, transform: false }))
+updateEvent(@Param('id') id: string, @Body() dto: UpdateEventDto, @Req() req) {
+  return this.eventsService.update(id, dto);
+}
+
 
   // ✅ DELETE EVENT
   @Delete(':id')

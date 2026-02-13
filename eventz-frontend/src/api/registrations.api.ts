@@ -1,5 +1,11 @@
 import api from "../utils/axios";
 
+type OtherAttendeePayload = {
+  name: string;
+  email: string;
+  phone: string;
+};
+
 // PUBLIC – initiate registration (send OTP)
 export const initiateRegistration = (data: {
   eventId: string;
@@ -9,6 +15,7 @@ export const initiateRegistration = (data: {
   ticketName: string;
   subTicketName?: string | null;
   quantity: number;
+  otherAttendees?: OtherAttendeePayload[]; // <-- add this
 }) => {
   return api.post("/api/registrations/initiate", data);
 };

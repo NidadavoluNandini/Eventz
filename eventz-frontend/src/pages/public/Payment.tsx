@@ -1,3 +1,4 @@
+// src/pages/public/Payment.tsx
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import api from "../../utils/axios";
@@ -24,7 +25,7 @@ export default function Payment() {
   const [paymentDetails, setPaymentDetails] = useState<any>(null);
   const [fetchingDetails, setFetchingDetails] = useState(true);
 
-  /* ---------------- FETCH PAYMENT DETAILS ---------------- */
+  // ---------------- FETCH PAYMENT DETAILS ----------------
   useEffect(() => {
     if (!finalRegistrationId) {
       setError("Invalid payment session.");
@@ -48,7 +49,7 @@ export default function Payment() {
     fetchDetails();
   }, [finalRegistrationId]);
 
-  /* ---------------- START PAYMENT ---------------- */
+  // ---------------- START PAYMENT ----------------
   const startPayment = async () => {
     if (!finalRegistrationId) return;
 
@@ -69,13 +70,11 @@ export default function Payment() {
         name: "Event Registration",
         description: "Event Ticket Payment",
         order_id: razorpayOrderId,
-
         prefill: {
           name: paymentDetails?.registration?.userName || "",
           email: paymentDetails?.registration?.userEmail || "",
           contact: paymentDetails?.registration?.userPhone || "",
         },
-
         handler: async (response: any) => {
           try {
             await api.post("/api/payments/registration/verify", {
@@ -88,10 +87,10 @@ export default function Payment() {
             // webhook handles verification
           }
 
+
           sessionStorage.removeItem("paymentSession");
           navigate(`/payment-processing/${finalRegistrationId}`);
         },
-
         modal: {
           ondismiss: async () => {
             try {
@@ -99,11 +98,9 @@ export default function Payment() {
                 `/api/payments/registration/fail/${finalRegistrationId}`
               );
             } catch {}
-
             navigate(`/payment-cancelled/${finalRegistrationId}`);
           },
         },
-
         theme: { color: "#4F46E5" },
       };
 
@@ -118,7 +115,7 @@ export default function Payment() {
     }
   };
 
-  /* ---------------- LOADING ---------------- */
+  // ---------------- LOADING ----------------
   if (fetchingDetails) {
     return (
       <PublicLayout>
@@ -135,8 +132,12 @@ export default function Payment() {
   }
 
   const quantity = paymentDetails?.pricing?.quantity ?? 1;
+  const basePrice = paymentDetails?.pricing?.total?.basePrice ?? 0;
+  const totalGST = paymentDetails?.pricing?.total?.totalGST ?? 0;
+  const platformFee = paymentDetails?.pricing?.total?.platformFee ?? 0;
+  const finalAmount = paymentDetails?.pricing?.total?.finalAmount ?? 0;
 
-  /* ---------------- RENDER ---------------- */
+  // ---------------- RENDER ----------------
   return (
     <PublicLayout>
       <style>
@@ -159,10 +160,9 @@ export default function Payment() {
       </style>
 
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 via-white to-purple-50 px-3 py-6">
-        {/* slightly smaller max width and padding so no internal scroll */}
         <div className="w-full max-w-md">
           <div className="bg-white rounded-2xl shadow-2xl overflow-hidden animate-slide-up">
-            {/* HEADER (more compact) */}
+            {/* HEADER */}
             <div className="bg-gradient-to-r from-indigo-600 to-purple-600 px-4 py-4 text-white relative overflow-hidden">
               <div className="absolute top-0 right-0 w-24 h-24 bg-white/10 rounded-full -mr-10 -mt-10" />
               <div className="absolute bottom-0 left-0 w-20 h-20 bg-white/10 rounded-full -ml-10 -mb-10" />
@@ -180,7 +180,8 @@ export default function Payment() {
                         strokeLinecap="round"
                         strokeLinejoin="round"
                         strokeWidth={2}
-                        d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"
+                        d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 
+                           003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"
                       />
                     </svg>
                   </div>
@@ -215,9 +216,9 @@ export default function Payment() {
               </div>
             </div>
 
-            {/* BODY (tighter paddings, smaller text, no inner scroll) */}
+            {/* BODY */}
             <div className="px-4 py-4 space-y-4">
-              {/* EVENT DETAILS CARD */}
+              {/* EVENT & REGISTRATION DETAILS */}
               {paymentDetails && (
                 <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-xl px-3.5 py-3.5 border border-indigo-100">
                   <div className="flex items-start justify-between mb-2.5">
@@ -301,8 +302,8 @@ export default function Payment() {
                             strokeLinejoin="round"
                             strokeWidth={2}
                             d="M16 7a4 4 0 11-8 0 4 4 0 
-                              018 0zM12 14a7 7 0 00-7 7h14a7 7 0 
-                              00-7-7z"
+                               018 0zM12 14a7 7 0 00-7 7h14a7 7 0 
+                               00-7-7z"
                           />
                         </svg>
                         <span className="font-medium text-gray-700">
@@ -346,69 +347,52 @@ export default function Payment() {
                 </div>
               )}
 
-              {/* AMOUNT WITH BREAKDOWN (compact) */}
+              {/* PRICE BREAKDOWN – USING BACKEND TOTALS ONLY */}
               {paymentDetails?.pricing && (
-                <div className="bg-gray-50 rounded-xl px-3.5 py-3.5 border border-gray-200 text-xs">
-                  <div className="space-y-2">
-                    <div className="flex justify-between items-center pb-1.5 border-b">
-                      <div>
-                        <p className="font-semibold text-gray-900">
-                          {paymentDetails.pricing.parentTicket.name}
-                        </p>
-                        <p className="text-[11px] text-gray-500">
-                          ₹{paymentDetails.pricing.parentTicket.basePrice} ×{" "}
-                          {quantity}
-                        </p>
-                      </div>
-                      <span className="font-semibold text-gray-900">
-                        ₹
-                        {paymentDetails.pricing.parentTicket.basePrice *
-                          quantity}
+                <div className="bg-white rounded-xl border border-gray-200 px-3.5 py-3.5 text-xs space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-[11px] text-gray-500 font-semibold uppercase tracking-wide">
+                        Price breakdown
+                      </p>
+                      <p className="text-[11px] text-gray-600">
+                        Includes base, GST, and platform fee.
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-[11px] text-gray-500 uppercase tracking-wide">
+                        Total to pay
+                      </p>
+                      <p className="text-2xl font-bold text-green-600 leading-none">
+                        ₹{finalAmount}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="mt-2 pt-2 border-t border-gray-200 space-y-1.5">
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Base price</span>
+                      <span className="font-medium text-gray-900">
+                        ₹{basePrice}
                       </span>
                     </div>
-
-                    {paymentDetails.pricing.subTicket && (
-                      <div className="flex justify-between items-center pb-1.5 border-b mt-1.5">
-                        <div>
-                          <p className="font-semibold text-gray-900">
-                            {paymentDetails.pricing.subTicket.name}
-                          </p>
-                          <p className="text-[11px] text-gray-500">
-                            ₹{paymentDetails.pricing.subTicket.basePrice} ×{" "}
-                            {quantity}
-                          </p>
-                        </div>
-                        <span className="font-semibold text-gray-900">
-                          ₹
-                          {paymentDetails.pricing.subTicket.basePrice *
-                            quantity}
-                        </span>
-                      </div>
-                    )}
-
-                    <div className="pt-2 mt-1.5 border-t space-y-1.5">
-                      <div className="flex justify-between text-gray-700">
-                        <span>Subtotal</span>
-                        <span>₹{paymentDetails.pricing.total.basePrice}</span>
-                      </div>
-                      <div className="flex justify-between text-gray-700">
-                        <span>GST</span>
-                        <span>₹{paymentDetails.pricing.total.totalGST}</span>
-                      </div>
-                      <div className="flex justify-between items-center pt-1.5 border-t">
-                        <span className="text-gray-700 font-medium">
-                          Amount to Pay
-                        </span>
-                        <div className="text-right">
-                          <p className="text-2xl font-bold text-green-600 leading-none">
-                            ₹{paymentDetails.pricing.total.finalAmount}
-                          </p>
-                          <p className="text-[11px] text-gray-500 mt-0.5">
-                            GST included for {quantity} ticket
-                            {quantity > 1 ? "s" : ""}
-                          </p>
-                        </div>
-                      </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">GST</span>
+                      <span className="font-medium text-gray-900">
+                        ₹{totalGST}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Platform fee</span>
+                      <span className="font-medium text-gray-900">
+                        ₹{platformFee}
+                      </span>
+                    </div>
+                    <div className="flex justify-between border-t pt-1.5 mt-1.5">
+                      <span className="text-gray-800 font-semibold">Total</span>
+                      <span className="font-semibold text-green-600">
+                        ₹{finalAmount}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -440,8 +424,8 @@ export default function Payment() {
               {/* PAY BUTTON */}
               <button
                 onClick={startPayment}
-                disabled={loading || !!error}
-                className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-3 rounded-lg font-semibold text-sm transition-all hover:from-indigo-700 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl flex items-center justify-center gap-2 pulse-glow"
+                disabled={loading || !!error || !paymentDetails?.pricing}
+                className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-3 rounded-lg font-semibold text-sm.transition-all hover:from-indigo-700 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl flex items-center justify-center gap-2 pulse-glow"
               >
                 {loading ? (
                   <>
@@ -486,7 +470,7 @@ export default function Payment() {
                 )}
               </button>
 
-              {/* SECURITY BADGES (compact) */}
+              {/* SECURITY BADGES */}
               <div className="flex items-center justify-center gap-3 pt-3 border-t text-[11px] text-gray-600">
                 <div className="flex items-center gap-1.5">
                   <svg

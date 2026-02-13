@@ -1,3 +1,4 @@
+// src/tickets/tickets.service.ts
 import {
   BadRequestException,
   Injectable,
@@ -23,10 +24,8 @@ export class TicketsService {
   constructor(
     @InjectModel(Registration.name)
     private readonly registrationModel: Model<Registration>,
-
     @InjectModel(Event.name)
     private readonly eventModel: Model<Event>,
-
     private readonly qrService: QrService,
     private readonly pdfService: PdfService,
     private readonly emailService: EmailService,
@@ -35,61 +34,55 @@ export class TicketsService {
   // =====================================================
   // 🎟 GENERATE + EMAIL TICKET
   // =====================================================
-async generateAndSendTicket(reg: Registration) {
-  if (reg.ticketSent) return;
+  async generateAndSendTicket(reg: Registration) {
+    if (reg.ticketSent) return;
 
-  if (reg.status !== RegistrationStatus.COMPLETED) {
-    throw new BadRequestException(
-      'Ticket can be generated only after completion',
-    );
-  }
+    if (reg.status !== RegistrationStatus.COMPLETED) {
+      throw new BadRequestException(
+        'Ticket can be generated only after completion',
+      );
+    }
 
-  const event = await this.eventModel.findById(
-    reg.eventId,
-  ) as EventDocument | null;
+    const event = (await this.eventModel.findById(
+      reg.eventId,
+    )) as EventDocument | null;
 
-  if (!event) {
-    throw new NotFoundException('Event not found');
-  }
+    if (!event) {
+      throw new NotFoundException('Event not found');
+    }
 
-  // ===============================
-  // 🔳 QR CODE
-  // ===============================
-  const qrCode = await this.qrService.generateQr({
-    registrationId: reg._id.toString(),
-    registrationNumber: reg.registrationNumber!,
-    eventId: event._id.toString(),
-  });
+    // 🔳 QR CODE
+    const qrCode = await this.qrService.generateQr({
+      registrationId: reg._id.toString(),
+      registrationNumber: reg.registrationNumber!,
+      eventId: event._id.toString(),
+    });
 
-  // ===============================
-  // 💰 READ STORED VALUES (NO MATH)
-  // ===============================
-  const {
-    ticketName,
-    basePricePerTicket,
-    quantity,
-    gstRate,
-    gstAmount,
-    totalAmount,
-  } = reg;
+    // 💰 READ STORED VALUES (NO MATH)
+    const {
+      ticketName,
+      basePricePerTicket,
+      quantity,
+      gstRate,
+      gstAmount,
+      totalAmount,
+      platformFee,
+      platformPercent,
+      otherAttendees,
+      subTicketName,
+    } = reg as any;
 
-  if (
-    basePricePerTicket == null ||
-    quantity == null ||
-    gstRate == null ||
-    gstAmount == null ||
-    totalAmount == null
-  ) {
-    throw new BadRequestException(
-      'Invoice data missing in registration',
-    );
-  }
+    if (
+      basePricePerTicket == null ||
+      quantity == null ||
+      gstRate == null ||
+      gstAmount == null ||
+      totalAmount == null
+    ) {
+      throw new BadRequestException('Invoice data missing in registration');
+    }
 
-  // ===============================
-  // 📄 PDF (DISPLAY ONLY)
-  // ===============================
-  const pdfBuffer =
-    await this.pdfService.generateTicketPdfBuffer({
+    const pdfBuffer = await this.pdfService.generateTicketPdfBuffer({
       userName: reg.userName,
       eventTitle: event.title,
       venue: event.location,
@@ -97,41 +90,35 @@ async generateAndSendTicket(reg: Registration) {
       registrationNumber: reg.registrationNumber!,
 
       ticketName,
+      subTicketName: subTicketName || undefined,
       basePricePerTicket,
       quantity,
       gstRate,
       gstAmount,
       totalAmount,
-
+      platformFee,
+      platformPercent,
       qrCode,
+      otherAttendees: otherAttendees || [],
     });
 
-  // ===============================
-  // 📧 EMAIL (DATA ONLY)
-  // ===============================
-  await this.emailService.sendTicketEmail({
-    to: reg.userEmail,
-    eventName: event.title,
-    userName: reg.userName,
-    ticketType: ticketName,
-    registrationNumber: reg.registrationNumber!,
-    eventDate: event.startDate.toDateString(),
-    eventTime: `${event.startTime} - ${event.endTime}`,
-    eventLocation: event.location,
-      quantity: reg.quantity || 1,   // ✅ here is correct
+    await this.emailService.sendTicketEmail({
+      to: reg.userEmail,
+      eventName: event.title,
+      userName: reg.userName,
+      ticketType: ticketName,
+      registrationNumber: reg.registrationNumber!,
+      eventDate: event.startDate.toDateString(),
+      eventTime: `${event.startTime} - ${event.endTime}`,
+      eventLocation: event.location,
+      quantity: reg.quantity || 1,
+      pdfBuffer,
+    });
 
-    pdfBuffer,
-  });
-
-  // ===============================
-  // ✅ MARK SENT
-  // ===============================
-  await this.registrationModel.findByIdAndUpdate(reg._id, {
-    ticketSent: true,
-  });
-}
-
-
+    await this.registrationModel.findByIdAndUpdate(reg._id, {
+      ticketSent: true,
+    });
+  }
 
   // =====================================================
   // 🎫 GET TICKET (DOWNLOAD PAGE)
@@ -206,9 +193,9 @@ async generateAndSendTicket(reg: Registration) {
       );
     }
 
-const event = await this.eventModel.findById(
-  reg.eventId,
-) as EventDocument | null;
+    const event = (await this.eventModel.findById(
+      reg.eventId,
+    )) as EventDocument | null;
 
     if (!event) {
       throw new BadRequestException('Event not found');
@@ -220,41 +207,53 @@ const event = await this.eventModel.findById(
       eventId: event._id.toString(),
     });
 
-   // inside generateAndSendTicket()
+    const basePricePerTicket =
+      (reg as any).basePricePerTicket ?? reg.ticketPrice;
+    const quantity = reg.quantity ?? 1;
 
-const basePricePerTicket = reg.ticketPrice; // base price (without GST)
-const quantity = reg.quantity ?? 1;
+    const ticket = event.tickets.find(
+      (t: any) => t.name === reg.ticketName,
+    );
 
-// 🔥 GST is already stored in EVENT ticket, so read it
-const ticket = event.tickets.find(
-  (t: any) => t.name === reg.ticketName,
-);
+    const gstRate = (reg as any).gstRate ?? ticket?.gst ?? 0;
+    const baseTotal = basePricePerTicket * quantity;
+    const gstAmount =
+      (reg as any).gstAmount ??
+      Math.round((baseTotal * gstRate) / 100);
 
-const gstRate = ticket?.gst ?? 0;
-const baseTotal = basePricePerTicket * quantity;
-const gstAmount = Math.round((baseTotal * gstRate) / 100);
-const totalAmount = baseTotal + gstAmount;
+    const platformPercent =
+      (reg as any).platformPercent ??
+      (event.paymentSettings?.collectPaymentCharges
+        ? event.paymentSettings.platformFeePercent ?? 0
+        : 0);
 
-const pdfBuffer =
-  await this.pdfService.generateTicketPdfBuffer({
-    userName: reg.userName,
-    eventTitle: event.title,
-    venue: event.location,
-    eventDate: event.startDate,
-    registrationNumber: reg.registrationNumber!,
+    const platformFee =
+      (reg as any).platformFee ??
+      Math.round(((baseTotal + gstAmount) * platformPercent) / 100);
 
-    ticketName: reg.ticketName,
-    basePricePerTicket,
-    quantity,
-    gstRate,
-    gstAmount,
-    totalAmount,
+    const totalAmount =
+      reg.totalAmount ?? baseTotal + gstAmount + platformFee;
+const pdfBuffer = await this.pdfService.generateTicketPdfBuffer({
+  userName: reg.userName,
+  eventTitle: event.title,
+  venue: event.location,
+  eventDate: event.startDate,
+  registrationNumber: reg.registrationNumber!,
 
-    qrCode,
-  });
+  ticketName: reg.ticketName,
+  subTicketName: (reg as any).subTicketName || undefined,
+  basePricePerTicket,
+  quantity,
+  gstRate,
+  gstAmount,
+  totalAmount,
+  platformFee,
+  platformPercent,
+  qrCode,
+  otherAttendees: (reg as any).otherAttendees || [],
+});
 
-
-    const html = ticketConfirmationTemplate({
+const html = ticketConfirmationTemplate({
   userName: reg.userName,
   eventTitle: event.title,
   eventDate: event.startDate.toDateString(),
@@ -262,27 +261,38 @@ const pdfBuffer =
   ticketName: reg.ticketName,
   registrationNumber: reg.registrationNumber!,
   quantity: reg.quantity ?? 1,
-  totalAmount: reg.totalAmount!,
+  totalAmount,
 });
 
+// use the same helper as generateAndSendTicket
+await this.emailService.sendTicketEmail({
+  to: reg.userEmail,
+  eventName: event.title,
+  userName: reg.userName,
+  ticketType: reg.ticketName,
+  registrationNumber: reg.registrationNumber!,
+  eventDate: event.startDate.toDateString(),
+  eventTime: `${event.startTime} - ${event.endTime}`,
+  eventLocation: event.location,
+  quantity: reg.quantity ?? 1,
+  pdfBuffer,
+});
 
-    
+return {
+  success: true,
+  message: 'Ticket email resent successfully',
+};
 
-    return {
-      success: true,
-      message: 'Ticket email resent successfully',
-    };
+      }
+  async getRegistrationsByEvent(eventId: string) {
+    return this.registrationModel
+      .find({
+        eventId: new Types.ObjectId(eventId),
+        status: RegistrationStatus.COMPLETED,
+      })
+      .sort({ createdAt: -1 })
+      .lean();
   }
-async getRegistrationsByEvent(eventId: string) {
-  return this.registrationModel
-    .find({
-      eventId: new Types.ObjectId(eventId),
-      status: RegistrationStatus.COMPLETED, // ✅ ticket exists
-    })
-    .sort({ createdAt: -1 })
-    .lean();
-}
-
 
   // =====================================================
   // 🔳 QR FOR DOWNLOAD

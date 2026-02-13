@@ -1,3 +1,4 @@
+// src/tickets/pdf.service.ts
 import { Injectable } from '@nestjs/common';
 import PDFDocument from 'pdfkit';
 
@@ -17,6 +18,9 @@ export class PdfService {
     gstAmount: number;
     totalAmount: number;
     qrCode: string;
+    platformFee?: number;
+    platformPercent?: number;
+    otherAttendees?: { name: string; email: string; phone: string }[];
   }): Promise<Buffer> {
     return new Promise((resolve, reject) => {
       const doc = new PDFDocument({ size: 'A4', margin: 0 });
@@ -36,7 +40,6 @@ export class PdfService {
 
       // Decorative circles
       doc.circle(pageWidth - 50, 50, 60).fillOpacity(0.1).fill('#FFFFFF');
-
       doc.circle(50, 100, 40).fillOpacity(0.1).fill('#FFFFFF');
 
       // ===============================
@@ -95,7 +98,6 @@ export class PdfService {
       const rightColX = pageWidth / 2 + 10;
       const colWidth = pageWidth / 2 - 70;
 
-      // Helper function to draw detail box
       const drawDetailBox = (
         x: number,
         y: number,
@@ -122,11 +124,47 @@ export class PdfService {
           });
       };
 
-      // Left Column
+      // Left Column - main attendee + other attendees + date
       drawDetailBox(leftColX, detailsY, 'Attendee', data.userName);
+
+      let dateBoxY = detailsY + 68;
+
+      if (data.otherAttendees && data.otherAttendees.length > 0) {
+        const othersY = detailsY + 68;
+
+        const othersText = data.otherAttendees
+          .map(
+            (att, idx) =>
+              `${idx + 1}) ${att.name} (${att.email}, ${att.phone})`,
+          )
+          .join('\n');
+
+        doc
+          .roundedRect(leftColX, othersY, colWidth, 68, 8)
+          .fillAndStroke('#FFFFFF', '#E5E7EB');
+
+        doc
+          .fontSize(8)
+          .fillColor('#9CA3AF')
+          .font('Helvetica-Bold')
+          .text('OTHER ATTENDEES', leftColX + 15, othersY + 10);
+
+        doc
+          .fontSize(8)
+          .fillColor('#1F2937')
+          .font('Helvetica')
+          .text(othersText, leftColX + 15, othersY + 26, {
+            width: colWidth - 30,
+            lineGap: 2,
+            ellipsis: true,
+          });
+
+        dateBoxY = othersY + 76;
+      }
+
       drawDetailBox(
         leftColX,
-        detailsY + 68,
+        dateBoxY,
         'Date',
         data.eventDate
           ? data.eventDate.toLocaleDateString('en-IN', {
@@ -141,7 +179,6 @@ export class PdfService {
       // Right Column
       drawDetailBox(rightColX, detailsY, 'Venue', data.venue);
 
-      // Ticket Type - Show main + sub-ticket
       const ticketDisplay = data.subTicketName
         ? `${data.ticketName} + ${data.subTicketName}`
         : data.ticketName;
@@ -152,9 +189,7 @@ export class PdfService {
       // PAYMENT DETAILS SECTION
       // ===============================
       const paymentY = detailsY + 148;
-
-      // Dynamic height based on whether sub-ticket exists
-      const paymentHeight = data.subTicketName ? 155 : 140;
+      const paymentHeight = data.subTicketName ? 170 : 155;
 
       doc
         .roundedRect(50, paymentY, pageWidth - 100, paymentHeight, 10)
@@ -166,9 +201,13 @@ export class PdfService {
         .font('Helvetica-Bold')
         .text('PAYMENT DETAILS', 70, paymentY + 12);
 
-      // Payment table
       const tableY = paymentY + 32;
-      const drawRow = (label: string, value: string, y: number, bold = false) => {
+      const drawRow = (
+        label: string,
+        value: string,
+        y: number,
+        bold = false,
+      ) => {
         doc
           .fontSize(9)
           .fillColor('#4B5563')
@@ -182,18 +221,15 @@ export class PdfService {
           .text(value, pageWidth - 170, y, { width: 100, align: 'right' });
       };
 
-      // Show main ticket
       drawRow('Ticket', data.ticketName || 'N/A', tableY);
 
       let currentY = tableY + 18;
 
-      // Show sub-ticket if exists
       if (data.subTicketName) {
         drawRow('Option', data.subTicketName, currentY);
         currentY += 18;
       }
 
-      // Base price and quantity
       drawRow(
         'Base Price (per ticket)',
         `Rs ${data.basePricePerTicket?.toFixed(2) || '0.00'}`,
@@ -201,27 +237,33 @@ export class PdfService {
       );
       drawRow('Quantity', `x ${data.quantity || 1}`, currentY + 18);
 
-      // Subtotal
       const subtotal = (data.basePricePerTicket || 0) * (data.quantity || 1);
       drawRow('Subtotal', `Rs ${subtotal.toFixed(2)}`, currentY + 36);
 
-      // GST
       drawRow(
         `GST (${data.gstRate || 0}%)`,
         `Rs ${data.gstAmount?.toFixed(2) || '0.00'}`,
         currentY + 54,
       );
 
-      // Total line
+      const platformPercent = data.platformPercent ?? 0;
+      const platformFee = data.platformFee ?? 0;
+
+      drawRow(
+        `Platform Fee (${platformPercent}%)`,
+        `Rs ${platformFee.toFixed(2)}`,
+        currentY + 72,
+      );
+
       doc
-        .moveTo(70, currentY + 74)
-        .lineTo(pageWidth - 70, currentY + 74)
+        .moveTo(70, currentY + 92)
+        .lineTo(pageWidth - 70, currentY + 92)
         .stroke('#C7D2FE');
 
       drawRow(
         'TOTAL PAID',
         `Rs ${data.totalAmount?.toFixed(2) || '0.00'}`,
-        currentY + 82,
+        currentY + 100,
         true,
       );
 
@@ -243,7 +285,6 @@ export class PdfService {
           width: pageWidth - 100,
         });
 
-      // QR Code
       try {
         const qrBase64 = data.qrCode.split(',')[1];
         const qrBuffer = Buffer.from(qrBase64, 'base64');
@@ -252,8 +293,7 @@ export class PdfService {
           fit: [130, 130],
           align: 'center',
         });
-      } catch (error) {
-        // Fallback if QR code fails
+      } catch {
         doc
           .fontSize(10)
           .fillColor('#EF4444')
@@ -264,13 +304,11 @@ export class PdfService {
       }
 
       // ===============================
-      // FOOTER INSTRUCTIONS
+      // FOOTER
       // ===============================
       const footerY = qrY + 180;
 
-      doc
-        .rect(0, footerY, pageWidth, 75)
-        .fillAndStroke('#F3F4F6', '#F3F4F6');
+      doc.rect(0, footerY, pageWidth, 75).fillAndStroke('#F3F4F6', '#F3F4F6');
 
       doc
         .fontSize(9)
@@ -286,28 +324,25 @@ export class PdfService {
         .fillColor('#6B7280')
         .font('Helvetica')
         .text(
-          
-            '- This ticket is non-transferable and valid for one entry only',
+          '- This ticket is non-transferable and valid for one entry only',
           50,
           footerY + 26,
           { align: 'center', width: pageWidth - 100, lineGap: 2 },
         );
 
-      // ===============================
-      // WATERMARK
-      // ===============================
       doc
         .fontSize(7)
         .fillColor('#D1D5DB')
         .font('Helvetica')
         .text(
-          `Generated on ${new Date().toLocaleString('en-IN')} | Powered by Eventz`,
+          `Generated on ${new Date().toLocaleString(
+            'en-IN',
+          )} | Powered by Eventz`,
           0,
           footerY + 60,
           { align: 'center', width: pageWidth },
         );
 
-      // Finish PDF
       doc.end();
     });
   }
