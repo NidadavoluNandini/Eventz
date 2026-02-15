@@ -22,6 +22,10 @@ import { InvoiceService } from '../payments/invoice.service';
 import { OtherAttendeesDto } from './dto/other-attendees.dto';
 
 type ExtraUserInfoDto = {
+  firstName?:string;
+  lastName?:string;
+  userEmail?:string;
+  userPhone?:string;
   linkedin?: string;
   gender?: string;
   altPhone?: string;
@@ -32,13 +36,13 @@ type ExtraUserInfoDto = {
   postalCode?: string;
   organization?: string;
   designation?: string;
-  collegeId?: string;
-  employeeId?: string;
+
   tShirtSize?: string;
   emergencyContactName?: string;
   emergencyContactPhone?: string;
 };
-const PLATFORM_FEE_PERCENT = Number(process.env.PLATFORM_FEE_PERCENT ?? 0);
+const PLATFORM_FEE_PERCENT = Number(process.env.PLATFORM_FEE_PERCENT || 0 );
+console.log("ENV PLATFORM_FEE_PERCENT =", process.env.PLATFORM_FEE_PERCENT);
 
 @Injectable()
 export class RegistrationsService {
@@ -77,34 +81,35 @@ async initiateRegistration(
   if (event.status !== 'PUBLISHED') {
     throw new BadRequestException('Event not open for registration');
   }
+dto.userName = `${dto.firstName ?? ''} ${dto.lastName ?? ''}`.trim();
 
   // 1) Enforce mandatory attendee fields from event.attendeeFieldConfig.optional
-  const optConfig = event.attendeeFieldConfig?.optional || {};
+  const requiredConfig = event.attendeeFieldConfig?.required || {};
   const missing: string[] = [];
 
-  const requiredChecks: Array<[keyof ExtraUserInfoDto, string]> = [
-    ['linkedin', 'LinkedIn URL'],
-    ['gender', 'Gender'],
-    ['altPhone', 'Alternate phone'],
-    ['altEmail', 'Alternate email'],
-    ['dob', 'Date of birth'],
-    ['country', 'Country'],
-    ['state', 'State'],
-    ['postalCode', 'Postal code'],
-    ['organization', 'Organization'],
-    ['designation', 'Designation'],
-    ['collegeId', 'College ID'],
-    ['employeeId', 'Employee ID'],
-    ['tShirtSize', 'T-shirt size'],
-    ['emergencyContactName', 'Emergency contact name'],
-    ['emergencyContactPhone', 'Emergency contact phone'],
-  ];
+const requiredChecks: Array<[string, string]> = [
+  ['firstName', 'First name'],
+  ['lastName', 'Last name'],
+  ['userEmail', 'Email'],
+  ['userPhone', 'Phone'],
 
-  for (const [fieldKey, label] of requiredChecks) {
-    if (optConfig[fieldKey] && !dto[fieldKey]) {
-      missing.push(label);
-    }
-  }
+  ['linkedin', 'LinkedIn URL'],
+  ['gender', 'Gender'],
+  ['altPhone', 'Alternate phone'],
+  ['altEmail', 'Alternate email'],
+  ['dob', 'Date of birth'],
+  ['country', 'Country'],
+  ['state', 'State'],
+  ['postalCode', 'Postal code'],
+  ['organization', 'Organization'],
+  ['designation', 'Designation'],
+
+  ['tShirtSize', 'T-shirt size'],
+  ['emergencyContactName', 'Emergency contact name'],
+  ['emergencyContactPhone', 'Emergency contact phone'],
+];
+
+ 
 
   if (missing.length > 0) {
     throw new BadRequestException(
@@ -170,25 +175,39 @@ async initiateRegistration(
   // GST ONLY on base
   const gstAmount = Math.round((baseTotal * (gstRate || 0)) / 100);
 
-// decide if user pays platform fee based on toggle
-const collectFromUser =
-  event.paymentSettings?.collectPaymentCharges ?? false;
+// =====================================================
+// PLATFORM FEE CALCULATION (SAFE + ENV BASED)
+// =====================================================
 
-// global percent from env
-const platformPercent =
-  PLATFORM_FEE_PERCENT > 0 ? PLATFORM_FEE_PERCENT : 0;
-
-// raw fee on (base + GST)
-const basePlusGstTotal = baseTotal + gstAmount;
-const platformFeeRaw = Math.round(
-  (basePlusGstTotal * platformPercent) / 100,
+// organizer toggle (default = false)
+const collectFromUser = Boolean(
+  event.paymentSettings &&
+  event.paymentSettings.collectPaymentCharges === true
 );
 
-// only charge user if toggle ON
-const platformFee = collectFromUser ? platformFeeRaw : 0;
+// platform percent from ENV
+const platformPercent = Number(process.env.PLATFORM_FEE_PERCENT ?? 0);
 
-// Final amount: base + GST + platformFee (if charged)
+// DEBUG (you can remove later)
+console.log('Platform fee config →', {
+  collectFromUser,
+  platformPercent,
+});
+
+// calculate platform fee ONLY if enabled
+let platformFee = 0;
+
+if (collectFromUser && platformPercent > 0) {
+  const basePlusGstTotal = baseTotal + gstAmount;
+
+  platformFee = Math.round(
+    (basePlusGstTotal * platformPercent) / 100,
+  );
+}
+
+// final payable amount
 const finalAmount = baseTotal + gstAmount + platformFee;
+
 
 
   // 3) Prevent duplicate completed registration
@@ -220,8 +239,7 @@ const finalAmount = baseTotal + gstAmount + platformFee;
     postalCode,
     organization,
     designation,
-    collegeId,
-    employeeId,
+
     tShirtSize,
     emergencyContactName,
     emergencyContactPhone,
@@ -259,9 +277,6 @@ const finalAmount = baseTotal + gstAmount + platformFee;
       organization ?? existingPending.organization;
     existingPending.designation =
       designation ?? existingPending.designation;
-    existingPending.collegeId = collegeId ?? existingPending.collegeId;
-    existingPending.employeeId =
-      employeeId ?? existingPending.employeeId;
     existingPending.tShirtSize =
       tShirtSize ?? existingPending.tShirtSize;
     existingPending.emergencyContactName =
@@ -305,8 +320,7 @@ const finalAmount = baseTotal + gstAmount + platformFee;
     postalCode,
     organization,
     designation,
-    collegeId,
-    employeeId,
+
     tShirtSize,
     emergencyContactName,
     emergencyContactPhone,
@@ -329,6 +343,7 @@ const finalAmount = baseTotal + gstAmount + platformFee;
     otp: otpNumber,
     otpExpiresAt,
   });
+console.log("PLATFORM %:", PLATFORM_FEE_PERCENT);
 
   await this.sendOtp(dto.userEmail, dto.userPhone, otp);
 

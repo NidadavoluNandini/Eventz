@@ -12,7 +12,7 @@ type OtherAttendeesConfig = {
 };
 
 type FormState = {
-  otherAttendeesConfig?: OtherAttendeesConfig;
+  otherAttendeesConfig: OtherAttendeesConfig;
 };
 
 type PaymentStepProps = {

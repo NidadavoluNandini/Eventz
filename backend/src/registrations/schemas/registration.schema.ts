@@ -63,11 +63,7 @@ export class Registration extends Document {
   @Prop()
   designation?: string;
 
-  @Prop()
-  collegeId?: string;
 
-  @Prop()
-  employeeId?: string;
 
   @Prop()
   tShirtSize?: string;
@@ -106,8 +102,9 @@ export class Registration extends Document {
   @Prop({ required: true })
   ticketPrice: number; // per-ticket final or legacy total
 
-  @Prop({ default: 0 })
-  platformFee: number; // NEW: total platform fee for this registration
+ //NEW: total platform fee for this registration
+@Prop({ default: 0 })
+platformFee: number;
 
   // ===============================
   // OTP

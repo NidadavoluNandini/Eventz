@@ -9,7 +9,8 @@ type OtherAttendeePayload = {
 // PUBLIC – initiate registration (send OTP)
 export const initiateRegistration = (data: {
   eventId: string;
-  userName: string;
+  firstName: string;
+  lastName:string;
   userEmail: string;
   userPhone: string;
   ticketName: string;

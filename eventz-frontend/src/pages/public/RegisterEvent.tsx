@@ -34,7 +34,8 @@ export default function RegisterEvent() {
 
   // base required + all possible optional fields
   const [form, setForm] = useState({
-    userName: "",
+    firstName: "",
+    lastName: "",
     userEmail: "",
     userPhone: "",
     linkedin: "",
@@ -56,7 +57,8 @@ export default function RegisterEvent() {
 
   const [errors, setErrors] = useState<Record<string, boolean>>({
     ticketName: false,
-    userName: false,
+    firstName: false,
+    lastName: false,
     userEmail: false,
     userPhone: false,
     linkedin: false,
@@ -137,37 +139,59 @@ export default function RegisterEvent() {
   // GST per ticket
   const parentGSTAmount = calculateGST(parentPrice, parentGSTPercent);
   const subGSTAmount = calculateGST(subPrice, subGSTPercent);
+  
+// =====================================================
+// PLATFORM FEE (FROM ENV + ORGANIZER TOGGLE)
+// =====================================================
 
-  // platform fee percent from event settings
-  const platformPercent = event?.paymentSettings?.collectPaymentCharges
-    ? event.paymentSettings.platformFeePercent ?? 0
-    : 0;
+// Organizer toggle
+const collectFromUser =
+  event?.paymentSettings?.collectPaymentCharges === true;
 
-  // platform fee per ticket base + GST percent
-  const parentPlatformFeePerTicket = Math.round(
-    (parentPrice + parentGSTAmount) * (platformPercent / 100)
+// Percent from VITE env (IMPORTANT: use import.meta.env in Vite)
+const platformPercent = Number(
+  import.meta.env.VITE_PLATFORM_FEE_PERCENT ?? 0
+);
+
+// =====================================================
+
+// =====================================================
+// FINAL PRICE CALCULATION (MATCH BACKEND)
+// =====================================================
+
+// BASE (per ticket)
+const basePricePerTicket = parentPrice + subPrice;
+
+// GST per ticket
+const gstPerTicket = calculateGST(basePricePerTicket, parentGSTPercent);
+
+// totals before platform fee
+const baseTotal = basePricePerTicket * quantity;
+const gstAmount = gstPerTicket * quantity;
+
+// platform fee ONLY if organizer enabled
+let platformFee = 0;
+
+if (collectFromUser && platformPercent > 0) {
+  const basePlusGst = baseTotal + gstAmount;
+
+  platformFee = Math.round(
+    (basePlusGst * platformPercent) / 100
   );
-  const subPlatformFeePerTicket = Math.round(
-    (subPrice + subGSTAmount) * (platformPercent / 100)
-  );
+}
 
-  // per-ticket totals
-  const totalBasePricePerTicket = parentPrice + subPrice;
-  const totalGSTPerTicket = parentGSTAmount + subGSTAmount;
-  const totalPlatformFeePerTicket =
-    parentPlatformFeePerTicket + subPlatformFeePerTicket;
-  const totalAmountPerTicket =
-    totalBasePricePerTicket + totalGSTPerTicket + totalPlatformFeePerTicket;
+// FINAL TOTAL (same as backend)
+const totalAmount = baseTotal + gstAmount + platformFee;
 
-  // multiplied by quantity
-  const totalBasePrice = totalBasePricePerTicket * quantity;
-  const totalGST = totalGSTPerTicket * quantity;
-  const totalPlatformFee = totalPlatformFeePerTicket * quantity;
-  const totalAmount = totalAmountPerTicket * quantity;
+// values used in summary UI
+const totalBasePrice = baseTotal;
+const totalGST = gstAmount;
+const totalPlatformFee = platformFee;
 
   const themeColor = event?.themeColor?.value || "#0F172A";
   const attendeeConfig = event?.attendeeFieldConfig;
   const optionalConfig = attendeeConfig?.optional || {};
+  const requiredConfig = attendeeConfig?.required || {};
 
   // NEW: sync otherAttendees with quantity and organizer preference
   useEffect(() => {
@@ -228,7 +252,8 @@ export default function RegisterEvent() {
 
     const newErrors: Record<string, boolean> = {
       ticketName: false,
-      userName: !form.userName.trim(),
+      firstName: !form.firstName.trim(),
+      lastName: !form.lastName.trim(),
       userEmail: !form.userEmail.trim(),
       userPhone: !form.userPhone.trim(),
       linkedin: false,
@@ -249,17 +274,29 @@ export default function RegisterEvent() {
     };
 
     // treat enabled optional fields as required
-    Object.entries(optionalConfig).forEach(([key, enabled]) => {
-      if (!enabled) return;
-      const v = (form as any)[key];
-      if (!v || !String(v).trim()) {
-        newErrors[key] = true;
-      }
-    });
+    
+// validate ONLY required fields from organizer config
+const fieldMap: Record<string, string> = {
+  email: "userEmail",
+  phone: "userPhone",
+};
+
+Object.entries(requiredConfig).forEach(([key, isRequired]) => {
+  if (!isRequired) return;
+
+  const formKey = fieldMap[key] || key;
+  const value = (form as any)[formKey];
+
+  if (!value || !String(value).trim()) {
+    newErrors[formKey] = true;
+  }
+});
+
 
     const hasAnyError = Object.values(newErrors).some((b) => b);
     if (hasAnyError) {
       setErrors((prev) => ({ ...prev, ...newErrors }));
+      console.log("Form errors:", newErrors);
       showModal("Please fill all required fields");
       document
         .getElementById("user-details")
@@ -705,12 +742,12 @@ export default function RegisterEvent() {
                   </div>
                 </div>
 
-                <div className="space-y-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {/* Full Name */}
                   <div>
                     <label className="block text-xs font-semibold text-gray-700 mb-1">
-                      Full Name
-                      {errors.userName && (
+                      First Name
+                      {errors.firstName && (
                         <span className="text-red-600 text-xs ml-2">
                           Required
                         </span>
@@ -718,21 +755,47 @@ export default function RegisterEvent() {
                     </label>
                     <input
                       type="text"
-                      placeholder="Enter your full name"
+                      placeholder="Enter your first name"
                       className={`w-full border-2 rounded-lg p-2.5 text-sm focus:outline-none transition ${
-                        errors.userName
+                        errors.firstName
                           ? "border-red-500 ring-2 ring-red-200"
                           : "border-gray-200 focus:border-indigo-500"
                       }`}
-                      value={form.userName}
+                      value={form.firstName}
                       onChange={(e) => {
-                        setForm({ ...form, userName: e.target.value });
-                        setErrors((prev) => ({ ...prev, userName: false }));
+                        setForm({ ...form, firstName: e.target.value });
+                        setErrors((prev) => ({ ...prev, firstName: false }));
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 mb-1">
+                      Last Name
+                      {errors.lastName && (
+                        <span className="text-red-600 text-xs ml-2">
+                          Required
+                        </span>
+                      )}
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Enter your last name"
+                      className={`w-full border-2 rounded-lg p-2.5 text-sm focus:outline-none transition ${
+                        errors.lastName
+                          ? "border-red-500 ring-2 ring-red-200"
+                          : "border-gray-200 focus:border-indigo-500"
+                      }`}
+                      value={form.lastName}
+                      onChange={(e) => {
+                        setForm({ ...form, lastName: e.target.value });
+                        setErrors((prev) => ({ ...prev, lastName: false }));
                       }}
                     />
                   </div>
 
-                  {/* Email */}
+
+                  
+                 {/*Email */}
                   <div>
                     <label className="block text-xs font-semibold text-gray-700 mb-1">
                       Email Address

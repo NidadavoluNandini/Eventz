@@ -75,36 +75,36 @@ export default function Events() {
     }
   };
 
-  const handleTogglePublish = async (event: any) => {
-    if (event.status === "PUBLISHED" && event.registrationOpen) {
-      await handleAction(
-        () => unpublishEvent(event._id),
-        event._id,
-        "Event unpublished."
-      );
-    } else if (event.status === "DRAFT" || event.status === "UNPUBLISHED") {
-      await handleAction(
-        () => publishEvent(event._id),
-        event._id,
-        "Event published."
-      );
-    }
-  };
 
-  async function handleEdit(event: any) {
-    try {
-      await updateEvent(event._id, { status: "EDITING" });
-
-    navigate(`/organizer/events/edit/${event._id}`, {
-      state: { editMode: true, eventData: event },
-    });
-    } catch (e: any) {
-      console.error(e);
-      const msg =
-        e?.response?.data?.message || "Failed to open event for editing.";
-      showToast("error", msg);
-    }
+const handleTogglePublish = async (event: any) => {
+  if (event.status === "PUBLISHED" && event.registrationOpen) {
+    await handleAction(
+      () => unpublishEvent(event._id),
+      event._id,
+      "Event unpublished."
+    );
+  } else if (event.status === "DRAFT" || event.status === "UNPUBLISHED") {
+    await handleAction(
+      () => publishEvent(event._id),
+      event._id,
+      "Event published."
+    );
   }
+};
+
+async function handleEdit(event: any) {
+  try {
+    // optional: mark as EDITING, but failure should not block navigation
+    await updateEvent(event._id, { status: "EDITING" });
+  } catch (e: any) {
+    console.error("Failed to set EDITING (continuing anyway)", e);
+    // no toast here, or use a soft one if you want
+  }
+
+  navigate(`/organizer/events/edit/${event._id}`, {
+    state: { editMode: true, eventData: event },
+  });
+}
 
   const confirmDelete = (event: any) => {
     setDeleteTarget({ id: event._id, title: event.title });
@@ -239,13 +239,11 @@ export default function Events() {
       ) : (
         <div className="space-y-3">
           {events.map((e) => {
-            const isPublished = e.status === "PUBLISHED" && e.registrationOpen;
+           
             const isCompleted = e.status === "COMPLETED";
-            const canToggle =
-              !isCompleted &&
-              (e.status === "DRAFT" ||
-                e.status === "UNPUBLISHED" ||
-                (e.status === "PUBLISHED" && e.registrationOpen));
+            const isPublished = e.status === "PUBLISHED" && e.registrationOpen;
+              const canToggle = !isCompleted; 
+
             const isFlashing = successFlash === e._id;
 
             return (

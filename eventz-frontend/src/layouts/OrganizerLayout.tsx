@@ -4,7 +4,6 @@ import { Link } from "react-router-dom";
 export default function OrganizerLayout({ children }: PropsWithChildren) {
   return (
     <div className="min-h-screen flex">
-
       <aside className="w-64 bg-gray-900 text-white p-4">
         <h2 className="text-xl font-bold mb-4">Organizer</h2>
         <nav className="space-y-2">

@@ -43,6 +43,8 @@ async function bootstrap() {
   await app.listen(port);
 
   console.log(`🚀 Backend running on port ${port}`);
+  console.log("ENV PLATFORM_FEE_PERCENT =", process.env.PLATFORM_FEE_PERCENT);
+
 }
 
 bootstrap();

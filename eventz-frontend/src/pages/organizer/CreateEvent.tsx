@@ -36,8 +36,17 @@ type Ticket = {
   subTickets: SubTicket[];
   isExpanded: boolean;
 };
+  type OtherAttendeesConfig = {
+  enabled: boolean;
+  requiredFields: string[];
+};
 
+type EventFormState = {
+  otherAttendeesConfig: OtherAttendeesConfig;
+};
 export default function CreateEvent() {
+
+
   const navigate = useNavigate();
   const locationHook = useLocation() as any;
   const { id } = useParams(); // /organizer/events/edit/:id
@@ -56,6 +65,12 @@ export default function CreateEvent() {
   );
   const [returnToReviewAfterEdit, setReturnToReviewAfterEdit] =
     useState<FormStep | null>(null);
+const [scheduleForm, setScheduleForm] = useState({
+  startDate: "",
+  endDate: "",
+  startTime: "",
+  endTime: "",
+});
 
   const [toast, setToast] = useState<{
     type: "success" | "error";
@@ -165,12 +180,13 @@ export default function CreateEvent() {
   const [uploadingBanner, setUploadingBanner] = useState(false);
   const [uploadingGallery, setUploadingGallery] = useState(false);
 
-  const [form, setForm] = useState<any>({
-    otherAttendeesConfig: {
-      enabled: false,
-      requiredFields: ["name", "email", "phone"],
-    },
-  });
+const [form, setForm] = useState<EventFormState>({
+  otherAttendeesConfig: {
+    enabled: false,
+    requiredFields: ["name", "email", "phone"],
+  },
+});
+
 
 const scrollTop = () => {
   formScrollRef.current?.scrollTo({
@@ -196,17 +212,65 @@ useEffect(() => {
 
   const attendeeCfg = existingEvent.attendeeFieldConfig || {};
 
-  // optional fields
   setUserFieldConfig((prev) => ({
     ...prev,
     ...(attendeeCfg.optional || {}),
   }));
 
-  // required fields
   setUserFieldRequiredConfig((prev) => ({
     ...prev,
     ...(attendeeCfg.required || {}),
   }));
+
+
+  /* ---------------- SCHEDULE (🔥 YOUR MISSING PART) ---------------- */
+
+setStartDate(
+  existingEvent.startDate
+    ? existingEvent.startDate.slice(0, 10)
+    : ""
+);
+
+setEndDate(
+  existingEvent.endDate
+    ? existingEvent.endDate.slice(0, 10)
+    : ""
+);
+
+setStartTime(existingEvent.startTime || "");
+setEndTime(existingEvent.endTime || "");
+
+
+
+  /* ---------------- PAYMENT SETTINGS (🔥 MISSING) ---------------- */
+
+setPaymentSettings({
+  collectPaymentCharges:
+    existingEvent.paymentSettings?.collectPaymentCharges ?? false,
+  platformFeePercent: Number(
+    import.meta.env.VITE_PLATFORM_FEE_PERCENT ?? 0
+  ),
+});
+
+
+
+  /* ---------------- OTHER ATTENDEES CONFIG (🔥 MISSING) ---------------- */
+
+setForm((prev: EventFormState) => ({
+  ...prev,
+  otherAttendeesConfig: {
+    enabled:
+      existingEvent.otherAttendeesConfig?.enabled ?? false,
+    requiredFields:
+      existingEvent.otherAttendeesConfig?.requiredFields ?? [
+        "name",
+        "email",
+        "phone",
+      ],
+  },
+}));
+
+
 
   /* ---------------- TICKETS ---------------- */
 
@@ -217,7 +281,10 @@ useEffect(() => {
       price: t.price || 0,
       quantity: t.quantity || 0,
       gst: t.gst || 0,
-      finalPrice: t.finalPrice || t.price || 0,
+finalPrice:
+  t.price && t.gst
+    ? Math.round(t.price + (t.price * t.gst) / 100)
+    : t.price || 0,
       isExpanded: false,
       subTickets: (t.subTickets || []).map((s: any) => ({
         id: `sub-${Date.now()}-${Math.random()}`,
@@ -231,6 +298,7 @@ useEffect(() => {
 
     setTickets(mappedTickets);
   }
+
 }, [existingEvent]);
 
 
@@ -777,7 +845,7 @@ const handlePrimaryClick = async () => {
   await handleNext();
 };
   return (
-<div className="min-h-screen bg-gray-50 px-3 py-3 flex flex-col">
+<div className="bg-gray-50 px-3 py-3 flex flex-col flex-1 min-h-0">
 
       {toast && (
         <div
@@ -813,8 +881,9 @@ const handlePrimaryClick = async () => {
 
 <div
   ref={formScrollRef}
-  className="bg-white rounded-xl shadow border border-gray-200 p-4 overflow-y-auto max-h-[calc(100vh-220px)]"
+  className="bg-white rounded-xl shadow border p-4 flex-1 overflow-y-auto min-h-0 h-full"
 >
+
 
 
 
