@@ -8,6 +8,7 @@ import {
   Registration,
   RegistrationSchema,
 } from './schemas/registration.schema';
+
 import { Event, EventSchema } from '../events/schemas/event.schema';
 
 import { EmailService } from '../notifications/email.service';
@@ -18,6 +19,7 @@ import {
   Invoice,
   InvoiceSchema,
 } from '../payments/schemas/invoice.schema';
+
 import {
   InvoiceCounter,
   InvoiceCounterSchema,
@@ -26,18 +28,20 @@ import {
 import { TicketsModule } from '../tickets/tickets.module';
 import { RegistrationExpiryService } from './registration-expiry.service';
 
+// ✅ FIXED IMPORT
+import { EventsModule } from '../events/events.module';
+
 @Module({
   imports: [
-    // 🔥 REGISTER ALL MODELS USED BY SERVICES IN THIS MODULE
     MongooseModule.forFeature([
       { name: Registration.name, schema: RegistrationSchema },
       { name: Event.name, schema: EventSchema },
-
-      // ✅ THIS IS WHAT WAS MISSING
       { name: Invoice.name, schema: InvoiceSchema },
       { name: InvoiceCounter.name, schema: InvoiceCounterSchema },
     ]),
+
     forwardRef(() => TicketsModule),
+    EventsModule, // ✅ now Nest can inject EventsService
   ],
   controllers: [RegistrationsController],
   providers: [
@@ -46,12 +50,7 @@ import { RegistrationExpiryService } from './registration-expiry.service';
     SmsService,
     InvoiceService,
     RegistrationExpiryService,
-
   ],
-  exports: [
-    RegistrationsService,
-   
-
-  ],
+  exports: [RegistrationsService],
 })
 export class RegistrationsModule {}

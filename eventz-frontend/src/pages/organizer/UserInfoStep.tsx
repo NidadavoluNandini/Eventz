@@ -87,12 +87,24 @@ export const UserInfoStep: React.FC<UserInfoStepProps> = ({
                   <span>{required ? "Required" : "Optional"}</span>
                   <button
                     type="button"
-                    onClick={() =>
-                      setUserFieldRequiredConfig((prev) => ({
-                        ...prev,
-                        [f.key]: !prev[f.key as keyof typeof prev],
-                      }))
-                    }
+                    onClick={() => {
+  const newRequired = !required;
+
+  // toggle required
+  setUserFieldRequiredConfig((prev) => ({
+    ...prev,
+    [f.key]: newRequired,
+  }));
+
+  // ✅ if required → automatically enable field visibility
+  if (newRequired) {
+    setUserFieldConfig((prev) => ({
+      ...prev,
+      [f.key]: true,
+    }));
+  }
+}}
+
                     className={`relative inline-flex h-5 w-9 items-center rounded-full transition ${
                       required ? "bg-indigo-600" : "bg-gray-300"
                     }`}

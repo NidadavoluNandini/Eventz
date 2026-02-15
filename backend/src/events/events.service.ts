@@ -76,26 +76,36 @@ async findAll(filters?: { status?: EventStatus; category?: string; city?: string
   }
 
   // ✅ FIND BY ID
-  async findById(id: string) {
-    const event = await this.eventModel.findById(id);
-    if (!event) {
-      throw new NotFoundException('Event not found');
-    }
+  // ✅ FIND BY ID (PUBLIC)// ✅ FIND BY ID (PUBLIC SAFE)
+async findById(id: string) {
+  const event = await this.eventModel.findById(id);
 
-    // Check if event should be auto-completed
-    const now = new Date();
-    if (
-      event.endDate < now &&
-      event.status !== EventStatus.COMPLETED &&
-      event.status !== EventStatus.DRAFT
-    ) {
-      event.status = EventStatus.COMPLETED;
-      event.registrationOpen = false;
-      await event.save();
-    }
-
-    return event;
+  if (!event) {
+    throw new NotFoundException('Event not found');
   }
+
+  const now = new Date();
+
+  // auto-complete expired
+  if (
+    event.endDate < now &&
+    event.status !== EventStatus.COMPLETED &&
+    event.status !== EventStatus.DRAFT
+  ) {
+    event.status = EventStatus.COMPLETED;
+    event.registrationOpen = false;
+    await event.save();
+  }
+
+  // PUBLIC ACCESS RULE
+  if (event.status !== EventStatus.PUBLISHED) {
+    throw new NotFoundException('Event not found');
+  }
+
+ 
+
+  return event;
+}
 
   // ✅ UPDATE EVENT
   async update(id: string, dto: UpdateEventDto) {

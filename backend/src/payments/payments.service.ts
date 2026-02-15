@@ -86,6 +86,9 @@ export class PaymentsService {
     if (!event) {
       throw new NotFoundException('Event not found');
     }
+if (event.status !== "PUBLISHED") {
+  throw new BadRequestException("Payment not allowed");
+}
 
     const quantity = registration.quantity || 1;
 

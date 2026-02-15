@@ -14,12 +14,14 @@ import {
   PaymentStatus,
 } from './schemas/registration.schema';
 import { Event } from '../events/schemas/event.schema';
+import { EventStatus } from '../events/schemas/event.schema';
 
 import { EmailService } from '../notifications/email.service';
 import { SmsService } from '../notifications/sms.service';
 import { TicketsService } from '../tickets/tickets.service';
 import { InvoiceService } from '../payments/invoice.service';
 import { OtherAttendeesDto } from './dto/other-attendees.dto';
+import { EventsService } from 'src/events/events.service';
 
 type ExtraUserInfoDto = {
   firstName?:string;
@@ -52,6 +54,7 @@ export class RegistrationsService {
 
     @InjectModel(Event.name)
     private readonly eventModel: Model<Event>,
+    private readonly eventsService: EventsService, // ✅ ADD
 
     private readonly emailService: EmailService,
     private readonly smsService: SmsService,
@@ -75,7 +78,21 @@ async initiateRegistration(
   } & ExtraUserInfoDto &
     OtherAttendeesDto,
 ) {
-  const event = await this.eventModel.findById(dto.eventId);
+  const event = await this.eventsService.findById(dto.eventId);
+
+// 🚫 REGISTRATION CLOSED
+if (!event.registrationOpen) {
+  throw new ForbiddenException(
+    'Registration is closed for this event',
+  );
+}
+
+// 🚫 EVENT ENDED
+const now = new Date();
+if (event.endDate < now) {
+  throw new ForbiddenException('Event has ended');
+}
+
   if (!event) throw new NotFoundException('Event not found');
 
   if (event.status !== 'PUBLISHED') {
@@ -364,9 +381,23 @@ console.log("PLATFORM %:", PLATFORM_FEE_PERCENT);
       .populate('eventId');
 
     if (!registration) {
-      throw new NotFoundException('Registration not found');
+      throw new NotFoundException('Event not found');
     }
+const event = registration.eventId as any;
 
+  if (!event) {
+    throw new NotFoundException('Event not found');
+  }
+
+  // ✅ BLOCK INVALID EVENTS
+  if (
+    event.status !== EventStatus.PUBLISHED ||
+    event.registrationOpen !== true
+  ) {
+    throw new BadRequestException(
+      'Registration is closed for this event'
+    );
+  }
     if (
       !registration.otpExpiresAt ||
       registration.otpExpiresAt < new Date()
@@ -424,7 +455,7 @@ console.log("PLATFORM %:", PLATFORM_FEE_PERCENT);
       .populate('eventId');
 
     if (!registration) {
-      throw new NotFoundException('Registration not found');
+      throw new NotFoundException('Event not found');
     }
 
     if (registration.ticketSent) {
@@ -464,7 +495,7 @@ console.log("PLATFORM %:", PLATFORM_FEE_PERCENT);
   }
 
   async findByEvent(eventId: string, organizerId: string) {
-    const event = await this.eventModel.findById(eventId);
+const event = await this.eventsService.findById(eventId);
     if (!event) throw new NotFoundException('Event not found');
 
     if (event.organizerId.toString() !== organizerId) {
@@ -489,9 +520,28 @@ console.log("PLATFORM %:", PLATFORM_FEE_PERCENT);
       .sort({ createdAt: -1 });
   }
 
-  async findById(id: string) {
-    return this.registrationModel.findById(id).populate('eventId');
+async findById(id: string) {
+  const registration = await this.registrationModel
+    .findById(id)
+    .populate('eventId');
+
+  if (!registration) {
+    throw new NotFoundException('Registration not found');
   }
+
+  const event: any = registration.eventId;
+
+  if (
+    !event ||
+    event.status !== EventStatus.PUBLISHED ||
+    !event.registrationOpen
+  ) {
+    throw new NotFoundException('Event not available');
+  }
+
+  return registration;
+}
+
 
   async markPaymentCancelled(registrationId: string) {
     return this.registrationModel.findByIdAndUpdate(registrationId, {
@@ -520,4 +570,26 @@ console.log("PLATFORM %:", PLATFORM_FEE_PERCENT);
     await this.emailService.sendOtpEmail(email, otp);
     await this.smsService.sendSms(phone, `OTP: ${otp}`);
   }
+
+  async getRegistrationStatus(registrationId: string) {
+  const registration = await this.registrationModel
+    .findById(registrationId)
+    .populate('eventId');
+
+  if (!registration) {
+    throw new NotFoundException('Registration not found');
+  }
+
+  const event = registration.eventId as any;
+
+if (
+    event.status !== EventStatus.PUBLISHED ||
+    !event.registrationOpen
+  ) {
+    throw new NotFoundException('Event not found');
+  }
+
+  return { valid: true };
+}
+
 }

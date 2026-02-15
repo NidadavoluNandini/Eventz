@@ -30,21 +30,17 @@ export class PdfService {
       doc.on('end', () => resolve(Buffer.concat(buffers)));
       doc.on('error', reject);
 
-      const pageWidth = 595.28; // A4 width in points
-      const pageHeight = 841.89; // A4 height in points
+      const pageWidth = 595.28;
+      const pageHeight = 841.89;
 
-      // ===============================
-      // GRADIENT HEADER BACKGROUND
-      // ===============================
+      // HEADER BACKGROUND
       doc.rect(0, 0, pageWidth, 130).fillAndStroke('#4F46E5', '#4F46E5');
 
       // Decorative circles
       doc.circle(pageWidth - 50, 50, 60).fillOpacity(0.1).fill('#FFFFFF');
       doc.circle(50, 100, 40).fillOpacity(0.1).fill('#FFFFFF');
 
-      // ===============================
       // HEADER TITLE
-      // ===============================
       doc.fillOpacity(1);
       doc
         .fontSize(28)
@@ -65,12 +61,10 @@ export class PdfService {
           align: 'center',
         });
 
-      // ===============================
-      // WHITE CONTENT AREA
-      // ===============================
+      // MAIN CONTENT
       const contentY = 150;
 
-      // Event Title Box
+      // Event title box
       doc
         .roundedRect(50, contentY, pageWidth - 100, 70, 10)
         .fillAndStroke('#F3F4F6', '#E5E7EB');
@@ -90,9 +84,7 @@ export class PdfService {
           ellipsis: true,
         });
 
-      // ===============================
-      // ATTENDEE & EVENT DETAILS GRID
-      // ===============================
+      // DETAILS GRID
       const detailsY = contentY + 85;
       const leftColX = 50;
       const rightColX = pageWidth / 2 + 10;
@@ -124,11 +116,12 @@ export class PdfService {
           });
       };
 
-      // Left Column - main attendee + other attendees + date
+      // Left column: main attendee
       drawDetailBox(leftColX, detailsY, 'Attendee', data.userName);
 
       let dateBoxY = detailsY + 68;
 
+      // Other attendees
       if (data.otherAttendees && data.otherAttendees.length > 0) {
         const othersY = detailsY + 68;
 
@@ -176,7 +169,7 @@ export class PdfService {
           : 'TBA',
       );
 
-      // Right Column
+      // Right column: venue + ticket
       drawDetailBox(rightColX, detailsY, 'Venue', data.venue);
 
       const ticketDisplay = data.subTicketName
@@ -185,23 +178,39 @@ export class PdfService {
 
       drawDetailBox(rightColX, detailsY + 68, 'Ticket Type', ticketDisplay);
 
-      // ===============================
-      // PAYMENT DETAILS SECTION
-      // ===============================
-      const paymentY = detailsY + 148;
-      const paymentHeight = data.subTicketName ? 170 : 155;
+      // PAYMENT DETAILS SECTION (dynamic height)
+      const basePaymentY = detailsY + 148;
+
+      // rows:
+      // Ticket
+      // Option (if subTicketName)
+      // Base price
+      // Quantity
+      // Subtotal
+      // GST
+      // Platform fee
+      // Total
+      let rowCount = 7;
+      if (data.subTicketName) {
+        rowCount += 1;
+      }
+
+      const rowHeight = 16;
+      const paymentHeaderAndPadding = 40;
+      const paymentHeight = paymentHeaderAndPadding + rowCount * rowHeight;
 
       doc
-        .roundedRect(50, paymentY, pageWidth - 100, paymentHeight, 10)
+        .roundedRect(50, basePaymentY, pageWidth - 100, paymentHeight, 10)
         .fillAndStroke('#EEF2FF', '#C7D2FE');
 
       doc
         .fontSize(11)
         .fillColor('#4338CA')
         .font('Helvetica-Bold')
-        .text('PAYMENT DETAILS', 70, paymentY + 12);
+        .text('PAYMENT DETAILS', 70, basePaymentY + 12);
 
-      const tableY = paymentY + 32;
+      const tableY = basePaymentY + 32;
+
       const drawRow = (
         label: string,
         value: string,
@@ -223,11 +232,11 @@ export class PdfService {
 
       drawRow('Ticket', data.ticketName || 'N/A', tableY);
 
-      let currentY = tableY + 18;
+      let currentY = tableY + rowHeight;
 
       if (data.subTicketName) {
         drawRow('Option', data.subTicketName, currentY);
-        currentY += 18;
+        currentY += rowHeight;
       }
 
       drawRow(
@@ -235,16 +244,22 @@ export class PdfService {
         `Rs ${data.basePricePerTicket?.toFixed(2) || '0.00'}`,
         currentY,
       );
-      drawRow('Quantity', `x ${data.quantity || 1}`, currentY + 18);
+      currentY += rowHeight;
 
-      const subtotal = (data.basePricePerTicket || 0) * (data.quantity || 1);
-      drawRow('Subtotal', `Rs ${subtotal.toFixed(2)}`, currentY + 36);
+      drawRow('Quantity', `x ${data.quantity || 1}`, currentY);
+      currentY += rowHeight;
+
+      const subtotal =
+        (data.basePricePerTicket || 0) * (data.quantity || 1);
+      drawRow('Subtotal', `Rs ${subtotal.toFixed(2)}`, currentY);
+      currentY += rowHeight;
 
       drawRow(
         `GST (${data.gstRate || 0}%)`,
         `Rs ${data.gstAmount?.toFixed(2) || '0.00'}`,
-        currentY + 54,
+        currentY,
       );
+      currentY += rowHeight;
 
       const platformPercent = data.platformPercent ?? 0;
       const platformFee = data.platformFee ?? 0;
@@ -252,25 +267,24 @@ export class PdfService {
       drawRow(
         `Platform Fee (${platformPercent}%)`,
         `Rs ${platformFee.toFixed(2)}`,
-        currentY + 72,
+        currentY,
       );
+      currentY += rowHeight;
 
       doc
-        .moveTo(70, currentY + 92)
-        .lineTo(pageWidth - 70, currentY + 92)
+        .moveTo(70, currentY + 8)
+        .lineTo(pageWidth - 70, currentY + 8)
         .stroke('#C7D2FE');
 
       drawRow(
         'TOTAL PAID',
         `Rs ${data.totalAmount?.toFixed(2) || '0.00'}`,
-        currentY + 100,
+        currentY + 18,
         true,
       );
 
-      // ===============================
       // QR CODE SECTION
-      // ===============================
-      const qrY = paymentY + paymentHeight + 15;
+      const qrY = basePaymentY + paymentHeight + 15;
 
       doc
         .roundedRect(50, qrY, pageWidth - 100, 165, 10)
@@ -303,9 +317,7 @@ export class PdfService {
           });
       }
 
-      // ===============================
       // FOOTER
-      // ===============================
       const footerY = qrY + 180;
 
       doc.rect(0, footerY, pageWidth, 75).fillAndStroke('#F3F4F6', '#F3F4F6');
@@ -324,7 +336,7 @@ export class PdfService {
         .fillColor('#6B7280')
         .font('Helvetica')
         .text(
-          '- This ticket is non-transferable and valid for one entry only',
+          'This ticket is non transferable and valid for one entry only',
           50,
           footerY + 26,
           { align: 'center', width: pageWidth - 100, lineGap: 2 },
@@ -335,9 +347,7 @@ export class PdfService {
         .fillColor('#D1D5DB')
         .font('Helvetica')
         .text(
-          `Generated on ${new Date().toLocaleString(
-            'en-IN',
-          )} | Powered by Eventz`,
+          `Generated on ${new Date().toLocaleString('en-IN')} | Powered by Eventz`,
           0,
           footerY + 60,
           { align: 'center', width: pageWidth },

@@ -95,15 +95,38 @@ export default function RegisterEvent() {
   >([]);
 
 
-  useEffect(() => {
-    if (!id) return;
-    getEventById(id)
-      .then((res) => setEvent(res.data))
-      .catch((err) =>
-        console.error("getEventById error:", err?.response?.data || err)
-      )
-      .finally(() => setLoading(false));
-  }, [id]);
+useEffect(() => {
+  if (!id) return;
+
+  getEventById(id)
+    .then((res) => {
+      const ev = res.data;
+
+      // ⭐ REGISTRATION CLOSED GUARD
+      if (!ev.registrationOpen) {
+        // show modal message
+        setModal({
+          show: true,
+          message: "Registration is closed for this event",
+        });
+
+        // redirect after short delay (so user sees message)
+        setTimeout(() => {
+          navigate(`/events/${ev._id}`, { replace: true });
+        }, 1500);
+
+        return;
+      }
+
+      setEvent(ev);
+    })
+    .catch((err) => {
+      console.error("getEventById error:", err?.response?.data || err);
+      navigate("/events");
+    })
+    .finally(() => setLoading(false));
+}, [id, navigate]);
+
 
   useEffect(() => {
     if (event && ticketName) {
@@ -192,6 +215,11 @@ const totalPlatformFee = platformFee;
   const attendeeConfig = event?.attendeeFieldConfig;
   const optionalConfig = attendeeConfig?.optional || {};
   const requiredConfig = attendeeConfig?.required || {};
+  // helper → check if organizer marked field as required
+const isRequired = (field: string) => {
+  return requiredConfig?.[field] === true;
+};
+
 
   // NEW: sync otherAttendees with quantity and organizer preference
   useEffect(() => {
@@ -230,6 +258,7 @@ const totalPlatformFee = platformFee;
   const showModal = (message: string) => {
     setModal({ show: true, message });
   };
+
 
   /* ---------- SUBMIT WITH VALIDATION ---------- */
   const handleSubmit = async () => {
@@ -331,22 +360,35 @@ Object.entries(requiredConfig).forEach(([key, isRequired]) => {
 
     try {
       const res = await initiateRegistration({
-        eventId: event._id,
-        ticketName,
-        subTicketName: subTicketName || undefined,
-        quantity,
-        ...form,
-        otherAttendees:
-          event?.otherAttendeesConfig?.enabled && quantity > 1
-            ? otherAttendees
-            : [],
-      });
-      navigate(`/verify-otp/${res.data.registrationId}`);
+  eventId: event._id,
+  ticketName,
+  subTicketName: subTicketName || undefined,
+  quantity,
+  ...form,
+  otherAttendees:
+    event?.otherAttendeesConfig?.enabled && quantity > 1
+      ? otherAttendees
+      : [],
+});
+
+console.log("Registration response:", res.data);
+
+// ✅ ensure backend returned id
+if (!res?.data?.registrationId) {
+  showModal("Something went wrong. Please try again.");
+  return;
+}
+
+navigate(`/verify-otp/${res.data.registrationId}`);
+
     } catch (err: any) {
-      showModal(
-        err.response?.data?.message || "Registration failed"
-      );
-    }
+  console.error("Registration error:", err?.response?.data || err);
+
+  showModal(
+    err.response?.data?.message || "Registration failed"
+  );
+}
+
   };
 
   if (loading) {
@@ -746,12 +788,16 @@ Object.entries(requiredConfig).forEach(([key, isRequired]) => {
                   {/* Full Name */}
                   <div>
                     <label className="block text-xs font-semibold text-gray-700 mb-1">
-                      First Name
-                      {errors.firstName && (
-                        <span className="text-red-600 text-xs ml-2">
-                          Required
-                        </span>
-                      )}
+                     First Name
+{isRequired("firstName") && (
+  <span className="text-red-500 ml-1">*</span>
+)}
+{errors.firstName && (
+  <span className="text-red-600 text-xs ml-2">
+    Required
+  </span>
+)}
+
                     </label>
                     <input
                       type="text"
@@ -771,11 +817,14 @@ Object.entries(requiredConfig).forEach(([key, isRequired]) => {
                   <div>
                     <label className="block text-xs font-semibold text-gray-700 mb-1">
                       Last Name
-                      {errors.lastName && (
-                        <span className="text-red-600 text-xs ml-2">
-                          Required
-                        </span>
-                      )}
+{isRequired("lastName") && (
+  <span className="text-red-500 ml-1">*</span>
+)}
+{errors.lastName && (
+  <span className="text-red-600 text-xs ml-2">
+    Required
+  </span>
+)}
                     </label>
                     <input
                       type="text"
@@ -799,6 +848,10 @@ Object.entries(requiredConfig).forEach(([key, isRequired]) => {
                   <div>
                     <label className="block text-xs font-semibold text-gray-700 mb-1">
                       Email Address
+{isRequired("email") && (
+  <span className="text-red-500 ml-1">*</span>
+)}
+
                       {errors.userEmail && (
                         <span className="text-red-600 text-xs ml-2">
                           Required
@@ -824,12 +877,11 @@ Object.entries(requiredConfig).forEach(([key, isRequired]) => {
                   {/* Phone */}
                   <div>
                     <label className="block text-xs font-semibold text-gray-700 mb-1">
-                      Phone Number
-                      {errors.userPhone && (
-                        <span className="text-red-600 text-xs ml-2">
-                          Required
-                        </span>
-                      )}
+                     Phone Number
+{isRequired("phone") && (
+  <span className="text-red-500 ml-1">*</span>
+)}
+
                     </label>
                     <input
                       type="tel"
@@ -852,11 +904,10 @@ Object.entries(requiredConfig).forEach(([key, isRequired]) => {
                     <div>
                       <label className="block text-xs font-semibold text-gray-700 mb-1">
                         LinkedIn Profile URL
-                        {errors.linkedin && (
-                          <span className="text-red-600 text-xs ml-2">
-                            Required
-                          </span>
-                        )}
+{isRequired("linkedin") && (
+  <span className="text-red-500 ml-1">*</span>
+)}
+
                       </label>
                       <input
                         type="url"
@@ -882,6 +933,9 @@ Object.entries(requiredConfig).forEach(([key, isRequired]) => {
                     <div>
                       <label className="block text-xs font-semibold text-gray-700 mb-1">
                         Gender
+                        {isRequired("gender") && (
+  <span className="text-red-500 ml-1">*</span>
+)}
                         {errors.gender && (
                           <span className="text-red-600 text-xs ml-2">
                             Required
@@ -918,6 +972,9 @@ Object.entries(requiredConfig).forEach(([key, isRequired]) => {
                     <div>
                       <label className="block text-xs font-semibold text-gray-700 mb-1">
                         Alternate Phone
+                        {isRequired("altPhone") && (
+  <span className="text-red-500 ml-1">*</span>
+)}
                         {errors.altPhone && (
                           <span className="text-red-600 text-xs ml-2">
                             Required
@@ -947,6 +1004,9 @@ Object.entries(requiredConfig).forEach(([key, isRequired]) => {
                     <div>
                       <label className="block text-xs font-semibold text-gray-700 mb-1">
                         Alternate Email
+                        {isRequired("altEmail") && (
+  <span className="text-red-500 ml-1">*</span>
+)}
                         {errors.altEmail && (
                           <span className="text-red-600 text-xs ml-2">
                             Required
@@ -976,6 +1036,9 @@ Object.entries(requiredConfig).forEach(([key, isRequired]) => {
                     <div>
                       <label className="block text-xs font-semibold text-gray-700 mb-1">
                         Date of Birth
+                        {isRequired("dob") && (
+  <span className="text-red-500 ml-1">*</span>
+)}
                         {errors.dob && (
                           <span className="text-red-600 text-xs ml-2">
                             Required
@@ -1002,6 +1065,9 @@ Object.entries(requiredConfig).forEach(([key, isRequired]) => {
                     <div>
                       <label className="block text-xs font-semibold text-gray-700 mb-1">
                         Country
+                        {isRequired("country") && (
+  <span className="text-red-500 ml-1">*</span>
+)}
                         {errors.country && (
                           <span className="text-red-600 text-xs ml-2">
                             Required
@@ -1031,6 +1097,9 @@ Object.entries(requiredConfig).forEach(([key, isRequired]) => {
                     <div>
                       <label className="block text-xs font-semibold text-gray-700 mb-1">
                         State
+                        {isRequired("state") && (
+  <span className="text-red-500 ml-1">*</span>
+)}
                         {errors.state && (
                           <span className="text-red-600 text-xs ml-2">
                             Required
@@ -1057,6 +1126,9 @@ Object.entries(requiredConfig).forEach(([key, isRequired]) => {
                     <div>
                       <label className="block text-xs font-semibold text-gray-700 mb-1">
                         Postal Code
+                        {isRequired("postalCode") && (
+  <span className="text-red-500 ml-1">*</span>
+)}
                         {errors.postalCode && (
                           <span className="text-red-600 text-xs ml-2">
                             Required
@@ -1089,6 +1161,9 @@ Object.entries(requiredConfig).forEach(([key, isRequired]) => {
                     <div>
                       <label className="block text-xs font-semibold text-gray-700 mb-1">
                         Organization / College
+                        {isRequired("organization") && (
+  <span className="text-red-500 ml-1">*</span>
+)}
                         {errors.organization && (
                           <span className="text-red-600 text-xs ml-2">
                             Required
@@ -1121,6 +1196,9 @@ Object.entries(requiredConfig).forEach(([key, isRequired]) => {
                     <div>
                       <label className="block text-xs font-semibold text-gray-700 mb-1">
                         Designation / Role
+                        {isRequired("designation") && (
+  <span className="text-red-500 ml-1">*</span>
+)}
                         {errors.designation && (
                           <span className="text-red-600 text-xs ml-2">
                             Required
@@ -1149,74 +1227,15 @@ Object.entries(requiredConfig).forEach(([key, isRequired]) => {
                     </div>
                   )}
 
-                  {optionalConfig.collegeId && (
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-700 mb-1">
-                        College ID
-                        {errors.collegeId && (
-                          <span className="text-red-600 text-xs ml-2">
-                            Required
-                          </span>
-                        )}
-                      </label>
-                      <input
-                        type="text"
-                        className={`w-full border-2 rounded-lg p-2.5 text-sm focus:outline-none transition ${
-                          errors.collegeId
-                            ? "border-red-500 ring-2 ring-red-200"
-                            : "border-gray-200 focus:border-indigo-500"
-                        }`}
-                        value={form.collegeId}
-                        onChange={(e) => {
-                          setForm({
-                            ...form,
-                            collegeId: e.target.value,
-                          });
-                          setErrors((prev) => ({
-                            ...prev,
-                            collegeId: false,
-                          }));
-                        }}
-                      />
-                    </div>
-                  )}
-
-                  {optionalConfig.employeeId && (
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-700 mb-1">
-                        Employee ID
-                        {errors.employeeId && (
-                          <span className="text-red-600 text-xs ml-2">
-                            Required
-                          </span>
-                        )}
-                      </label>
-                      <input
-                        type="text"
-                        className={`w-full border-2 rounded-lg p-2.5 text-sm focus:outline-none transition ${
-                          errors.employeeId
-                            ? "border-red-500 ring-2 ring-red-200"
-                            : "border-gray-200 focus:border-indigo-500"
-                        }`}
-                        value={form.employeeId}
-                        onChange={(e) => {
-                          setForm({
-                            ...form,
-                            employeeId: e.target.value,
-                          });
-                          setErrors((prev) => ({
-                            ...prev,
-                            employeeId: false,
-                          }));
-                        }}
-                      />
-                    </div>
-                  )}
+                 
 
                   {optionalConfig.tShirtSize && (
                     <div>
                       <label className="block text-xs font-semibold text-gray-700 mb-1">
                         T-shirt Size
+                        {isRequired("tShirtSize") && (
+  <span className="text-red-500 ml-1">*</span>
+)}
                         {errors.tShirtSize && (
                           <span className="text-red-600 text-xs ml-2">
                             Required
@@ -1256,6 +1275,9 @@ Object.entries(requiredConfig).forEach(([key, isRequired]) => {
                     <div>
                       <label className="block text-xs font-semibold text-gray-700 mb-1">
                         Emergency Contact Name
+                        {isRequired("emergencyContactName") && (
+  <span className="text-red-500 ml-1">*</span>
+)}
                         {errors.emergencyContactName && (
                           <span className="text-red-600 text-xs ml-2">
                             Required
@@ -1288,6 +1310,9 @@ Object.entries(requiredConfig).forEach(([key, isRequired]) => {
                     <div>
                       <label className="block text-xs font-semibold text-gray-700 mb-1">
                         Emergency Contact Phone
+                        {isRequired("emergencyContactPhone") && (
+  <span className="text-red-500 ml-1">*</span>
+)}
                         {errors.emergencyContactPhone && (
                           <span className="text-red-600 text-xs ml-2">
                             Required

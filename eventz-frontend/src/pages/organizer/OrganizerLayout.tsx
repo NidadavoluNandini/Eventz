@@ -297,46 +297,10 @@ export default function OrganizerLayout() {
             <span className="relative z-10">Registrations</span>
           </NavLink>
 
-          {/* Divider */}
-          <div className="relative my-3">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-slate-200"></div>
-            </div>
-          </div>
+         
 
-          {/* Settings Section */}
-          <div className="px-2 pb-2 pt-2">
-            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
-              Account
-            </p>
-          </div>
+         
 
-          <NavLink
-            to="/organizer/profile"
-            onClick={() => setIsSidebarOpen(false)}
-            className={({ isActive }) =>
-              `flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium transition-all duration-200 group relative overflow-hidden ${
-                isActive
-                  ? "bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-lg shadow-indigo-500/50"
-                  : "text-slate-600 hover:bg-slate-50 hover:text-slate-900 hover:translate-x-1"
-              }`
-            }
-          >
-            <svg
-              className="w-5 h-5 relative z-10"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-              />
-            </svg>
-            <span className="relative z-10">Profile Settings</span>
-          </NavLink>
         </nav>
 
         {/* Footer Actions */}

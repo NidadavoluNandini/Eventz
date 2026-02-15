@@ -121,4 +121,10 @@ initiateRegistration(
   async getEventAttendees(@Param("eventId") eventId: string) {
     return this.registrationsService.getAttendeesByEvent(eventId);
   }
+
+  @Get(':id/status')
+getStatus(@Param('id') id: string) {
+  return this.registrationsService.getRegistrationStatus(id);
+}
+
 }

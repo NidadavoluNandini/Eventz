@@ -2,8 +2,10 @@ import { useParams, Link } from "react-router-dom";
 import { useEffect, useState } from "react";
 import PublicLayout from "../../layouts/PublicLayout";
 import api from "../../utils/axios";
-
+import AccessDenied from "../../components/AccessDenied";
 export default function TicketSuccess() {
+  const [isValidAccess, setIsValidAccess] = useState<boolean | null>(null);
+
   const { id } = useParams<{ id: string }>();
   const [reg, setReg] = useState<any>(null);
   const [paymentDetails, setPaymentDetails] = useState<any>(null);
@@ -27,22 +29,35 @@ export default function TicketSuccess() {
     }
   }, [reg]);
 
-  const fetchData = async () => {
-    try {
-      const [regRes, paymentRes] = await Promise.all([
-        api.get(`/api/registrations/${id}`),
-        api.get(`/api/payments/registration/details/${id}`),
-      ]);
-      setReg(regRes.data);
-      setPaymentDetails(paymentRes.data);
-    } catch (err) {
-      console.error("Failed to load ticket", err);
-      setError("Failed to load ticket details");
-    } finally {
-      setLoading(false);
-    }
-  };
+const fetchData = async () => {
+  try {
+    const [regRes, paymentRes] = await Promise.all([
+      api.get(`/api/registrations/${id}`),
+      api.get(`/api/payments/registration/details/${id}`),
+    ]);
 
+    setReg(regRes.data);
+    setPaymentDetails(paymentRes.data);
+    setIsValidAccess(true);
+
+  } catch (err: any) {
+
+    const message = err.response?.data?.message;
+
+    if (
+      message === "Registration not found" ||
+      message === "Event not found"
+    ) {
+      setIsValidAccess(false);
+      return;
+    }
+
+    setError("Failed to load ticket details");
+    setIsValidAccess(false);
+  } finally {
+    setLoading(false);
+  }
+};
   /* ---------------- ACTIONS ---------------- */
 
   const resendTicket = async () => {
@@ -92,7 +107,14 @@ export default function TicketSuccess() {
       </PublicLayout>
     );
   }
-
+if (isValidAccess === false) {
+  return (
+    <AccessDenied
+      title="Ticket Not Available"
+      message="This ticket no longer exists or the event is unavailable."
+    />
+  );
+}
   if (!reg || error) {
     return (
       <PublicLayout>
@@ -132,6 +154,7 @@ export default function TicketSuccess() {
   const quantity = paymentDetails?.pricing?.quantity ?? reg.quantity ?? 1;
 
   /* ---------------- UI ---------------- */
+
 
   return (
     <PublicLayout>

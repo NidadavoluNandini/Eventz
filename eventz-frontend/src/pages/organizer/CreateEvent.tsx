@@ -212,15 +212,27 @@ useEffect(() => {
 
   const attendeeCfg = existingEvent.attendeeFieldConfig || {};
 
-  setUserFieldConfig((prev) => ({
-    ...prev,
-    ...(attendeeCfg.optional || {}),
-  }));
+const optional = attendeeCfg.optional || {};
+const required = attendeeCfg.required || {};
 
-  setUserFieldRequiredConfig((prev) => ({
-    ...prev,
-    ...(attendeeCfg.required || {}),
-  }));
+// REQUIRED fields must also be enabled
+const mergedOptional = { ...optional };
+
+Object.keys(required).forEach((key) => {
+  if (required[key]) {
+    mergedOptional[key] = true;
+  }
+});
+
+setUserFieldConfig((prev) => ({
+  ...prev,
+  ...mergedOptional,
+}));
+
+setUserFieldRequiredConfig((prev) => ({
+  ...prev,
+  ...required,
+}));
 
 
   /* ---------------- SCHEDULE (🔥 YOUR MISSING PART) ---------------- */
@@ -415,34 +427,49 @@ finalPrice:
     return Number(basePrice.toFixed(2));
   };
 
-  const updateTicket = (id: string, field: keyof Ticket, value: any) => {
-    setTickets((prev) =>
-      prev.map((t) => {
-        if (t.id !== id) return t;
-        const updated: Ticket = { ...t };
-        switch (field) {
-          case "name":
-            updated.name = String(value);
-            break;
-          case "price": {
-            const price = Number(value) || 0;
-            updated.price = price;
-            updated.finalPrice = price;
-            break;
-          }
-          case "gst":
-            updated.gst = Number(value) || 0;
-            break;
-          case "quantity":
-            updated.quantity = Number(value) || 0;
-            break;
-          default:
-            (updated as any)[field] = value;
+const updateTicket = (id: string, field: keyof Ticket, value: any) => {
+  setTickets((prev) =>
+    prev.map((t) => {
+      if (t.id !== id) return t;
+
+      const updated: Ticket = { ...t };
+
+      switch (field) {
+        case "name":
+          updated.name = String(value);
+          break;
+
+        case "price": {
+          updated.price = Number(value) || 0;
+          break;
         }
-        return updated;
-      })
-    );
-  };
+
+        case "gst": {
+          updated.gst = Number(value) || 0;
+          break;
+        }
+
+        case "quantity":
+          updated.quantity = Number(value) || 0;
+          break;
+
+        default:
+          (updated as any)[field] = value;
+      }
+
+      // ✅ ALWAYS recompute final price
+      const price = updated.price || 0;
+      const gst = updated.gst || 0;
+
+      updated.finalPrice =
+        price > 0
+          ? Number((price + (price * gst) / 100).toFixed(2))
+          : 0;
+
+      return updated;
+    })
+  );
+};
 
   const updateSubTicket = (
     ticketId: string,
@@ -845,7 +872,7 @@ const handlePrimaryClick = async () => {
   await handleNext();
 };
   return (
-<div className="bg-gray-50 px-3 py-3 flex flex-col flex-1 min-h-0">
+<div className="bg-gray-50 px-3 py-3 flex flex-col h-[calc(100vh-80px)]">
 
       {toast && (
         <div
@@ -857,7 +884,7 @@ const handlePrimaryClick = async () => {
         </div>
       )}
 
-<div className="max-w-4xl mx-auto w-full flex flex-col gap-3 flex-1">
+<div className="max-w-4xl mx-auto w-full flex flex-col gap-3 flex-1 min-h-0">
 <StepHeader
   editMode={editMode}
   isLoading={isLoading}
@@ -881,12 +908,9 @@ const handlePrimaryClick = async () => {
 
 <div
   ref={formScrollRef}
-  className="bg-white rounded-xl shadow border p-4 flex-1 overflow-y-auto min-h-0 h-full"
+className="bg-white rounded-xl shadow border p-4 flex-1 overflow-y-auto min-h-0"
+
 >
-
-
-
-
 
           {currentStep === "userInfo" && (
             <UserInfoStep

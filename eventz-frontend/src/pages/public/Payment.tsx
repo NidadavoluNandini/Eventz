@@ -11,6 +11,8 @@ declare global {
 }
 
 export default function Payment() {
+  const [isValidPayment, setIsValidPayment] = useState<boolean | null>(null);
+
   const navigate = useNavigate();
   const { registrationId } = useParams();
 
@@ -26,28 +28,48 @@ export default function Payment() {
   const [fetchingDetails, setFetchingDetails] = useState(true);
 
   // ---------------- FETCH PAYMENT DETAILS ----------------
-  useEffect(() => {
-    if (!finalRegistrationId) {
-      setError("Invalid payment session.");
-      setFetchingDetails(false);
-      return;
-    }
+useEffect(() => {
+  if (!finalRegistrationId) {
+    setError("Invalid payment session.");
+    setFetchingDetails(false);
+    setIsValidPayment(false);
+    return;
+  }
 
-    const fetchDetails = async () => {
-      try {
-        const res = await api.get(
-          `/api/payments/registration/details/${finalRegistrationId}`
-        );
-        setPaymentDetails(res.data);
-      } catch {
-        setError("Failed to load payment details");
-      } finally {
-        setFetchingDetails(false);
+  const fetchDetails = async () => {
+    try {
+      const res = await api.get(
+        `/api/payments/registration/details/${finalRegistrationId}`
+      );
+
+      setPaymentDetails(res.data);
+
+      // ✅ VALID payment session
+      setIsValidPayment(true);
+    } catch (err: any) {
+      const message = err.response?.data?.message;
+
+      // ✅ BLOCKED STATES
+      if (
+        message === "Event not found" ||
+        message === "Registration not found" ||
+        message === "Registration closed" ||
+        message === "Registration expired" ||
+        message === "Payment not allowed"
+      ) {
+        setIsValidPayment(false);
+        return;
       }
-    };
 
-    fetchDetails();
-  }, [finalRegistrationId]);
+      setError("Failed to load payment details");
+      setIsValidPayment(false);
+    } finally {
+      setFetchingDetails(false);
+    }
+  };
+
+  fetchDetails();
+}, [finalRegistrationId]);
 
   // ---------------- START PAYMENT ----------------
   const startPayment = async () => {
@@ -114,6 +136,49 @@ export default function Payment() {
       setLoading(false);
     }
   };
+if (isValidPayment === null) {
+  return (
+    <PublicLayout>
+      <div className="min-h-[100vh] flex items-center justify-center">
+        <p className="text-gray-600 font-medium">
+          Validating payment session...
+        </p>
+      </div>
+    </PublicLayout>
+  );
+}
+
+
+if (isValidPayment === false) {
+  return (
+    <PublicLayout>
+      <div className="min-h-[100vh] flex items-center justify-center px-4">
+        <div className="bg-white shadow-xl rounded-2xl p-10 text-center max-w-md">
+
+          <div className="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
+            ❌
+          </div>
+
+          <h2 className="text-xl font-bold text-gray-900 mb-2">
+            Payment Not Available
+          </h2>
+
+          <p className="text-gray-600 text-sm mb-6">
+            This event is no longer accepting registrations or the payment
+            session has expired.
+          </p>
+
+          <button
+            onClick={() => navigate("/events")}
+            className="px-6 py-3 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700"
+          >
+            Browse Events
+          </button>
+        </div>
+      </div>
+    </PublicLayout>
+  );
+}
 
   // ---------------- LOADING ----------------
   if (fetchingDetails) {

@@ -4,6 +4,9 @@ import { useNavigate, useParams } from "react-router-dom";
 import PublicLayout from "../../layouts/PublicLayout";
 
 export default function VerifyOtp() {
+
+  const [isValidRegistration, setIsValidRegistration] = useState<boolean | null>(null);
+
   const navigate = useNavigate();
   const inputs = useRef<HTMLInputElement[]>([]);
   const { registrationId } = useParams();
@@ -26,13 +29,49 @@ export default function VerifyOtp() {
   }, [session]);
 
   // Countdown timer
-  useEffect(() => {
-    if (timeLeft <= 0) return;
-    const timer = setInterval(() => {
-      setTimeLeft((prev) => prev - 1);
-    }, 1000);
-    return () => clearInterval(timer);
-  }, [timeLeft]);
+
+
+useEffect(() => {
+  if (!isValidRegistration) return;
+  if (timeLeft <= 0) return;
+
+  const timer = setInterval(() => {
+    setTimeLeft((prev) => prev - 1);
+  }, 1000);
+
+  return () => clearInterval(timer);
+}, [timeLeft, isValidRegistration]);
+
+
+
+useEffect(() => {
+  const validateRegistration = async () => {
+    try {
+      await api.get(`/api/registrations/${registrationId}/status`);
+
+      // ✅ registration valid
+      setIsValidRegistration(true);
+    } catch (err: any) {
+      const message = err.response?.data?.message;
+
+      if (
+        message === "Registration closed" ||
+        message === "Registration expired" ||
+        message === "Registration not found" ||
+        message === "Event not found"
+      ) {
+        setIsValidRegistration(false);
+        return;
+      }
+
+      setIsValidRegistration(false);
+    }
+  };
+
+  if (registrationId) {
+    validateRegistration();
+  }
+}, [registrationId]);
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -132,6 +171,46 @@ export default function VerifyOtp() {
       setLoading(false);
     }
   };
+if (isValidRegistration === null) {
+  return (
+    <PublicLayout>
+      <div className="min-h-[100vh] flex items-center justify-center">
+        <p className="text-gray-600 font-medium">
+          Validating registration...
+        </p>
+      </div>
+    </PublicLayout>
+  );
+}
+if (isValidRegistration === false) {
+  return (
+    <PublicLayout>
+      <div className="min-h-[100vh] flex items-center justify-center px-4">
+        <div className="bg-white shadow-xl rounded-2xl p-10 text-center max-w-md">
+          
+          <div className="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
+            ❌
+          </div>
+
+          <h2 className="text-xl font-bold text-gray-900 mb-2">
+            Registration Not Available
+          </h2>
+
+          <p className="text-gray-600 text-sm mb-6">
+            This event is no longer accepting registrations or the session has expired.
+          </p>
+
+          <button
+            onClick={() => navigate("/events")}
+            className="px-6 py-3 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700"
+          >
+            Browse Events
+          </button>
+        </div>
+      </div>
+    </PublicLayout>
+  );
+}
 
   return (
     <PublicLayout>

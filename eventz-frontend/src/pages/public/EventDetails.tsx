@@ -212,23 +212,27 @@ export default function EventDetails() {
     event.endDate,
     event.endTime
   );
+// also respect organizer's registrationOpen flag from backend
+const isRegistrationOpenFlag = event.registrationOpen !== false; // if your field is named differently, use that
+const canShowRegister = registrationOpen && isRegistrationOpenFlag;
 
   const selectedTicketObj = event.tickets.find(
     (t: any) => t.name === selectedTicket
   );
   const hasSubTickets = selectedTicketObj?.subTickets?.length > 0;
 
-  const canRegister = selectedTicket !== null;
+const canRegister = selectedTicket !== null && canShowRegister;
 
-  const handleRegister = () => {
-    if (!canRegister || !registrationOpen) return;
+const handleRegister = () => {
+  if (!selectedTicket || !canShowRegister) return;
 
-    const state: any = { ticketName: selectedTicket };
-    if (selectedSubTicket) {
-      state.subTicketName = selectedSubTicket;
-    }
-    navigate(`/events/${event._id}/register`, { state });
-  };
+  const state: any = { ticketName: selectedTicket };
+  if (selectedSubTicket) {
+    state.subTicketName = selectedSubTicket;
+  }
+  navigate(`/events/${event._id}/register`, { state });
+};
+
 
   const aboutMinHeightClass = getAboutMinHeightClass(event.description);
 
@@ -687,17 +691,18 @@ export default function EventDetails() {
                 {/* Register Button */}
                 <div className="p-3 border-t">
                   <button
-                    disabled={!registrationOpen || !canRegister}
-                    onClick={handleRegister}
-                    className="w-full py-3 rounded-lg text-white font-bold disabled:opacity-50 disabled:cursor-not-allowed shadow hover:shadow-lg transition"
-                    style={{ backgroundColor: themeColor }}
-                  >
-                    {!registrationOpen
-                      ? "Registration Closed"
-                      : !selectedTicket
-                      ? "Select a Ticket"
-                      : "Register Now"}
-                  </button>
+  disabled={!canShowRegister || !selectedTicket}
+  onClick={handleRegister}
+  className="w-full py-3 rounded-lg text-white font-bold disabled:opacity-50 disabled:cursor-not-allowed shadow hover:shadow-lg transition"
+  style={{ backgroundColor: themeColor }}
+>
+  {!canShowRegister
+    ? "Registration Closed"
+    : !selectedTicket
+    ? "Select a Ticket"
+    : "Register Now"}
+</button>
+
                   {selectedTicket && hasSubTickets && !selectedSubTicket && (
                     <p className="text-xs text-gray-500 text-center mt-2">
                       💡 Sub-ticket selection is optional

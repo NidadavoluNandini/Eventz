@@ -34,7 +34,7 @@ export const Stepper: React.FC<StepperProps> = ({
   const currentIndex = steps.findIndex((s) => s.id === currentStep);
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 mb-6">
+<div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 mb-6 overflow-hidden">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between md:flex-nowrap">
         {steps.map((step, index) => {
           const isActive = currentStep === step.id;
@@ -43,7 +43,7 @@ export const Stepper: React.FC<StepperProps> = ({
           const clickable = canNavigateToStep(step.id);
 
           return (
-            <div key={step.id} className="flex items-center flex-1">
+          <div key={step.id} className="flex items-center flex-1 min-w-0">
               <button
                 type="button"
                 onClick={() => clickable && goToStep(step.id)}
@@ -94,7 +94,7 @@ export const Stepper: React.FC<StepperProps> = ({
               </button>
 
               {index < steps.length - 1 && (
-                <div className="w-10 h-1 mx-2 relative hidden md:block">
+<div className="flex-1 h-1 mx-2 relative hidden md:block">
                   <div
                     className={`h-full rounded transition-colors ${
                       isPast ? "bg-green-500" : "bg-gray-200"

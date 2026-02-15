@@ -77,13 +77,13 @@ export default function Events() {
 
 
 const handleTogglePublish = async (event: any) => {
-  if (event.status === "PUBLISHED" && event.registrationOpen) {
+  if (event.status === "PUBLISHED") {
     await handleAction(
       () => unpublishEvent(event._id),
       event._id,
       "Event unpublished."
     );
-  } else if (event.status === "DRAFT" || event.status === "UNPUBLISHED") {
+  } else {
     await handleAction(
       () => publishEvent(event._id),
       event._id,
@@ -241,7 +241,7 @@ async function handleEdit(event: any) {
           {events.map((e) => {
            
             const isCompleted = e.status === "COMPLETED";
-            const isPublished = e.status === "PUBLISHED" && e.registrationOpen;
+            const isPublished = e.status === "PUBLISHED" ;
               const canToggle = !isCompleted; 
 
             const isFlashing = successFlash === e._id;
