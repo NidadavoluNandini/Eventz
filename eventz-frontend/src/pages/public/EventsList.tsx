@@ -80,7 +80,8 @@ export default function EventsList() {
       </div>
 
       {/* Main Content */}
-      <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
+      <div className="min-h-[100dvh]
+ bg-gradient-to-b from-slate-50 to-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-12">
           {loading && (
             <div className="flex flex-col items-center justify-center py-20">

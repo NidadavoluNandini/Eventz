@@ -82,7 +82,8 @@ export default function TicketSuccess() {
   if (loading) {
     return (
       <PublicLayout>
-        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 via-white to-emerald-50">
+        <div className="min-h-[100dvh]
+ flex items-center justify-center bg-gradient-to-br from-green-50 via-white to-emerald-50">
           <div className="text-center">
             <div className="w-16 h-16 border-4 border-green-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
             <p className="text-gray-600 font-medium">Loading your ticket...</p>
@@ -95,7 +96,8 @@ export default function TicketSuccess() {
   if (!reg || error) {
     return (
       <PublicLayout>
-        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-red-50 via-white to-pink-50">
+        <div className="min-h-[100dvh]
+ flex items-center justify-center bg-gradient-to-br from-red-50 via-white to-pink-50">
           <div className="text-center bg-white rounded-3xl shadow-xl p-8 max-w-md">
             <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <svg
@@ -172,7 +174,8 @@ export default function TicketSuccess() {
         `}
       </style>
 
-      <div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 flex items-center justify-center px-4 py-8 relative overflow-hidden">
+      <div className="min-h-[100dvh]
+ bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 flex items-center justify-center px-4 py-8 relative overflow-hidden">
         {/* Confetti Animation */}
         {showConfetti && (
           <div className="fixed inset-0 pointer-events-none z-40">

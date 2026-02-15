@@ -32,7 +32,8 @@ export default function PaymentProcessing() {
 
   return (
     <PublicLayout>
-      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50">
+      <div className="min-h-[100dvh]
+ flex flex-col items-center justify-center bg-gray-50">
         <div className="bg-white p-10 rounded-2xl shadow-lg text-center">
 
           <div className="text-5xl animate-spin mb-4">⏳</div>

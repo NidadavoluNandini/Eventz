@@ -101,78 +101,16 @@ class ThemeColorDto {
 }
 
 /* ---------- ATTENDEE FIELD CONFIG DTO ---------- */
-class AttendeeOptionalFieldsDto {
-  @IsOptional()
-  @IsBoolean()
-  linkedin?: boolean;
-
-  @IsOptional()
-  @IsBoolean()
-  gender?: boolean;
-
-  @IsOptional()
-  @IsBoolean()
-  altPhone?: boolean;
-
-  @IsOptional()
-  @IsBoolean()
-  altEmail?: boolean;
-
-  @IsOptional()
-  @IsBoolean()
-  dob?: boolean;
-
-  @IsOptional()
-  @IsBoolean()
-  country?: boolean;
-
-  @IsOptional()
-  @IsBoolean()
-  state?: boolean;
-
-  @IsOptional()
-  @IsBoolean()
-  postalCode?: boolean;
-
-  @IsOptional()
-  @IsBoolean()
-  organization?: boolean;
-
-  @IsOptional()
-  @IsBoolean()
-  designation?: boolean;
-
-  @IsOptional()
-  @IsBoolean()
-  collegeId?: boolean;
-
-  @IsOptional()
-  @IsBoolean()
-  employeeId?: boolean;
-
-  @IsOptional()
-  @IsBoolean()
-  tShirtSize?: boolean;
-
-  @IsOptional()
-  @IsBoolean()
-  emergencyContactName?: boolean;
-
-  @IsOptional()
-  @IsBoolean()
-  emergencyContactPhone?: boolean;
-}
-
 class AttendeeFieldConfigDto {
-  @IsArray()
-  @IsString({ each: true })
-  alwaysRequired: string[];
-
+  @IsOptional()
   @IsObject()
-  @ValidateNested()
-  @Type(() => AttendeeOptionalFieldsDto)
-  optional: AttendeeOptionalFieldsDto;
+  optional?: Record<string, boolean>;
+
+  @IsOptional()
+  @IsObject()
+  required?: Record<string, boolean>;
 }
+
 
 /* ---------- PAYMENT SETTINGS DTO ---------- */
 class PaymentSettingsDto {
@@ -180,10 +118,7 @@ class PaymentSettingsDto {
   @IsBoolean()
   collectPaymentCharges?: boolean;
 
-  @IsOptional()
-  @Type(() => Number)
-  @IsNumber()
-  platformFeePercent?: number;
+
 }
 
 /* ---------- OTHER ATTENDEES CONFIG DTO ---------- */

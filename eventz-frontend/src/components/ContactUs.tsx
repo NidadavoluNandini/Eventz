@@ -91,7 +91,8 @@ export default function ContactUs() {
   return (
     <PublicLayout>
       {/* Full-screen center, no extra space */}
-      <div className="bg-gradient-to-br from-slate-50 via-indigo-50/20 to-slate-50 min-h-screen flex items-center justify-center px-4">
+      <div className="bg-gradient-to-br from-slate-50 via-indigo-50/20 to-slate-50 min-h-[100dvh]
+ flex items-center justify-center px-4">
         {/* Main card */}
         <div className="bg-white rounded-3xl shadow-xl border border-slate-200 max-w-5xl w-full mx-4 px-4 py-4 sm:px-6 sm:py-5">
           {/* Compact hero header */}

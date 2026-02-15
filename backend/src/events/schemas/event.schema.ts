@@ -70,32 +70,19 @@ export const ThemeColorSchema = SchemaFactory.createForClass(ThemeColor);
 /* ---------- ATTENDEE FIELD CONFIG ---------- */
 @Schema({ _id: false })
 export class AttendeeFieldConfig {
-  @Prop({ type: [String], default: ['firstName', 'lastName', 'email', 'phone'] })
-  alwaysRequired: string[];
+  @Prop({
+    type: Object,
+    default: {},
+  })
+  optional: Record<string, boolean>;   // visible?
 
   @Prop({
     type: Object,
     default: {},
   })
-  optional: Record<
-    | 'linkedin'
-    | 'gender'
-    | 'altPhone'
-    | 'altEmail'
-    | 'dob'
-    | 'country'
-    | 'state'
-    | 'postalCode'
-    | 'organization'
-    | 'designation'
-    | 'collegeId'
-    | 'employeeId'
-    | 'tShirtSize'
-    | 'emergencyContactName'
-    | 'emergencyContactPhone',
-    boolean
-  >;
+  required: Record<string, boolean>;   // required?
 }
+
 export const AttendeeFieldConfigSchema =
   SchemaFactory.createForClass(AttendeeFieldConfig);
 
@@ -105,8 +92,7 @@ export class PaymentSettings {
   @Prop({ default: false })
   collectPaymentCharges: boolean;
 
-  @Prop({ default: 0 })
-  platformFeePercent: number;
+
 }
 export const PaymentSettingsSchema =
   SchemaFactory.createForClass(PaymentSettings);
@@ -186,8 +172,9 @@ export class Event {
   @Prop({ type: Types.ObjectId, ref: 'Organizer', required: true })
   organizerId: Types.ObjectId;
 
-  @Prop({ type: AttendeeFieldConfigSchema, default: null })
-  attendeeFieldConfig?: AttendeeFieldConfig;
+@Prop({ type: AttendeeFieldConfigSchema, default: null })
+attendeeFieldConfig?: AttendeeFieldConfig;
+
 
   @Prop({ type: PaymentSettingsSchema, default: null })
   paymentSettings?: PaymentSettings;

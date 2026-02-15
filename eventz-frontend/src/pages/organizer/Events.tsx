@@ -95,9 +95,9 @@ export default function Events() {
     try {
       await updateEvent(event._id, { status: "EDITING" });
 
-      navigate("/organizer/events/create", {
-        state: { editMode: true, eventData: event },
-      });
+    navigate(`/organizer/events/edit/${event._id}`, {
+      state: { editMode: true, eventData: event },
+    });
     } catch (e: any) {
       console.error(e);
       const msg =

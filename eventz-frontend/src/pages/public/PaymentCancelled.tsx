@@ -34,7 +34,8 @@ export default function PaymentCancelled() {
         `}
       </style>
 
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-red-50 via-white to-orange-50 px-4 py-8 relative overflow-hidden">
+      <div className="min-h-[100dvh]
+ flex items-center justify-center bg-gradient-to-br from-red-50 via-white to-orange-50 px-4 py-8 relative overflow-hidden">
         {/* Background Pattern */}
         <div className="absolute inset-0 overflow-hidden opacity-5">
           <div className="absolute top-20 left-10 w-40 h-40 border-4 border-red-500 rounded-full"></div>

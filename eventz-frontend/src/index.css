@@ -4,11 +4,17 @@
 
 /* Global base styles */
 html,
-body {
+body,
+#root {
+  height: 100%;
   margin: 0;
   padding: 0;
-  background-color: #f9fafb;
 }
+body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
 
 .sidebar-link {
   padding: 10px 12px;

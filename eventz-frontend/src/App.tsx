@@ -99,6 +99,8 @@ export default function App() {
           <Route path="dashboard" element={<Dashboard />} />
           <Route path="events" element={<Events />} />
           <Route path="events/create" element={<CreateEvent />} />
+          <Route path="events/edit/:id" element={<CreateEvent />} />
+
           <Route path="users" element={<UserManagement />} />
           <Route path="profile" element={<OrganizerProfile />} />
         </Route>

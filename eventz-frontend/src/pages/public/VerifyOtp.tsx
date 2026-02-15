@@ -162,7 +162,8 @@ export default function VerifyOtp() {
         `}
       </style>
 
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 via-white to-purple-50 px-4 py-8">
+      <div className="min-h-[100dvh]
+ flex items-center justify-center bg-gradient-to-br from-indigo-50 via-white to-purple-50 px-4 py-8">
         <div className={`bg-white rounded-3xl shadow-2xl w-full max-w-md p-8 ${success ? 'animate-success' : 'animate-fade-in'}`}>
           {!success ? (
             <>

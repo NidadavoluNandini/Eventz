@@ -180,7 +180,8 @@ export default function EventDetails() {
   if (loading) {
     return (
       <PublicLayout>
-        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 via-white to-purple-50">
+        <div className="min-h-[100dvh]
+ flex items-center justify-center bg-gradient-to-br from-indigo-50 via-white to-purple-50">
           <div className="text-center">
             <div className="w-16 h-16 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
             <p className="text-gray-600 font-medium">Loading event...</p>
@@ -251,7 +252,7 @@ export default function EventDetails() {
 
       {/* THEME BACKGROUND */}
       <div
-        className="min-h-screen"
+        className="min-h-[100dvh]"
         style={{
           background: `linear-gradient(135deg, rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.08) 0%, #ffffff 50%, rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.08) 100%)`,
         }}

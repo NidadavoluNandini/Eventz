@@ -315,7 +315,8 @@ export default function RegisterEvent() {
   if (loading) {
     return (
       <PublicLayout>
-        <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="min-h-[100dvh]
+ flex items-center justify-center bg-gray-50">
           <div className="text-center">
             <div className="w-16 h-16 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
             <p className="text-gray-600 font-medium">
@@ -330,7 +331,8 @@ export default function RegisterEvent() {
   if (!event) {
     return (
       <PublicLayout>
-        <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="min-h-[100dvh]
+ flex items-center justify-center bg-gray-50">
           <p className="text-gray-600">Event not found.</p>
         </div>
       </PublicLayout>
@@ -391,7 +393,8 @@ export default function RegisterEvent() {
       )}
 
       <div
-        className="min-h-screen py-6 px-4"
+        className="min-h-[100dvh]
+ py-6 px-4"
         style={{
           background: `linear-gradient(135deg, ${themeColor}08 0%, #ffffff 50%, ${themeColor}08 100%)`,
         }}

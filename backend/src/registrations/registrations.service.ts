@@ -38,6 +38,7 @@ type ExtraUserInfoDto = {
   emergencyContactName?: string;
   emergencyContactPhone?: string;
 };
+const PLATFORM_FEE_PERCENT = Number(process.env.PLATFORM_FEE_PERCENT ?? 0);
 
 @Injectable()
 export class RegistrationsService {
@@ -57,6 +58,7 @@ export class RegistrationsService {
   // =====================================================
   // STEP 1: INITIATE REGISTRATION (SEND OTP)
   // =====================================================
+
 async initiateRegistration(
   dto: {
     eventId: string;
@@ -168,19 +170,26 @@ async initiateRegistration(
   // GST ONLY on base
   const gstAmount = Math.round((baseTotal * (gstRate || 0)) / 100);
 
-  // Platform fee percent from event settings (mirror frontend)
-  const platformPercent = event.paymentSettings?.collectPaymentCharges
-    ? event.paymentSettings.platformFeePercent ?? 0
-    : 0;
+// decide if user pays platform fee based on toggle
+const collectFromUser =
+  event.paymentSettings?.collectPaymentCharges ?? false;
 
-  // Platform fee on (base + GST)
-  const basePlusGstTotal = baseTotal + gstAmount;
-  const platformFee = Math.round(
-    (basePlusGstTotal * platformPercent) / 100,
-  );
+// global percent from env
+const platformPercent =
+  PLATFORM_FEE_PERCENT > 0 ? PLATFORM_FEE_PERCENT : 0;
 
-  // Final amount: base + GST + platform
-  const finalAmount = baseTotal + gstAmount + platformFee;
+// raw fee on (base + GST)
+const basePlusGstTotal = baseTotal + gstAmount;
+const platformFeeRaw = Math.round(
+  (basePlusGstTotal * platformPercent) / 100,
+);
+
+// only charge user if toggle ON
+const platformFee = collectFromUser ? platformFeeRaw : 0;
+
+// Final amount: base + GST + platformFee (if charged)
+const finalAmount = baseTotal + gstAmount + platformFee;
+
 
   // 3) Prevent duplicate completed registration
   const completed = await this.registrationModel.findOne({

@@ -19,6 +19,8 @@ import {
 
 import { Event, EventDocument } from '../events/schemas/event.schema';
 
+const PLATFORM_FEE_PERCENT = Number(process.env.PLATFORM_FEE_PERCENT ?? 0);
+
 @Injectable()
 export class TicketsService {
   constructor(
@@ -217,22 +219,22 @@ export class TicketsService {
 
     const gstRate = (reg as any).gstRate ?? ticket?.gst ?? 0;
     const baseTotal = basePricePerTicket * quantity;
-    const gstAmount =
-      (reg as any).gstAmount ??
-      Math.round((baseTotal * gstRate) / 100);
 
-    const platformPercent =
-      (reg as any).platformPercent ??
-      (event.paymentSettings?.collectPaymentCharges
-        ? event.paymentSettings.platformFeePercent ?? 0
-        : 0);
 
-    const platformFee =
-      (reg as any).platformFee ??
-      Math.round(((baseTotal + gstAmount) * platformPercent) / 100);
+   const collectFromUser =
+  event.paymentSettings?.collectPaymentCharges ?? false;
 
-    const totalAmount =
-      reg.totalAmount ?? baseTotal + gstAmount + platformFee;
+const gstAmount =
+  (reg as any).gstAmount ??
+  Math.round((baseTotal * gstRate) / 100);
+
+// read platform fee and percent from stored reg (set at payment time)
+const platformFee = (reg as any).platformFee ?? 0;
+const platformPercent = (reg as any).platformPercent ?? PLATFORM_FEE_PERCENT;
+
+const totalAmount =
+  reg.totalAmount ?? baseTotal + gstAmount + platformFee;
+
 const pdfBuffer = await this.pdfService.generateTicketPdfBuffer({
   userName: reg.userName,
   eventTitle: event.title,
