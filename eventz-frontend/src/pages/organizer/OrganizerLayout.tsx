@@ -162,7 +162,7 @@ export default function OrganizerLayout() {
   };
 
   return (
-    <div className="flex h-screen overflow-hidden bg-gradient-to-br from-slate-50 to-slate-100">
+<div className="flex min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
       {/* MOBILE OVERLAY */}
       {isSidebarOpen && (
         <div
@@ -477,9 +477,10 @@ export default function OrganizerLayout() {
 
         {/* PAGE CONTENT */}
         <div
-          id="main-content"
-          className="flex-1 overflow-y-auto bg-gradient-to-br from-slate-50 to-slate-100"
-        >
+  id="main-content"
+  className="flex-1"
+>
+
           <div className="p-6 max-w-[1600px] mx-auto animate-fadeIn">
             <Outlet />
           </div>

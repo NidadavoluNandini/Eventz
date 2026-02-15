@@ -9,8 +9,8 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
-    <div className="min-h-[100dvh]
-flex flex-col">
+<div className="min-h-screen flex flex-col">
+
       {/* NAVBAR */}
       <nav className="sticky top-0 z-50 bg-white border-b shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
