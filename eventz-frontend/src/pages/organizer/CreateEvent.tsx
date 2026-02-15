@@ -777,7 +777,7 @@ const handlePrimaryClick = async () => {
   await handleNext();
 };
   return (
-<div className="h-full bg-gray-50 px-3 py-3 flex flex-col overflow-hidden">
+<div className="min-h-screen bg-gray-50 px-3 py-3 flex flex-col">
 
       {toast && (
         <div
@@ -789,7 +789,7 @@ const handlePrimaryClick = async () => {
         </div>
       )}
 
-<div className="max-w-4xl mx-auto w-full flex flex-col gap-3 flex-1 min-h-0 overflow-hidden">
+<div className="max-w-4xl mx-auto w-full flex flex-col gap-3 flex-1">
 <StepHeader
   editMode={editMode}
   isLoading={isLoading}
@@ -813,8 +813,10 @@ const handlePrimaryClick = async () => {
 
 <div
   ref={formScrollRef}
-  className="bg-white rounded-xl shadow border border-gray-200 p-4 flex-1 overflow-y-auto min-h-0"
+  className="bg-white rounded-xl shadow border border-gray-200 p-4 overflow-y-auto max-h-[calc(100vh-220px)]"
 >
+
+
 
 
           {currentStep === "userInfo" && (

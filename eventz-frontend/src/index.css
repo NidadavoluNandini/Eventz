@@ -3,13 +3,17 @@
 @tailwind utilities;
 
 /* Global base styles */
-html,
-body,
-#root {
+html, body, #root {
   height: 100%;
+}
+
+body {
   margin: 0;
   padding: 0;
+  overflow-x: hidden;
 }
+
+
 body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -100,3 +104,8 @@ body {
       #f0f0f0 36%);
   background-size: 1000px 100%;
 }
+/* ---------- FIX VIEWPORT HEIGHT ISSUE ---------- */
+
+
+
+
