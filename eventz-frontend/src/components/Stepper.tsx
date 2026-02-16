@@ -47,58 +47,82 @@ export const Stepper: React.FC<StepperProps> = ({
         </div>
       </div>
 
-      {/* Horizontal pills */}
+      {/* Pills + desktop connectors */}
       <div className="relative">
         <div className="flex items-center gap-2 overflow-x-auto pb-1 hide-scrollbar">
-          {steps.map((step) => {
+          {steps.map((step, index) => {
             const isActive = currentStep === step.id;
             const completed = isSectionCompleted(step.id);
             const clickable = canNavigateToStep(step.id);
+            const isBeforeOrCurrent = index <= currentIndex;
 
             return (
-              <button
+              <div
                 key={step.id}
-                type="button"
-                disabled={!clickable}
-                onClick={() => clickable && goToStep(step.id)}
-                className={`flex items-center gap-2 px-3 sm:px-4 md:px-5 py-1.5 md:py-2 rounded-full border text-[11px] sm:text-xs md:text-sm font-medium transition whitespace-nowrap ${
-                  isActive
-                    ? "bg-indigo-600 text-white border-indigo-600"
-                    : completed
-                    ? "bg-green-50 text-green-700 border-green-200"
-                    : "bg-gray-50 text-gray-600 border-gray-200"
-                } ${
-                  !clickable
-                    ? "opacity-60 cursor-not-allowed"
-                    : "hover:bg-indigo-50"
-                }`}
+                className="flex items-center md:flex-1 md:min-w-0"
               >
-                {/* icon badge */}
-                <span
-                  className={`relative flex items-center justify-center
-                    w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8
-                    rounded-full ${
+                {/* pill */}
+                <button
+                  type="button"
+                  disabled={!clickable}
+                  onClick={() => clickable && goToStep(step.id)}
+                  className={`flex items-center gap-2
+                    px-3 sm:px-4 md:px-5
+                    py-1.5 md:py-2
+                    rounded-full border
+                    text-[11px] sm:text-xs md:text-sm
+                    font-medium transition whitespace-nowrap
+                    ${
                       isActive
-                        ? "bg-white text-indigo-700"
+                        ? "bg-indigo-600 text-white border-indigo-600"
                         : completed
-                        ? "bg-green-600 text-white"
-                        : "bg-gray-200 text-gray-700"
+                        ? "bg-green-50 text-green-700 border-green-200"
+                        : "bg-gray-50 text-gray-600 border-gray-200"
+                    }
+                    ${
+                      !clickable
+                        ? "opacity-60 cursor-not-allowed"
+                        : "hover:bg-indigo-50"
                     }`}
                 >
-                  <span className="text-base sm:text-lg md:text-xl leading-none">
-                    {step.icon}
-                  </span>
-                  {completed && !isActive && (
-                    <span className="absolute -bottom-1 -right-1 w-3 h-3 rounded-full bg-white flex items-center justify-center">
-                      <span className="w-2 h-2 rounded-full bg-green-500" />
+                  {/* icon badge */}
+                  <span
+                    className={`relative flex items-center justify-center
+                      w-6 h-6 sm:w-7 sm:h-7 md:w-9 md:h-9
+                      rounded-full ${
+                        isActive
+                          ? "bg-white text-indigo-700"
+                          : completed
+                          ? "bg-green-600 text-white"
+                          : "bg-gray-200 text-gray-700"
+                      }`}
+                  >
+                    <span className="text-base sm:text-lg md:text-2xl leading-none">
+                      {step.icon}
                     </span>
-                  )}
-                </span>
+                    {completed && !isActive && (
+                      <span className="absolute -bottom-1 -right-1 w-3 h-3 rounded-full bg-white flex items-center justify-center">
+                        <span className="w-2 h-2 rounded-full bg-green-500" />
+                      </span>
+                    )}
+                  </span>
 
-                <span className="hidden xs:inline truncate max-w-[90px] sm:max-w-[130px] md:max-w-[170px]">
-                  {step.label}
-                </span>
-              </button>
+                  <span className="hidden xs:inline truncate max-w-[90px] sm:max-w-[130px] md:max-w-[180px]">
+                    {step.label}
+                  </span>
+                </button>
+
+                {/* desktop connector line: only between steps */}
+                {index < steps.length - 1 && (
+                  <div className="hidden md:block flex-1 mx-1">
+                    <div
+                      className={`h-1 w-full rounded-full transition-colors ${
+                        isBeforeOrCurrent ? "bg-indigo-200" : "bg-gray-200"
+                      }`}
+                    />
+                  </div>
+                )}
+              </div>
             );
           })}
         </div>
