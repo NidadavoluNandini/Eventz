@@ -34,119 +34,65 @@ export const Stepper: React.FC<StepperProps> = ({
   const currentIndex = steps.findIndex((s) => s.id === currentStep);
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-4 sm:p-6 mb-6">
-      {/* MOBILE = vertical | DESKTOP = horizontal */}
-      <ol className="flex flex-col md:flex-row md:items-center md:justify-between">
-        {steps.map((step, index) => {
-          const isActive = currentStep === step.id;
-          const completed = isSectionCompleted(step.id);
-          const isPast = index < currentIndex && completed;
-          const clickable = canNavigateToStep(step.id);
+    <div className="bg-white rounded-2xl shadow-sm border border-gray-200 px-3 py-3 sm:px-4 sm:py-4 mb-4 sm:mb-6">
+      {/* Header: step count + current label */}
+      <div className="flex items-center justify-between mb-2">
+        <div>
+          <p className="text-[11px] sm:text-xs font-semibold tracking-wide text-indigo-600 uppercase">
+            Step {currentIndex + 1} of {steps.length}
+          </p>
+          <p className="text-sm sm:text-base font-semibold text-gray-800">
+            {steps[currentIndex]?.label}
+          </p>
+        </div>
+      </div>
 
-          return (
-            <li
-              key={step.id}
-              className="flex md:flex-1 md:flex-col items-center relative"
-            >
-              {/* STEP BUTTON */}
+      {/* Horizontal pills – always row, scroll if overflow */}
+      <div className="relative">
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 hide-scrollbar">
+          {steps.map((step, index) => {
+            const isActive = currentStep === step.id;
+            const completed = isSectionCompleted(step.id);
+            const clickable = canNavigateToStep(step.id);
+            const number = index + 1;
+
+            return (
               <button
+                key={step.id}
                 type="button"
-                onClick={() => clickable && goToStep(step.id)}
                 disabled={!clickable}
-                className={`flex items-center md:flex-col gap-3 group z-10
-                  ${
-                    !clickable
-                      ? "cursor-not-allowed opacity-60"
-                      : "cursor-pointer"
-                  }
-                `}
+                onClick={() => clickable && goToStep(step.id)}
+                className={`flex items-center gap-2 px-3 sm:px-4 py-1.5 rounded-full border text-[11px] sm:text-xs font-medium transition whitespace-nowrap ${
+                  isActive
+                    ? "bg-indigo-600 text-white border-indigo-600"
+                    : completed
+                    ? "bg-green-50 text-green-700 border-green-200"
+                    : "bg-gray-50 text-gray-600 border-gray-200"
+                } ${
+                  !clickable
+                    ? "opacity-60 cursor-not-allowed"
+                    : "hover:bg-indigo-50"
+                }`}
               >
-                {/* CIRCLE */}
-                <div
-                  className={`
-                    w-10 h-10 sm:w-11 sm:h-11 lg:w-12 lg:h-12
-                    rounded-full flex items-center justify-center
-                    font-bold transition-all
-                    ${
-                      isActive
-                        ? "bg-indigo-600 text-white ring-4 ring-indigo-200 scale-110"
-                        : isPast
-                        ? "bg-green-500 text-white"
-                        : "bg-gray-200 text-gray-500"
-                    }
-                  `}
-                >
-                  {isPast ? (
-                    <svg
-                      className="w-5 h-5"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={3}
-                        d="M5 13l4 4L19 7"
-                      />
-                    </svg>
-                  ) : (
-                    step.icon
-                  )}
-                </div>
-
-                {/* LABEL */}
                 <span
-                  className={`
-                    text-[11px] sm:text-xs font-medium text-center md:mt-2
-                    ${
-                      isActive
-                        ? "text-indigo-600 font-semibold"
-                        : isPast
-                        ? "text-green-600"
-                        : "text-gray-500"
-                    }
-                  `}
+                  className={`w-5 h-5 flex items-center justify-center rounded-full text-[10px] ${
+                    isActive
+                      ? "bg-white text-indigo-700"
+                      : completed
+                      ? "bg-green-600 text-white"
+                      : "bg-gray-200 text-gray-700"
+                  }`}
                 >
+                  {completed ? "✓" : number}
+                </span>
+                <span className="hidden xs:inline truncate max-w-[90px] sm:max-w-[130px]">
                   {step.label}
                 </span>
               </button>
-
-              {/* ---------- CONNECTOR LINE ---------- */}
-
-              {/* Desktop Horizontal Line */}
-              {index < steps.length - 1 && (
-                <div className="hidden md:block absolute top-6 left-1/2 w-full">
-                  <div
-                    className={`h-1 ml-6 rounded-full
-                      ${
-                        index < currentIndex
-                          ? "bg-green-500"
-                          : "bg-gray-200"
-                      }
-                    `}
-                  />
-                </div>
-              )}
-
-              {/* Mobile Vertical Line */}
-              {index < steps.length - 1 && (
-                <div className="md:hidden absolute top-12 left-5">
-                  <div
-                    className={`w-0.5 h-8 rounded-full
-                      ${
-                        index < currentIndex
-                          ? "bg-green-500"
-                          : "bg-gray-200"
-                      }
-                    `}
-                  />
-                </div>
-              )}
-            </li>
-          );
-        })}
-      </ol>
+            );
+          })}
+        </div>
+      </div>
     </div>
   );
 };

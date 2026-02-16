@@ -12,6 +12,13 @@ body {
   padding: 0;
   overflow-x: hidden;
 }
+/* tailwind.css or global.css */
+.hide-scrollbar {
+  scrollbar-width: none;        /* Firefox */
+}
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;                /* Chrome/Safari */
+}
 
 
 body {
