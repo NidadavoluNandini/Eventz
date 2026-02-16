@@ -35,7 +35,6 @@ export const Stepper: React.FC<StepperProps> = ({
 
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-gray-200 px-3 py-3 sm:px-4 sm:py-4 mb-4 sm:mb-6">
-      {/* Header: step count + current label */}
       <div className="flex items-center justify-between mb-2">
         <div>
           <p className="text-[11px] sm:text-xs font-semibold tracking-wide text-indigo-600 uppercase">
@@ -47,14 +46,12 @@ export const Stepper: React.FC<StepperProps> = ({
         </div>
       </div>
 
-      {/* Horizontal pills – always row, scroll if overflow */}
       <div className="relative">
         <div className="flex items-center gap-2 overflow-x-auto pb-1 hide-scrollbar">
-          {steps.map((step, index) => {
+          {steps.map((step) => {
             const isActive = currentStep === step.id;
             const completed = isSectionCompleted(step.id);
             const clickable = canNavigateToStep(step.id);
-            const number = index + 1;
 
             return (
               <button
@@ -74,8 +71,9 @@ export const Stepper: React.FC<StepperProps> = ({
                     : "hover:bg-indigo-50"
                 }`}
               >
+                {/* icon badge */}
                 <span
-                  className={`w-5 h-5 flex items-center justify-center rounded-full text-[10px] ${
+                  className={`relative flex items-center justify-center w-6 h-6 rounded-full ${
                     isActive
                       ? "bg-white text-indigo-700"
                       : completed
@@ -83,8 +81,16 @@ export const Stepper: React.FC<StepperProps> = ({
                       : "bg-gray-200 text-gray-700"
                   }`}
                 >
-                  {completed ? "✓" : number}
+                  <span className="text-base leading-none">
+                    {step.icon}
+                  </span>
+                  {completed && !isActive && (
+                    <span className="absolute -bottom-1 -right-1 w-3 h-3 rounded-full bg-white flex items-center justify-center">
+                      <span className="w-2 h-2 rounded-full bg-green-500" />
+                    </span>
+                  )}
                 </span>
+
                 <span className="hidden xs:inline truncate max-w-[90px] sm:max-w-[130px]">
                   {step.label}
                 </span>

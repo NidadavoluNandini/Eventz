@@ -190,12 +190,15 @@ export default function CreateEvent() {
 
   const formScrollRef = React.useRef<HTMLDivElement | null>(null);
 
-  const scrollTop = () => {
-    formScrollRef.current?.scrollTo({
-      top: 0,
-      behavior: "smooth",
-    });
-  };
+const scrollTop = () => {
+  window.scrollTo({ top: 0, behavior: "smooth" });
+
+  formScrollRef.current?.scrollTo({
+    top: 0,
+    behavior: "smooth",
+  });
+};
+
 
   const showToast = (type: "success" | "error", message: string) => {
     setToast({ type, message });
