@@ -35,17 +35,19 @@ export const Stepper: React.FC<StepperProps> = ({
 
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-gray-200 px-3 py-3 sm:px-4 sm:py-4 mb-4 sm:mb-6">
+      {/* Header */}
       <div className="flex items-center justify-between mb-2">
         <div>
-          <p className="text-[11px] sm:text-xs font-semibold tracking-wide text-indigo-600 uppercase">
+          <p className="text-[11px] sm:text-xs md:text-sm font-semibold tracking-wide text-indigo-600 uppercase">
             Step {currentIndex + 1} of {steps.length}
           </p>
-          <p className="text-sm sm:text-base font-semibold text-gray-800">
+          <p className="text-sm sm:text-base md:text-lg font-semibold text-gray-800">
             {steps[currentIndex]?.label}
           </p>
         </div>
       </div>
 
+      {/* Horizontal pills */}
       <div className="relative">
         <div className="flex items-center gap-2 overflow-x-auto pb-1 hide-scrollbar">
           {steps.map((step) => {
@@ -59,7 +61,7 @@ export const Stepper: React.FC<StepperProps> = ({
                 type="button"
                 disabled={!clickable}
                 onClick={() => clickable && goToStep(step.id)}
-                className={`flex items-center gap-2 px-3 sm:px-4 py-1.5 rounded-full border text-[11px] sm:text-xs font-medium transition whitespace-nowrap ${
+                className={`flex items-center gap-2 px-3 sm:px-4 md:px-5 py-1.5 md:py-2 rounded-full border text-[11px] sm:text-xs md:text-sm font-medium transition whitespace-nowrap ${
                   isActive
                     ? "bg-indigo-600 text-white border-indigo-600"
                     : completed
@@ -73,15 +75,17 @@ export const Stepper: React.FC<StepperProps> = ({
               >
                 {/* icon badge */}
                 <span
-                  className={`relative flex items-center justify-center w-6 h-6 rounded-full ${
-                    isActive
-                      ? "bg-white text-indigo-700"
-                      : completed
-                      ? "bg-green-600 text-white"
-                      : "bg-gray-200 text-gray-700"
-                  }`}
+                  className={`relative flex items-center justify-center
+                    w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8
+                    rounded-full ${
+                      isActive
+                        ? "bg-white text-indigo-700"
+                        : completed
+                        ? "bg-green-600 text-white"
+                        : "bg-gray-200 text-gray-700"
+                    }`}
                 >
-                  <span className="text-base leading-none">
+                  <span className="text-base sm:text-lg md:text-xl leading-none">
                     {step.icon}
                   </span>
                   {completed && !isActive && (
@@ -91,7 +95,7 @@ export const Stepper: React.FC<StepperProps> = ({
                   )}
                 </span>
 
-                <span className="hidden xs:inline truncate max-w-[90px] sm:max-w-[130px]">
+                <span className="hidden xs:inline truncate max-w-[90px] sm:max-w-[130px] md:max-w-[170px]">
                   {step.label}
                 </span>
               </button>
