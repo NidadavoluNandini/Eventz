@@ -1,5 +1,5 @@
 // src/pages/events/create/steps/TicketsStep.tsx
-import React from 'react';
+import React from "react";
 
 export type SubTicket = {
   id: string;
@@ -49,35 +49,35 @@ export const TicketsStep: React.FC<TicketsStepProps> = ({
   updateSubTicket,
   removeSubTicket,
   errors,
-  paymentSettings
+  paymentSettings,
 }) => {
   return (
-    <div className="space-y-4">
+    <div className="space-y-3 sm:space-y-4">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
         <div>
-          <h2 className="text-lg font-semibold text-gray-800">
+          <h2 className="text-base sm:text-lg font-semibold text-gray-800">
             Ticket Configuration
           </h2>
-          <p className="text-xs text-gray-500 mt-0.5">
+          <p className="text-xs sm:text-sm text-gray-500 mt-0.5">
             Add tickets and addons with pricing.
           </p>
         </div>
         <button
           type="button"
           onClick={addTicket}
-          className="flex items-center gap-1.5 px-4 py-2 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 transition text-sm shadow-md"
+          className="self-start sm:self-auto flex items-center gap-1.5 px-3 sm:px-4 py-1.5 sm:py-2 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 transition text-xs sm:text-sm shadow-md"
         >
-          <span className="text-lg leading-none">＋</span>
+          <span className="text-base sm:text-lg leading-none">＋</span>
           <span>Add Ticket</span>
         </button>
       </div>
 
       {/* Error */}
       {errors.tickets && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-3 flex items-start gap-2">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-2.5 sm:p-3 flex items-start gap-2">
           <span className="text-red-500 text-sm font-semibold">!</span>
-          <p className="text-red-700 text-sm font-medium">
+          <p className="text-red-700 text-xs sm:text-sm font-medium">
             {errors.tickets}
           </p>
         </div>
@@ -85,14 +85,14 @@ export const TicketsStep: React.FC<TicketsStepProps> = ({
 
       {/* No tickets */}
       {tickets.length === 0 && !errors.tickets && (
-        <div className="text-center py-12 bg-gray-50 rounded-xl border-2 border-dashed border-gray-300">
-          <div className="w-16 h-16 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-3">
-            <span className="text-indigo-600 text-3xl">🎫</span>
+        <div className="text-center py-8 sm:py-10 bg-gray-50 rounded-xl border-2 border-dashed border-gray-300">
+          <div className="w-14 h-14 sm:w-16 sm:h-16 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-3">
+            <span className="text-indigo-600 text-2xl sm:text-3xl">🎫</span>
           </div>
-          <p className="text-gray-700 font-semibold mb-1">
+          <p className="text-gray-700 font-semibold mb-1 text-sm sm:text-base">
             No Tickets Added
           </p>
-          <p className="text-sm text-gray-500">
+          <p className="text-xs sm:text-sm text-gray-500">
             Click &quot;Add Ticket&quot; to create your first ticket.
           </p>
         </div>
@@ -107,12 +107,12 @@ export const TicketsStep: React.FC<TicketsStepProps> = ({
             <div
               key={ticket.id}
               className={`bg-white rounded-xl border-2 transition-all shadow-sm ${
-                ticket.isExpanded ? 'border-indigo-300' : 'border-gray-200'
+                ticket.isExpanded ? "border-indigo-300" : "border-gray-200"
               }`}
             >
               {/* Header row */}
               <div
-                className="flex items-center justify-between p-3 cursor-pointer hover:bg-gray-50"
+                className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-3 cursor-pointer hover:bg-gray-50"
                 onClick={() => toggleTicketExpansion(ticket.id)}
               >
                 <div className="flex items-center gap-3 flex-1">
@@ -120,32 +120,34 @@ export const TicketsStep: React.FC<TicketsStepProps> = ({
                     {index + 1}
                   </div>
                   <div className="flex-1">
-                    <h3 className="font-semibold text-gray-800 text-sm">
+                    <h3 className="font-semibold text-gray-800 text-sm sm:text-base">
                       {ticket.name || `Ticket ${index + 1}`}
                       {isFree && (
-                        <span className="ml-2 px-2 py-0.5 bg-blue-100 text-blue-700 text-xs font-bold rounded-full">
+                        <span className="ml-2 px-2 py-0.5 bg-blue-100 text-blue-700 text-[11px] sm:text-xs font-bold rounded-full">
                           FREE
                         </span>
                       )}
                       {ticket.subTickets?.length > 0 && (
-                        <span className="ml-2 px-2 py-0.5 bg-purple-100 text-purple-700 text-xs font-bold rounded-full">
+                        <span className="ml-2 px-2 py-0.5 bg-purple-100 text-purple-700 text-[11px] sm:text-xs font-bold rounded-full">
                           {ticket.subTickets.length} Addons
                         </span>
                       )}
                     </h3>
                     {!ticket.isExpanded && (
-                      <p className="text-xs text-gray-500">
-                        {ticket.quantity || 0} tickets •{' '}
-                        {isFree ? 'Free' : ticket.finalPrice.toFixed(2)}
+                      <p className="text-[11px] sm:text-xs text-gray-500">
+                        {ticket.quantity || 0} tickets •{" "}
+                        {isFree ? "Free" : ticket.finalPrice.toFixed(2)}
                       </p>
                     )}
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 self-end sm:self-auto">
                   {!isFree && (
-                    <div className="text-right mr-2 hidden sm:block">
-                      <p className="text-xs text-gray-500">Final price</p>
+                    <div className="text-right mr-1 hidden sm:block">
+                      <p className="text-[11px] text-gray-500">
+                        Final price
+                      </p>
                       <p className="text-lg font-bold text-green-600">
                         {ticket.finalPrice.toFixed(2)}
                       </p>
@@ -161,7 +163,7 @@ export const TicketsStep: React.FC<TicketsStepProps> = ({
                   >
                     <span
                       className={`transition-transform ${
-                        ticket.isExpanded ? 'rotate-180' : ''
+                        ticket.isExpanded ? "rotate-180" : ""
                       }`}
                     >
                       ▼
@@ -171,11 +173,11 @@ export const TicketsStep: React.FC<TicketsStepProps> = ({
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation();
-                      if (window.confirm('Delete this ticket?')) {
+                      if (window.confirm("Delete this ticket?")) {
                         removeTicket(ticket.id);
                       }
                     }}
-                    className="px-3 py-1 bg-red-500 text-white rounded-lg text-xs font-medium hover:bg-red-600 transition"
+                    className="px-3 py-1 bg-red-500 text-white rounded-lg text-[11px] sm:text-xs font-medium hover:bg-red-600 transition"
                   >
                     Delete
                   </button>
@@ -184,16 +186,16 @@ export const TicketsStep: React.FC<TicketsStepProps> = ({
 
               {/* Expanded content */}
               {ticket.isExpanded && (
-                <div className="border-t border-gray-200 p-4 bg-gray-50 space-y-4">
+                <div className="border-t border-gray-200 p-3 sm:p-4 bg-gray-50 space-y-3 sm:space-y-4">
                   {/* Main ticket */}
-                  <div className="bg-white rounded-lg p-4 border-2 border-indigo-200 mb-2">
-                    <h4 className="text-sm font-bold text-gray-700 mb-3 flex items-center gap-2">
+                  <div className="bg-white rounded-lg p-3 sm:p-4 border-2 border-indigo-200 mb-1 sm:mb-2">
+                    <h4 className="text-xs sm:text-sm font-bold text-gray-700 mb-2 sm:mb-3 flex items-center gap-2">
                       Main Ticket Details
                     </h4>
 
-                    <div className="grid grid-cols-2 gap-3 mb-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
                       <div>
-                        <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+                        <label className="block text-[11px] sm:text-xs font-semibold text-gray-700 mb-1.5">
                           Ticket Name <span className="text-red-500">*</span>
                         </label>
                         <input
@@ -202,12 +204,12 @@ export const TicketsStep: React.FC<TicketsStepProps> = ({
                           placeholder="e.g., VIP, General"
                           value={ticket.name}
                           onChange={(e) =>
-                            updateTicket(ticket.id, 'name', e.target.value)
+                            updateTicket(ticket.id, "name", e.target.value)
                           }
                         />
                       </div>
                       <div>
-                        <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+                        <label className="block text-[11px] sm:text-xs font-semibold text-gray-700 mb-1.5">
                           Quantity
                           <span className="text-gray-400"> (Optional)</span>
                         </label>
@@ -218,15 +220,19 @@ export const TicketsStep: React.FC<TicketsStepProps> = ({
                           min={0}
                           value={ticket.quantity || ""}
                           onChange={(e) =>
-                            updateTicket(ticket.id, 'quantity', e.target.value)
+                            updateTicket(
+                              ticket.id,
+                              "quantity",
+                              e.target.value
+                            )
                           }
                         />
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-3 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                       <div>
-                        <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+                        <label className="block text-[11px] sm:text-xs font-semibold text-gray-700 mb-1.5">
                           Price
                         </label>
                         <input
@@ -236,12 +242,12 @@ export const TicketsStep: React.FC<TicketsStepProps> = ({
                           min={0}
                           value={ticket.price || ""}
                           onChange={(e) =>
-                            updateTicket(ticket.id, 'price', e.target.value)
+                            updateTicket(ticket.id, "price", e.target.value)
                           }
                         />
                       </div>
                       <div>
-                        <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+                        <label className="block text-[11px] sm:text-xs font-semibold text-gray-700 mb-1.5">
                           GST (%)
                         </label>
                         <input
@@ -253,12 +259,12 @@ export const TicketsStep: React.FC<TicketsStepProps> = ({
                           disabled={isFree}
                           value={ticket.gst || ""}
                           onChange={(e) =>
-                            updateTicket(ticket.id, 'gst', e.target.value)
+                            updateTicket(ticket.id, "gst", e.target.value)
                           }
                         />
                       </div>
                       <div>
-                        <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+                        <label className="block text-[11px] sm:text-xs font-semibold text-gray-700 mb-1.5">
                           Final Price
                         </label>
                         <input
@@ -279,14 +285,14 @@ export const TicketsStep: React.FC<TicketsStepProps> = ({
 
                   {/* Addons */}
                   <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <h4 className="text-xs font-bold text-gray-700 uppercase tracking-wide flex items-center gap-2">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-1.5 sm:mb-2">
+                      <h4 className="text-[11px] sm:text-xs font-bold text-gray-700 uppercase tracking-wide flex items-center gap-2">
                         Addons
                       </h4>
                       <button
                         type="button"
                         onClick={() => addSubTicket(ticket.id)}
-                        className="px-3 py-1 text-xs font-semibold text-purple-600 bg-purple-50 rounded-lg hover:bg-purple-100 transition flex items-center gap-1"
+                        className="px-3 py-1 text-[11px] sm:text-xs font-semibold text-purple-600 bg-purple-50 rounded-lg hover:bg-purple-100 transition flex items-center gap-1 self-start sm:self-auto"
                       >
                         <span>＋</span>
                         <span>Add Addon</span>
@@ -294,7 +300,7 @@ export const TicketsStep: React.FC<TicketsStepProps> = ({
                     </div>
 
                     {ticket.subTickets.length === 0 && (
-                      <p className="text-xs text-gray-500">
+                      <p className="text-[11px] sm:text-xs text-gray-500">
                         No addons added. You can create optional extras like
                         food coupons, workshops, etc.
                       </p>
@@ -307,28 +313,28 @@ export const TicketsStep: React.FC<TicketsStepProps> = ({
                             key={sub.id}
                             className="bg-purple-50 border border-purple-200 rounded-lg p-3"
                           >
-                            <div className="grid grid-cols-6 gap-2 items-end">
-                              <div className="col-span-2">
-                                <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+                            <div className="grid grid-cols-1 sm:grid-cols-6 gap-2 items-end">
+                              <div className="sm:col-span-2">
+                                <label className="block text-[11px] sm:text-xs font-semibold text-gray-700 mb-1.5">
                                   Addon Name
                                 </label>
                                 <input
                                   type="text"
-                                  className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 transition outline-none text-sm"
+                                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 transition outline-none text-sm"
                                   placeholder="Addon name"
                                   value={sub.name}
                                   onChange={(e) =>
                                     updateSubTicket(
                                       ticket.id,
                                       sub.id,
-                                      'name',
+                                      "name",
                                       e.target.value
                                     )
                                   }
                                 />
                               </div>
-                              <div className="col-span-2">
-                                <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+                              <div className="sm:col-span-2">
+                                <label className="block text-[11px] sm:text-xs font-semibold text-gray-700 mb-1.5">
                                   Price
                                 </label>
                                 <input
@@ -341,28 +347,28 @@ export const TicketsStep: React.FC<TicketsStepProps> = ({
                                     updateSubTicket(
                                       ticket.id,
                                       sub.id,
-                                      'price',
+                                      "price",
                                       e.target.value
                                     )
                                   }
                                 />
                               </div>
-                             
-                              <div className="col-span-1">
-                                <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+
+                              <div className="sm:col-span-1">
+                                <label className="block text-[11px] sm:text-xs font-semibold text-gray-700 mb-1.5">
                                   Final
                                 </label>
                                 <div className="px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm font-bold text-green-600 text-center">
                                   {sub.finalPrice.toFixed(2)}
                                 </div>
                               </div>
-                              <div className="col-span-1 flex justify-end">
+                              <div className="sm:col-span-1 flex justify-end">
                                 <button
                                   type="button"
                                   onClick={() =>
                                     removeSubTicket(ticket.id, sub.id)
                                   }
-                                  className="px-3 py-2 bg-red-500 text-white rounded-lg text-xs font-medium hover:bg-red-600 transition w-full"
+                                  className="w-full px-3 py-2 bg-red-500 text-white rounded-lg text-[11px] sm:text-xs font-medium hover:bg-red-600 transition"
                                 >
                                   Remove
                                 </button>

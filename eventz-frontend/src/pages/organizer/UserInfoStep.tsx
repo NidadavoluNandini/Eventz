@@ -39,20 +39,22 @@ export const UserInfoStep: React.FC<UserInfoStepProps> = ({
   setUserFieldRequiredConfig,
 }) => {
   return (
-    <div className="space-y-4">
-      <h2 className="text-lg font-semibold text-gray-800 mb-1">
-        Attendee Fields Configuration
-      </h2>
-      <p className="text-sm text-gray-500">
-        Choose which attendee fields to collect and whether they are required.
-      </p>
+    <div className="space-y-3 sm:space-y-4">
+      <div>
+        <h2 className="text-base sm:text-lg font-semibold text-gray-800 mb-1">
+          Attendee Fields Configuration
+        </h2>
+        <p className="text-xs sm:text-sm text-gray-500">
+          Choose which attendee fields to collect and whether they are required.
+        </p>
+      </div>
 
       <div>
-        <h3 className="text-xs font-semibold text-gray-700 mb-2 uppercase tracking-wide">
+        <h3 className="text-[11px] sm:text-xs font-semibold text-gray-700 mb-2 uppercase tracking-wide">
           Fields
         </h3>
 
-        <div className="space-y-2 text-sm">
+        <div className="space-y-2 text-xs sm:text-sm">
           {ALL_FIELDS.map((f) => {
             const visible =
               userFieldConfig[f.key as keyof typeof userFieldConfig];
@@ -64,7 +66,7 @@ export const UserInfoStep: React.FC<UserInfoStepProps> = ({
             return (
               <div
                 key={f.key}
-                className="flex items-center justify-between gap-3 border border-gray-200 rounded-lg px-3 py-2 bg-white"
+                className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border border-gray-200 rounded-lg px-3 py-2 bg-white"
               >
                 <div className="flex items-center gap-2">
                   {/* visibility checkbox */}
@@ -83,28 +85,25 @@ export const UserInfoStep: React.FC<UserInfoStepProps> = ({
                 </div>
 
                 {/* required toggle */}
-                <div className="flex items-center gap-2 text-xs text-gray-500">
+                <div className="flex items-center gap-2 text-[11px] sm:text-xs text-gray-500">
                   <span>{required ? "Required" : "Optional"}</span>
                   <button
                     type="button"
                     onClick={() => {
-  const newRequired = !required;
+                      const newRequired = !required;
 
-  // toggle required
-  setUserFieldRequiredConfig((prev) => ({
-    ...prev,
-    [f.key]: newRequired,
-  }));
+                      setUserFieldRequiredConfig((prev) => ({
+                        ...prev,
+                        [f.key]: newRequired,
+                      }));
 
-  // ✅ if required → automatically enable field visibility
-  if (newRequired) {
-    setUserFieldConfig((prev) => ({
-      ...prev,
-      [f.key]: true,
-    }));
-  }
-}}
-
+                      if (newRequired) {
+                        setUserFieldConfig((prev) => ({
+                          ...prev,
+                          [f.key]: true,
+                        }));
+                      }
+                    }}
                     className={`relative inline-flex h-5 w-9 items-center rounded-full transition ${
                       required ? "bg-indigo-600" : "bg-gray-300"
                     }`}

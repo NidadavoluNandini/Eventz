@@ -3,7 +3,7 @@ import React from "react";
 
 type PaymentSettings = {
   collectPaymentCharges: boolean;
-  platformFeePercent: number; // keep in shape, but we won't show the input
+  platformFeePercent: number;
 };
 
 type OtherAttendeesConfig = {
@@ -27,12 +27,12 @@ export const PaymentStep: React.FC<PaymentStepProps> = ({
   paymentSettings,
   setPaymentSettings,
   form,
-  setForm
+  setForm,
 }) => {
   const toggleCollectCharges = () => {
     setPaymentSettings((p) => ({
       ...p,
-      collectPaymentCharges: !p.collectPaymentCharges
+      collectPaymentCharges: !p.collectPaymentCharges,
     }));
   };
 
@@ -45,27 +45,27 @@ export const PaymentStep: React.FC<PaymentStepProps> = ({
           prev.otherAttendeesConfig?.requiredFields ?? [
             "name",
             "email",
-            "phone"
-          ]
-      }
+            "phone",
+          ],
+      },
     }));
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5 sm:space-y-6">
       <div>
-        <h2 className="text-lg font-semibold text-gray-800 mb-1">
+        <h2 className="text-base sm:text-lg font-semibold text-gray-800 mb-1">
           Payment preferences
         </h2>
-        <p className="text-sm text-gray-500">
+        <p className="text-xs sm:text-sm text-gray-500">
           Control how ticket charges are shown to attendees and how you collect
           details for multiple attendees.
         </p>
       </div>
 
-      {/* Collect platform charges (toggle only) */}
-      <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 flex items-center justify-between gap-3">
-        <div>
+      {/* Collect platform charges */}
+      <div className="rounded-lg border border-gray-200 bg-gray-50 p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div className="flex-1">
           <p className="text-sm font-semibold text-gray-800">
             Collect additional platform charges
           </p>
@@ -94,8 +94,8 @@ export const PaymentStep: React.FC<PaymentStepProps> = ({
       </div>
 
       {/* Other attendees config */}
-      <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 flex items-center justify-between gap-3">
-        <div>
+      <div className="rounded-lg border border-gray-200 bg-gray-50 p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div className="flex-1">
           <p className="text-sm font-semibold text-gray-800">
             Additional attendees details
           </p>
@@ -108,7 +108,9 @@ export const PaymentStep: React.FC<PaymentStepProps> = ({
           type="button"
           onClick={toggleOtherAttendees}
           className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${
-            form.otherAttendeesConfig?.enabled ? "bg-indigo-600" : "bg-gray-300"
+            form.otherAttendeesConfig?.enabled
+              ? "bg-indigo-600"
+              : "bg-gray-300"
           }`}
         >
           <span

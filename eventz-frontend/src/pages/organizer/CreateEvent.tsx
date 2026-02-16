@@ -36,7 +36,8 @@ type Ticket = {
   subTickets: SubTicket[];
   isExpanded: boolean;
 };
-  type OtherAttendeesConfig = {
+
+type OtherAttendeesConfig = {
   enabled: boolean;
   requiredFields: string[];
 };
@@ -44,9 +45,8 @@ type Ticket = {
 type EventFormState = {
   otherAttendeesConfig: OtherAttendeesConfig;
 };
+
 export default function CreateEvent() {
-
-
   const navigate = useNavigate();
   const locationHook = useLocation() as any;
   const { id } = useParams(); // /organizer/events/edit/:id
@@ -65,12 +65,13 @@ export default function CreateEvent() {
   );
   const [returnToReviewAfterEdit, setReturnToReviewAfterEdit] =
     useState<FormStep | null>(null);
-const [scheduleForm, setScheduleForm] = useState({
-  startDate: "",
-  endDate: "",
-  startTime: "",
-  endTime: "",
-});
+
+  const [scheduleForm, setScheduleForm] = useState({
+    startDate: "",
+    endDate: "",
+    startTime: "",
+    endTime: "",
+  });
 
   const [toast, setToast] = useState<{
     type: "success" | "error";
@@ -180,139 +181,117 @@ const [scheduleForm, setScheduleForm] = useState({
   const [uploadingBanner, setUploadingBanner] = useState(false);
   const [uploadingGallery, setUploadingGallery] = useState(false);
 
-const [form, setForm] = useState<EventFormState>({
-  otherAttendeesConfig: {
-    enabled: false,
-    requiredFields: ["name", "email", "phone"],
-  },
-});
-
-
-const scrollTop = () => {
-  formScrollRef.current?.scrollTo({
-    top: 0,
-    behavior: "smooth",
+  const [form, setForm] = useState<EventFormState>({
+    otherAttendeesConfig: {
+      enabled: false,
+      requiredFields: ["name", "email", "phone"],
+    },
   });
-};
 
+  const formScrollRef = React.useRef<HTMLDivElement | null>(null);
+
+  const scrollTop = () => {
+    formScrollRef.current?.scrollTo({
+      top: 0,
+      behavior: "smooth",
+    });
+  };
 
   const showToast = (type: "success" | "error", message: string) => {
     setToast({ type, message });
     setTimeout(() => setToast(null), 3000);
   };
-useEffect(() => {
-  scrollTop();
-}, [currentStep]);
 
-// ✅ Load tickets when editing an event
-useEffect(() => {
-  if (!existingEvent) return;
+  useEffect(() => {
+    scrollTop();
+  }, [currentStep]);
 
-  /* ---------------- USER INFO (Attendee Fields) ---------------- */
+  // ✅ Load tickets and other data when editing an event
+  useEffect(() => {
+    if (!existingEvent) return;
 
-  const attendeeCfg = existingEvent.attendeeFieldConfig || {};
+    /* ---------------- USER INFO (Attendee Fields) ---------------- */
+    const attendeeCfg = existingEvent.attendeeFieldConfig || {};
+    const optional = attendeeCfg.optional || {};
+    const required = attendeeCfg.required || {};
 
-const optional = attendeeCfg.optional || {};
-const required = attendeeCfg.required || {};
+    // REQUIRED fields must also be enabled
+    const mergedOptional = { ...optional };
+    Object.keys(required).forEach((key) => {
+      if (required[key]) {
+        mergedOptional[key] = true;
+      }
+    });
 
-// REQUIRED fields must also be enabled
-const mergedOptional = { ...optional };
-
-Object.keys(required).forEach((key) => {
-  if (required[key]) {
-    mergedOptional[key] = true;
-  }
-});
-
-setUserFieldConfig((prev) => ({
-  ...prev,
-  ...mergedOptional,
-}));
-
-setUserFieldRequiredConfig((prev) => ({
-  ...prev,
-  ...required,
-}));
-
-
-  /* ---------------- SCHEDULE (🔥 YOUR MISSING PART) ---------------- */
-
-setStartDate(
-  existingEvent.startDate
-    ? existingEvent.startDate.slice(0, 10)
-    : ""
-);
-
-setEndDate(
-  existingEvent.endDate
-    ? existingEvent.endDate.slice(0, 10)
-    : ""
-);
-
-setStartTime(existingEvent.startTime || "");
-setEndTime(existingEvent.endTime || "");
-
-
-
-  /* ---------------- PAYMENT SETTINGS (🔥 MISSING) ---------------- */
-
-setPaymentSettings({
-  collectPaymentCharges:
-    existingEvent.paymentSettings?.collectPaymentCharges ?? false,
-  platformFeePercent: Number(
-    import.meta.env.VITE_PLATFORM_FEE_PERCENT ?? 0
-  ),
-});
-
-
-
-  /* ---------------- OTHER ATTENDEES CONFIG (🔥 MISSING) ---------------- */
-
-setForm((prev: EventFormState) => ({
-  ...prev,
-  otherAttendeesConfig: {
-    enabled:
-      existingEvent.otherAttendeesConfig?.enabled ?? false,
-    requiredFields:
-      existingEvent.otherAttendeesConfig?.requiredFields ?? [
-        "name",
-        "email",
-        "phone",
-      ],
-  },
-}));
-
-
-
-  /* ---------------- TICKETS ---------------- */
-
-  if (existingEvent.tickets?.length) {
-    const mappedTickets = existingEvent.tickets.map((t: any) => ({
-      id: `ticket-${Date.now()}-${Math.random()}`,
-      name: t.name || "",
-      price: t.price || 0,
-      quantity: t.quantity || 0,
-      gst: t.gst || 0,
-finalPrice:
-  t.price && t.gst
-    ? Math.round(t.price + (t.price * t.gst) / 100)
-    : t.price || 0,
-      isExpanded: false,
-      subTickets: (t.subTickets || []).map((s: any) => ({
-        id: `sub-${Date.now()}-${Math.random()}`,
-        name: s.name || "",
-        price: s.price || 0,
-        quantity: s.quantity || 0,
-        gst: 0,
-        finalPrice: s.finalPrice || s.price || 0,
-      })),
+    setUserFieldConfig((prev) => ({
+      ...prev,
+      ...mergedOptional,
     }));
 
-    setTickets(mappedTickets);
-  }
+    setUserFieldRequiredConfig((prev) => ({
+      ...prev,
+      ...required,
+    }));
 
-}, [existingEvent]);
+    /* ---------------- SCHEDULE ---------------- */
+    setStartDate(
+      existingEvent.startDate ? existingEvent.startDate.slice(0, 10) : ""
+    );
+    setEndDate(
+      existingEvent.endDate ? existingEvent.endDate.slice(0, 10) : ""
+    );
+    setStartTime(existingEvent.startTime || "");
+    setEndTime(existingEvent.endTime || "");
 
+    /* ---------------- PAYMENT SETTINGS ---------------- */
+    setPaymentSettings({
+      collectPaymentCharges:
+        existingEvent.paymentSettings?.collectPaymentCharges ?? false,
+      platformFeePercent: Number(
+        import.meta.env.VITE_PLATFORM_FEE_PERCENT ?? 0
+      ),
+    });
+
+    /* ---------------- OTHER ATTENDEES CONFIG ---------------- */
+    setForm((prev: EventFormState) => ({
+      ...prev,
+      otherAttendeesConfig: {
+        enabled: existingEvent.otherAttendeesConfig?.enabled ?? false,
+        requiredFields:
+          existingEvent.otherAttendeesConfig?.requiredFields ?? [
+            "name",
+            "email",
+            "phone",
+          ],
+      },
+    }));
+
+    /* ---------------- TICKETS ---------------- */
+    if (existingEvent.tickets?.length) {
+      const mappedTickets = existingEvent.tickets.map((t: any) => ({
+        id: `ticket-${Date.now()}-${Math.random()}`,
+        name: t.name || "",
+        price: t.price || 0,
+        quantity: t.quantity || 0,
+        gst: t.gst || 0,
+        finalPrice:
+          t.price && t.gst
+            ? Math.round(t.price + (t.price * t.gst) / 100)
+            : t.price || 0,
+        isExpanded: false,
+        subTickets: (t.subTickets || []).map((s: any) => ({
+          id: `sub-${Date.now()}-${Math.random()}`,
+          name: s.name || "",
+          price: s.price || 0,
+          quantity: s.quantity || 0,
+          gst: 0,
+          finalPrice: s.finalPrice || s.price || 0,
+        })),
+      }));
+
+      setTickets(mappedTickets);
+    }
+  }, [existingEvent]);
 
   const uploadImage = async (file: File): Promise<string> => {
     const formData = new FormData();
@@ -361,9 +340,7 @@ finalPrice:
 
   const addTicket = () => {
     const newTicket: Ticket = {
-      id: `ticket-${Date.now()}-${Math.random()
-        .toString(36)
-        .substr(2, 9)}`,
+      id: `ticket-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       name: "",
       price: 0,
       quantity: 0,
@@ -427,49 +404,49 @@ finalPrice:
     return Number(basePrice.toFixed(2));
   };
 
-const updateTicket = (id: string, field: keyof Ticket, value: any) => {
-  setTickets((prev) =>
-    prev.map((t) => {
-      if (t.id !== id) return t;
+  const updateTicket = (id: string, field: keyof Ticket, value: any) => {
+    setTickets((prev) =>
+      prev.map((t) => {
+        if (t.id !== id) return t;
 
-      const updated: Ticket = { ...t };
+        const updated: Ticket = { ...t };
 
-      switch (field) {
-        case "name":
-          updated.name = String(value);
-          break;
+        switch (field) {
+          case "name":
+            updated.name = String(value);
+            break;
 
-        case "price": {
-          updated.price = Number(value) || 0;
-          break;
+          case "price": {
+            updated.price = Number(value) || 0;
+            break;
+          }
+
+          case "gst": {
+            updated.gst = Number(value) || 0;
+            break;
+          }
+
+          case "quantity":
+            updated.quantity = Number(value) || 0;
+            break;
+
+          default:
+            (updated as any)[field] = value;
         }
 
-        case "gst": {
-          updated.gst = Number(value) || 0;
-          break;
-        }
+        // ✅ ALWAYS recompute final price
+        const price = updated.price || 0;
+        const gst = updated.gst || 0;
 
-        case "quantity":
-          updated.quantity = Number(value) || 0;
-          break;
+        updated.finalPrice =
+          price > 0
+            ? Number((price + (price * gst) / 100).toFixed(2))
+            : 0;
 
-        default:
-          (updated as any)[field] = value;
-      }
-
-      // ✅ ALWAYS recompute final price
-      const price = updated.price || 0;
-      const gst = updated.gst || 0;
-
-      updated.finalPrice =
-        price > 0
-          ? Number((price + (price * gst) / 100).toFixed(2))
-          : 0;
-
-      return updated;
-    })
-  );
-};
+        return updated;
+      })
+    );
+  };
 
   const updateSubTicket = (
     ticketId: string,
@@ -780,10 +757,8 @@ const updateTicket = (id: string, field: keyof Ticket, value: any) => {
     { id: "review", label: "Review & Edit", icon: <span>✅</span> },
     { id: "preview", label: "Event Preview", icon: <span>👀</span> },
   ];
-const formScrollRef = React.useRef<HTMLDivElement | null>(null);
 
   const handleSubmit = async () => {
-    
     if (!validateTickets()) return;
     if (!validatePaymentInfo()) return;
 
@@ -859,21 +834,22 @@ const formScrollRef = React.useRef<HTMLDivElement | null>(null);
     }
   };
 
-const handlePrimaryClick = async () => {
-  console.log("primary click", { editMode, currentStep, eventId });
+  const handlePrimaryClick = async () => {
+    console.log("primary click", { editMode, currentStep, eventId });
 
-  // ✅ Only submit on preview step
-  if (currentStep === "preview") {
-    await handleSubmit();
-    return;
-  }
+    // ✅ Only submit on preview step
+    if (currentStep === "preview") {
+      await handleSubmit();
+      return;
+    }
 
-  // ✅ Otherwise always go to next step
-  await handleNext();
-};
+    // ✅ Otherwise always go to next step
+    await handleNext();
+  };
+
   return (
-<div className="bg-gray-50 px-3 py-3 flex flex-col h-[calc(100vh-80px)]">
-
+    <div className="bg-gray-50 min-h-[100dvh] py-3 sm:py-4">
+      {/* Toast */}
       {toast && (
         <div
           className={`fixed top-3 right-3 z-50 px-3 py-2 rounded-md text-xs text-white shadow-md ${
@@ -884,210 +860,211 @@ const handlePrimaryClick = async () => {
         </div>
       )}
 
-<div className="max-w-4xl mx-auto w-full flex flex-col gap-3 flex-1 min-h-0">
-<StepHeader
-  editMode={editMode}
-  isLoading={isLoading}
-  onUpdate={async () => {
-    if (currentStep !== "preview") {
-      setCurrentStep("preview");
-      scrollTop();
-      return;
-    }
-    await handleSubmit();
-  }}
-/>
+      <div className="container mx-auto px-3 sm:px-4 lg:px-6">
+        <div className="max-w-5xl mx-auto w-full flex flex-col gap-3 sm:gap-4">
+          <StepHeader
+            editMode={editMode}
+            isLoading={isLoading}
+            onUpdate={async () => {
+              if (currentStep !== "preview") {
+                setCurrentStep("preview");
+                scrollTop();
+                return;
+              }
+              await handleSubmit();
+            }}
+          />
 
-        <Stepper
-          steps={steps}
-          currentStep={currentStep}
-          canNavigateToStep={canNavigateToStep}
-          isSectionCompleted={isSectionCompleted}
-          goToStep={(step) => goToStep(step)}
-        />
-
-<div
-  ref={formScrollRef}
-className="bg-white rounded-xl shadow border p-4 flex-1 overflow-y-auto min-h-0"
-
->
-
-          {currentStep === "userInfo" && (
-            <UserInfoStep
-              userFieldConfig={userFieldConfig}
-              setUserFieldConfig={setUserFieldConfig}
-              userFieldRequiredConfig={userFieldRequiredConfig}
-              setUserFieldRequiredConfig={setUserFieldRequiredConfig}
+          <div className="flex flex-col gap-3 sm:gap-4 md:max-h-[calc(100dvh-8rem)] md:flex-1">
+            <Stepper
+              steps={steps}
+              currentStep={currentStep}
+              canNavigateToStep={canNavigateToStep}
+              isSectionCompleted={isSectionCompleted}
+              goToStep={(step) => goToStep(step)}
             />
-          )}
 
-          {currentStep === "basic" && (
-            <BasicInfoStep
-              title={title}
-              setTitle={setTitle}
-              description={description}
-              setDescription={setDescription}
-              category={category}
-              setCategory={setCategory}
-              themeColor={themeColor}
-              setThemeColor={setThemeColor}
-              errors={errors}
-            />
-          )}
-
-          {currentStep === "schedule" && (
-            <ScheduleStep
-              city={city}
-              setCity={setCity}
-              locationText={locationText}
-              setLocationText={setLocationText}
-              startDate={startDate}
-              setStartDate={setStartDate}
-              endDate={endDate}
-              setEndDate={setEndDate}
-              startTime={startTime}
-              setStartTime={setStartTime}
-              endTime={endTime}
-              setEndTime={setEndTime}
-              errors={errors}
-            />
-          )}
-
-          {currentStep === "media" && (
-            <MediaStep
-              bannerImageUrl={bannerImageUrl}
-              setBannerImageUrl={setBannerImageUrl}
-              mediaUrls={mediaUrls}
-              setMediaUrls={setMediaUrls}
-              uploadingBanner={uploadingBanner}
-              uploadingGallery={uploadingGallery}
-              handleBannerChange={handleBannerChange}
-              handleGalleryChange={handleGalleryChange}
-              removeGalleryImage={removeGalleryImage}
-            />
-          )}
-
-          {currentStep === "tickets" && (
-            <TicketsStep
-              tickets={tickets}
-              addTicket={addTicket}
-              removeTicket={removeTicket}
-              toggleTicketExpansion={toggleTicketExpansion}
-              updateTicket={updateTicket}
-              addSubTicket={addSubTicket}
-              updateSubTicket={updateSubTicket}
-              removeSubTicket={removeSubTicket}
-              errors={errors}
-              paymentSettings={paymentSettings}
-            />
-          )}
-
-          {currentStep === "payment" && (
-            <PaymentStep
-              paymentSettings={paymentSettings}
-              setPaymentSettings={setPaymentSettings}
-              form={form}
-              setForm={setForm}
-              errors={errors}
-            />
-          )}
-
-          {currentStep === "review" && (
-            <ReviewStep
-              userFieldConfig={userFieldConfig}
-              goToStep={goToStep}
-              title={title}
-              category={category}
-              themeColor={themeColor}
-              city={city}
-              locationText={locationText}
-              startDate={startDate}
-              endDate={endDate}
-              startTime={startTime}
-              endTime={endTime}
-              bannerImageUrl={bannerImageUrl}
-              mediaUrls={mediaUrls}
-              tickets={tickets}
-              paymentSettings={paymentSettings}
-              formatDate={formatDate}
-            />
-          )}
-
-          {currentStep === "preview" && (
-            <PreviewStep
-              title={title}
-              category={category}
-              description={description}
-              themeColor={themeColor}
-              city={city}
-              locationText={locationText}
-              startDate={startDate}
-              endDate={endDate}
-              startTime={startTime}
-              endTime={endTime}
-              bannerImageUrl={bannerImageUrl}
-              mediaUrls={mediaUrls}
-              tickets={tickets}
-              previewMapCenter={previewMapCenter}
-              formatDate={formatDate}
-            />
-          )}
-        </div>
-
-<div className="bg-gray-50 pt-2 flex flex-col-reverse gap-2 sm:flex-row sm:justify-between shrink-0">
-          {currentStep !== "userInfo" && (
-            <button
-              type="button"
-              onClick={handleBack}
-              className="px-4 py-2 border border-gray-300 rounded-md text-xs font-semibold text-gray-700 hover:bg-gray-50 flex items-center gap-1"
+            <div
+              ref={formScrollRef}
+              className="bg-white rounded-xl shadow border p-3 sm:p-4 md:p-5 flex-1 overflow-visible md:overflow-y-auto min-h-[260px]"
             >
-              <span>←</span> Back
-            </button>
-          )}
-
-          <div className="flex gap-2 sm:ml-auto">
-            <button
-              type="button"
-              onClick={() => navigate("/organizer/events")}
-              className="px-4 py-2 border border-gray-300 rounded-md text-xs font-semibold text-gray-700 hover:bg-gray-50"
-            >
-              Cancel
-            </button>
-
-            <button
-              type="button"
-              onClick={handlePrimaryClick}
-              disabled={isLoading}
-              className="px-5 py-2 bg-indigo-600 text-white rounded-md text-xs font-semibold hover:bg-indigo-700 disabled:opacity-50 flex items-center gap-2"
-            >
-              {isLoading && (
-                <svg
-                  className="animate-spin h-3 w-3"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                >
-                  <circle
-                    className="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                  />
-                  <path
-                    className="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 
-                    7.938l3-2.647z"
-                  />
-                </svg>
+              {currentStep === "userInfo" && (
+                <UserInfoStep
+                  userFieldConfig={userFieldConfig}
+                  setUserFieldConfig={setUserFieldConfig}
+                  userFieldRequiredConfig={userFieldRequiredConfig}
+                  setUserFieldRequiredConfig={setUserFieldRequiredConfig}
+                />
               )}
-             {currentStep === "preview"
-  ? editMode
-    ? "Update Event"
-    : "Create Event"
-  : "Next"}
-            </button>
+
+              {currentStep === "basic" && (
+                <BasicInfoStep
+                  title={title}
+                  setTitle={setTitle}
+                  description={description}
+                  setDescription={setDescription}
+                  category={category}
+                  setCategory={setCategory}
+                  themeColor={themeColor}
+                  setThemeColor={setThemeColor}
+                  errors={errors}
+                />
+              )}
+
+              {currentStep === "schedule" && (
+                <ScheduleStep
+                  city={city}
+                  setCity={setCity}
+                  locationText={locationText}
+                  setLocationText={setLocationText}
+                  startDate={startDate}
+                  setStartDate={setStartDate}
+                  endDate={endDate}
+                  setEndDate={setEndDate}
+                  startTime={startTime}
+                  setStartTime={setStartTime}
+                  endTime={endTime}
+                  setEndTime={setEndTime}
+                  errors={errors}
+                />
+              )}
+
+              {currentStep === "media" && (
+                <MediaStep
+                  bannerImageUrl={bannerImageUrl}
+                  setBannerImageUrl={setBannerImageUrl}
+                  mediaUrls={mediaUrls}
+                  setMediaUrls={setMediaUrls}
+                  uploadingBanner={uploadingBanner}
+                  uploadingGallery={uploadingGallery}
+                  handleBannerChange={handleBannerChange}
+                  handleGalleryChange={handleGalleryChange}
+                  removeGalleryImage={removeGalleryImage}
+                />
+              )}
+
+              {currentStep === "tickets" && (
+                <TicketsStep
+                  tickets={tickets}
+                  addTicket={addTicket}
+                  removeTicket={removeTicket}
+                  toggleTicketExpansion={toggleTicketExpansion}
+                  updateTicket={updateTicket}
+                  addSubTicket={addSubTicket}
+                  updateSubTicket={updateSubTicket}
+                  removeSubTicket={removeSubTicket}
+                  errors={errors}
+                  paymentSettings={paymentSettings}
+                />
+              )}
+
+              {currentStep === "payment" && (
+                <PaymentStep
+                  paymentSettings={paymentSettings}
+                  setPaymentSettings={setPaymentSettings}
+                  form={form}
+                  setForm={setForm}
+                  errors={errors}
+                />
+              )}
+
+              {currentStep === "review" && (
+                <ReviewStep
+                  userFieldConfig={userFieldConfig}
+                  goToStep={goToStep}
+                  title={title}
+                  category={category}
+                  themeColor={themeColor}
+                  city={city}
+                  locationText={locationText}
+                  startDate={startDate}
+                  endDate={endDate}
+                  startTime={startTime}
+                  endTime={endTime}
+                  bannerImageUrl={bannerImageUrl}
+                  mediaUrls={mediaUrls}
+                  tickets={tickets}
+                  paymentSettings={paymentSettings}
+                  formatDate={formatDate}
+                />
+              )}
+
+              {currentStep === "preview" && (
+                <PreviewStep
+                  title={title}
+                  category={category}
+                  description={description}
+                  themeColor={themeColor}
+                  city={city}
+                  locationText={locationText}
+                  startDate={startDate}
+                  endDate={endDate}
+                  startTime={startTime}
+                  endTime={endTime}
+                  bannerImageUrl={bannerImageUrl}
+                  mediaUrls={mediaUrls}
+                  tickets={tickets}
+                  previewMapCenter={previewMapCenter}
+                  formatDate={formatDate}
+                />
+              )}
+            </div>
+
+            <div className="bg-gray-50 pt-2 mt-1 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sticky bottom-0 sm:static">
+              {currentStep !== "userInfo" && (
+                <button
+                  type="button"
+                  onClick={handleBack}
+                  className="px-4 py-2 border border-gray-300 rounded-md text-xs font-semibold text-gray-700 hover:bg-gray-100 flex items-center gap-1 justify-center"
+                >
+                  <span>←</span> Back
+                </button>
+              )}
+
+              <div className="flex gap-2 sm:ml-auto flex-col xs:flex-row">
+                <button
+                  type="button"
+                  onClick={() => navigate("/organizer/events")}
+                  className="px-4 py-2 border border-gray-300 rounded-md text-xs font-semibold text-gray-700 hover:bg-gray-100"
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handlePrimaryClick}
+                  disabled={isLoading}
+                  className="px-5 py-2 bg-indigo-600 text-white rounded-md text-xs font-semibold hover:bg-indigo-700 disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {isLoading && (
+                    <svg
+                      className="animate-spin h-3 w-3"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      />
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      />
+                    </svg>
+                  )}
+                  {currentStep === "preview"
+                    ? editMode
+                      ? "Update Event"
+                      : "Create Event"
+                    : "Next"}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </div>

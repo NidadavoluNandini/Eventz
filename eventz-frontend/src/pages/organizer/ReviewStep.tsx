@@ -35,8 +35,8 @@ type ReviewStepProps = {
   endTime: string;
   bannerImageUrl?: string;
   mediaUrls: string[];
-  tickets: any[];
-  paymentSettings: { collectPaymentCharges: boolean; platformFeePercent: number };
+  tickets: Ticket[];
+  paymentSettings: PaymentSettings;
   formatDate: (date: string) => string;
 };
 
@@ -56,28 +56,40 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({
   mediaUrls,
   tickets,
   paymentSettings,
-  formatDate
+  formatDate,
 }) => {
+  const enabledOptionalFields = Object.entries(userFieldConfig)
+    .filter(([_, enabled]) => enabled)
+    .map(([key]) => key);
+
   return (
-    <div className="space-y-4">
+    <div className="space-y-3 sm:space-y-4">
       <div>
-        <h2 className="text-lg font-semibold text-gray-800 mb-1">
+        <h2 className="text-base sm:text-lg font-semibold text-gray-800 mb-1">
           Review Event Details
         </h2>
-        <p className="text-sm text-gray-500">
-          Double-check everything before publishing
+        <p className="text-xs sm:text-sm text-gray-500">
+          Double-check everything before publishing.
         </p>
       </div>
 
-      <div className="space-y-3">
+      <div className="space-y-3 sm:space-y-4">
         {/* User info */}
-        <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="font-semibold text-gray-800 flex items-center gap-2">
-              <span className="text-xl">👤</span> User Information Fields
+        <div className="bg-gray-50 rounded-lg p-3 sm:p-4 border border-gray-200">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-2">
+            <h3 className="font-semibold text-gray-800 flex items-center gap-2 text-sm sm:text-base">
+              <span className="text-lg sm:text-xl">👤</span>
+              User Information Fields
             </h3>
+            <button
+              type="button"
+              onClick={() => goToStep("userInfo", true)}
+              className="self-start sm:self-auto text-[11px] sm:text-xs font-semibold text-indigo-600 hover:text-indigo-700"
+            >
+              Edit
+            </button>
           </div>
-          <div className="space-y-1 text-sm">
+          <div className="space-y-1 text-xs sm:text-sm">
             <p>
               <span className="font-medium text-gray-700">
                 Always required:
@@ -88,32 +100,31 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({
               <span className="font-medium text-gray-700">
                 Optional fields enabled:
               </span>{" "}
-              {Object.entries(userFieldConfig)
-                .filter(([_, enabled]) => enabled)
-                .map(([key]) => key)
-                .join(", ") || "None"}
+              {enabledOptionalFields.length > 0
+                ? enabledOptionalFields.join(", ")
+                : "None"}
             </p>
           </div>
         </div>
 
         {/* Basic */}
-        <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="font-semibold text-gray-800 flex items-center gap-2">
-              <span className="text-xl">📝</span> Basic Information
+        <div className="bg-gray-50 rounded-lg p-3 sm:p-4 border border-gray-200">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-2">
+            <h3 className="font-semibold text-gray-800 flex items-center gap-2 text-sm sm:text-base">
+              <span className="text-lg sm:text-xl">📝</span>
+              Basic Information
             </h3>
             <button
               type="button"
               onClick={() => goToStep("basic", true)}
-              className="text-xs font-semibold text-indigo-600 hover:text-indigo-700"
+              className="self-start sm:self-auto text-[11px] sm:text-xs font-semibold text-indigo-600 hover:text-indigo-700"
             >
               Edit
             </button>
           </div>
-          <div className="space-y-1 text-sm">
+          <div className="space-y-1 text-xs sm:text-sm">
             <p>
-              <span className="font-medium text-gray-700">Title:</span>{" "}
-              {title}
+              <span className="font-medium text-gray-700">Title:</span> {title}
             </p>
             <p>
               <span className="font-medium text-gray-700">Category:</span>{" "}
@@ -127,23 +138,23 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({
         </div>
 
         {/* Schedule */}
-        <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="font-semibold text-gray-800 flex items-center gap-2">
-              <span className="text-xl">📅</span> Schedule & Location
+        <div className="bg-gray-50 rounded-lg p-3 sm:p-4 border border-gray-200">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-2">
+            <h3 className="font-semibold text-gray-800 flex items-center gap-2 text-sm sm:text-base">
+              <span className="text-lg sm:text-xl">📅</span>
+              Schedule & Location
             </h3>
             <button
               type="button"
               onClick={() => goToStep("schedule", true)}
-              className="text-xs font-semibold text-indigo-600 hover:text-indigo-700"
+              className="self-start sm:self-auto text-[11px] sm:text-xs font-semibold text-indigo-600 hover:text-indigo-700"
             >
               Edit
             </button>
           </div>
-          <div className="space-y-1 text-sm">
+          <div className="space-y-1 text-xs sm:text-sm">
             <p>
-              <span className="font-medium text-gray-700">City:</span>{" "}
-              {city}
+              <span className="font-medium text-gray-700">City:</span> {city}
             </p>
             <p>
               <span className="font-medium text-gray-700">Venue:</span>{" "}
@@ -152,13 +163,13 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({
             <p>
               <span className="font-medium text-gray-700">Start:</span>{" "}
               {startDate
-                ? `${formatDate(startDate)} at ${startTime}`
+                ? `${formatDate(startDate)} at ${startTime || "-"}`
                 : "-"}
             </p>
             <p>
               <span className="font-medium text-gray-700">End:</span>{" "}
               {endDate
-                ? `${formatDate(endDate)} at ${endTime}`
+                ? `${formatDate(endDate)} at ${endTime || "-"}`
                 : "-"}
             </p>
           </div>
@@ -166,20 +177,21 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({
 
         {/* Media */}
         {(bannerImageUrl || mediaUrls.length > 0) && (
-          <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="font-semibold text-gray-800 flex items-center gap-2">
-                <span className="text-xl">🖼️</span> Media
+          <div className="bg-gray-50 rounded-lg p-3 sm:p-4 border border-gray-200">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-2">
+              <h3 className="font-semibold text-gray-800 flex items-center gap-2 text-sm sm:text-base">
+                <span className="text-lg sm:text-xl">🖼️</span>
+                Media
               </h3>
               <button
                 type="button"
                 onClick={() => goToStep("media", true)}
-                className="text-xs font-semibold text-indigo-600 hover:text-indigo-700"
+                className="self-start sm:self-auto text-[11px] sm:text-xs font-semibold text-indigo-600 hover:text-indigo-700"
               >
                 Edit
               </button>
             </div>
-            <div className="flex flex-wrap gap-2 text-xs text-gray-600">
+            <div className="flex flex-wrap gap-2 text-[11px] sm:text-xs text-gray-600">
               {bannerImageUrl && <span>Banner image set</span>}
               {mediaUrls.length > 0 && (
                 <span>
@@ -192,15 +204,16 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({
         )}
 
         {/* Tickets */}
-        <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="font-semibold text-gray-800 mb-2 flex items-center gap-2">
-              <span className="text-xl">🎟️</span> Tickets ({tickets.length})
+        <div className="bg-gray-50 rounded-lg p-3 sm:p-4 border border-gray-200">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-2">
+            <h3 className="font-semibold text-gray-800 flex items-center gap-2 text-sm sm:text-base">
+              <span className="text-lg sm:text-xl">🎟️</span>
+              Tickets ({tickets.length})
             </h3>
             <button
               type="button"
               onClick={() => goToStep("tickets", true)}
-              className="text-xs font-semibold text-indigo-600 hover:text-indigo-700"
+              className="self-start sm:self-auto text-[11px] sm:text-xs font-semibold text-indigo-600 hover:text-indigo-700"
             >
               Edit
             </button>
@@ -209,16 +222,16 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({
             {tickets.map((t, i) => (
               <div
                 key={t.id}
-                className="text-sm bg-white p-2 rounded border border-gray-200"
+                className="text-xs sm:text-sm bg-white p-2 sm:p-2.5 rounded border border-gray-200"
               >
                 <p className="font-medium text-gray-800">
-                  {i + 1}. {t.name} -{" "}
+                  {i + 1}. {t.name} –{" "}
                   {t.price <= 0 ? "FREE" : t.finalPrice.toFixed(2)}
                 </p>
                 {t.subTickets.length > 0 && (
-                  <p className="text-xs text-gray-600 ml-4">
+                  <p className="text-[11px] sm:text-xs text-gray-600 ml-4">
                     {t.subTickets.length} addon option
-                    {t.subTickets.length > 1 ? "s" : ""}{" "}
+                    {t.subTickets.length > 1 ? "s" : ""}
                   </p>
                 )}
               </div>
@@ -227,20 +240,21 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({
         </div>
 
         {/* Payment */}
-        <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="font-semibold text-gray-800 flex items-center gap-2">
-              <span className="text-xl">💰</span> Payment Preferences
+        <div className="bg-gray-50 rounded-lg p-3 sm:p-4 border border-gray-200">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-2">
+            <h3 className="font-semibold text-gray-800 flex items-center gap-2 text-sm sm:text-base">
+              <span className="text-lg sm:text-xl">💰</span>
+              Payment Preferences
             </h3>
             <button
               type="button"
               onClick={() => goToStep("payment", true)}
-              className="text-xs font-semibold text-indigo-600 hover:text-indigo-700"
+              className="self-start sm:self-auto text-[11px] sm:text-xs font-semibold text-indigo-600 hover:text-indigo-700"
             >
               Edit
             </button>
           </div>
-          <div className="space-y-1 text-sm">
+          <div className="space-y-1 text-xs sm:text-sm">
             <p>
               <span className="font-medium text-gray-700">
                 Collect charges:

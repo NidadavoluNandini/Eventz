@@ -42,7 +42,7 @@ const formatEventDateTime = (date: string, time: string) => {
     const datePart = d.toLocaleDateString("en-IN", {
       day: "2-digit",
       month: "short",
-      year: "numeric"
+      year: "numeric",
     });
     return time ? `${datePart} · ${time}` : datePart;
   } catch {
@@ -73,7 +73,6 @@ export const PreviewStep: React.FC<PreviewStepProps> = ({
   mediaUrls,
   tickets,
   previewMapCenter,
-  formatDate
 }) => {
   const [activeTab, setActiveTab] = useState<"about" | "location" | "gallery">(
     "about"
@@ -86,31 +85,28 @@ export const PreviewStep: React.FC<PreviewStepProps> = ({
   const themeHex = themeColor?.value || "#4F46E5";
   const aboutMinHeightClass = getAboutMinHeightClass(description);
 
-const selectedTicketObj = tickets.find((t) => t.name === selectedTicket);
-const hasSubTickets = !!selectedTicketObj?.subTickets?.length;
+  const selectedTicketObj = tickets.find((t) => t.name === selectedTicket);
+  const hasSubTickets = !!selectedTicketObj?.subTickets?.length;
 
   const heroImage =
     bannerImageUrl ||
     "https://via.placeholder.com/1200x400?text=Event+Banner";
 
-  const registrationOpen = true; // preview only
-
   return (
-    <div className="space-y-4">
+    <div className="space-y-3 sm:space-y-4">
       <div>
-        <h2 className="text-lg font-semibold text-gray-800 mb-1">
+        <h2 className="text-base sm:text-lg font-semibold text-gray-800 mb-1">
           Event Preview
         </h2>
-        <p className="text-sm text-gray-500">
+        <p className="text-xs sm:text-sm text-gray-500">
           This is a preview of how your event page will look.
         </p>
       </div>
 
-      <div className="min-h-[100dvh]
- bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-        {/* HERO IMAGE (matching EventDetails) */}
-        <div className="max-w-7xl mx-auto px-6 py-6">
-          <div className="relative h-56 overflow-hidden rounded-2xl shadow-2xl">
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+        {/* HERO */}
+        <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 py-3 sm:py-4">
+          <div className="relative h-44 sm:h-56 md:h-64 overflow-hidden rounded-2xl shadow-xl">
             <img
               src={heroImage}
               alt={title || "Event"}
@@ -118,24 +114,24 @@ const hasSubTickets = !!selectedTicketObj?.subTickets?.length;
             />
             <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/50 to-black/70" />
 
-            <div className="relative z-10 h-full flex items-end px-6 pb-5">
+            <div className="relative z-10 h-full flex items-end px-3 sm:px-5 pb-4 sm:pb-5">
               <div className="w-full">
-                <div className="flex items-center gap-3 mb-2">
+                <div className="flex flex-wrap items-center gap-2 mb-2">
                   <span
-                    className="px-3 py-1 rounded-full text-xs font-bold text-white uppercase"
+                    className="px-2.5 py-1 rounded-full text-[11px] sm:text-xs font-bold text-white uppercase"
                     style={{ backgroundColor: themeHex }}
                   >
                     {category || "Category"}
                   </span>
                 </div>
 
-                <h1 className="text-3xl font-extrabold text-white mb-2 drop-shadow-lg">
+                <h1 className="text-xl sm:text-2xl md:text-3xl font-extrabold text-white mb-2 drop-shadow-lg">
                   {title || "Event Title"}
                 </h1>
 
-                {/* Location + formatted date/time pills */}
-                <div className="flex flex-wrap items-center gap-3 text-xs sm:text-sm">
-                  {/* Location pill */}
+                {/* Location + date pills */}
+                <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-[11px] sm:text-xs md:text-sm">
+                  {/* Location */}
                   <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-white/10 text-white">
                     <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-emerald-500/90">
                       <svg
@@ -148,18 +144,18 @@ const hasSubTickets = !!selectedTicketObj?.subTickets?.length;
                           strokeLinecap="round"
                           strokeLinejoin="round"
                           strokeWidth={2}
-                          d="M17.657 16.657L13.414 20.9a1.998 1.998 
-                             0 01-2.827 0l-4.244-4.243a8 8 0 
+                          d="M17.657 16.657L13.414 20.9a1.998 1.998
+                             0 01-2.827 0l-4.244-4.243a8 8 0
                              1111.314 0z"
                         />
                       </svg>
                     </span>
-                    <span className="font-medium">
+                    <span className="font-medium line-clamp-1">
                       {locationText || "Venue"}, {city || "City"}
                     </span>
                   </div>
 
-                  {/* Date/time pill */}
+                  {/* Dates */}
                   <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-white/10 text-white/90">
                     <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-sky-500/90">
                       <svg
@@ -172,13 +168,13 @@ const hasSubTickets = !!selectedTicketObj?.subTickets?.length;
                           strokeLinecap="round"
                           strokeLinejoin="round"
                           strokeWidth={2}
-                          d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 
-                             002-2V7a2 2 0 00-2-2H5a2 2 0 
+                          d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0
+                             002-2V7a2 2 0 00-2-2H5a2 2 0
                              00-2 2v12a2 2 0 002 2z"
                         />
                       </svg>
                     </span>
-                    <span className="font-medium">
+                    <span className="font-medium line-clamp-1">
                       {startDate
                         ? formatEventDateTime(startDate, startTime)
                         : "Start not set"}
@@ -196,10 +192,10 @@ const hasSubTickets = !!selectedTicketObj?.subTickets?.length;
           </div>
         </div>
 
-        {/* CONTENT - TWO COLUMN LAYOUT (like EventDetails) */}
-        <div className="max-w-7xl mx-auto px-6 pt-0 pb-6">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-            {/* LEFT - TABS */}
+        {/* CONTENT */}
+        <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 pb-4 sm:pb-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-5">
+            {/* LEFT: tabs */}
             <div className="lg:col-span-2">
               {/* Tabs header */}
               <div
@@ -212,7 +208,7 @@ const hasSubTickets = !!selectedTicketObj?.subTickets?.length;
                 >
                   <button
                     onClick={() => setActiveTab("about")}
-                    className={`flex-1 py-3 px-4 font-semibold transition-all ${
+                    className={`flex-1 py-2.5 sm:py-3 px-3 sm:px-4 text-xs sm:text-sm font-semibold transition-all ${
                       activeTab === "about"
                         ? "text-white"
                         : "text-gray-600 hover:bg-gray-50"
@@ -227,7 +223,7 @@ const hasSubTickets = !!selectedTicketObj?.subTickets?.length;
                   </button>
                   <button
                     onClick={() => setActiveTab("location")}
-                    className={`flex-1 py-3 px-4 font-semibold transition-all ${
+                    className={`flex-1 py-2.5 sm:py-3 px-3 sm:px-4 text-xs sm:text-sm font-semibold transition-all ${
                       activeTab === "location"
                         ? "text-white"
                         : "text-gray-600 hover:bg-gray-50"
@@ -243,7 +239,7 @@ const hasSubTickets = !!selectedTicketObj?.subTickets?.length;
                   {mediaUrls.length > 0 && (
                     <button
                       onClick={() => setActiveTab("gallery")}
-                      className={`flex-1 py-3 px-4 font-semibold transition-all ${
+                      className={`flex-1 py-2.5 sm:py-3 px-3 sm:px-4 text-xs sm:text-sm font-semibold transition-all ${
                         activeTab === "gallery"
                           ? "text-white"
                           : "text-gray-600 hover:bg-gray-50"
@@ -262,14 +258,14 @@ const hasSubTickets = !!selectedTicketObj?.subTickets?.length;
 
               {/* Tab content */}
               <div
-                className={`bg-white rounded-b-2xl border-2 border-t-0 p-6 shadow-lg ${aboutMinHeightClass}`}
+                className={`bg-white rounded-b-2xl border-2 border-t-0 p-4 sm:p-5 shadow-lg ${aboutMinHeightClass}`}
                 style={{ borderColor: `${themeHex}30` }}
               >
                 {activeTab === "about" && (
                   <div>
-                    <h2 className="text-xl font-bold mb-3 flex items-center gap-2">
+                    <h2 className="text-base sm:text-lg font-bold mb-2 sm:mb-3 flex items-center gap-2">
                       <svg
-                        className="w-5 h-5"
+                        className="w-4 h-4 sm:w-5 sm:h-5"
                         style={{ color: themeHex }}
                         fill="none"
                         stroke="currentColor"
@@ -279,13 +275,13 @@ const hasSubTickets = !!selectedTicketObj?.subTickets?.length;
                           strokeLinecap="round"
                           strokeLinejoin="round"
                           strokeWidth={2}
-                          d="M13 16h-1v-4h-1m1-4h.01M21 
+                          d="M13 16h-1v-4h-1m1-4h.01M21
                              12a9 9 0 11-18 0 9 9 0 0118 0z"
                         />
                       </svg>
                       About This Event
                     </h2>
-                    <p className="text-gray-700 leading-relaxed whitespace-pre-line">
+                    <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-line">
                       {description ||
                         "Add a detailed description to tell people more about your event."}
                     </p>
@@ -294,9 +290,9 @@ const hasSubTickets = !!selectedTicketObj?.subTickets?.length;
 
                 {activeTab === "location" && (
                   <div className="space-y-3">
-                    <h2 className="text-xl font-bold flex items-center gap-2">
+                    <h2 className="text-base sm:text-lg font-bold flex items-center gap-2">
                       <svg
-                        className="w-5 h-5"
+                        className="w-4 h-4 sm:w-5 sm:h-5"
                         style={{ color: themeHex }}
                         fill="none"
                         stroke="currentColor"
@@ -306,8 +302,8 @@ const hasSubTickets = !!selectedTicketObj?.subTickets?.length;
                           strokeLinecap="round"
                           strokeLinejoin="round"
                           strokeWidth={2}
-                          d="M17.657 16.657L13.414 20.9a1.998 1.998 
-                             0 01-2.827 0l-4.244-4.243a8 8 0 
+                          d="M17.657 16.657L13.414 20.9a1.998 1.998
+                             0 01-2.827 0l-4.244-4.243a8 8 0
                              1111.314 0z"
                         />
                       </svg>
@@ -319,10 +315,10 @@ const hasSubTickets = !!selectedTicketObj?.subTickets?.length;
                       style={{ backgroundColor: `${themeHex}10` }}
                     >
                       <div>
-                        <p className="font-semibold text-gray-900">
+                        <p className="font-semibold text-sm text-gray-900">
                           {locationText || "Venue not set"}
                         </p>
-                        <p className="text-sm text-gray-600">
+                        <p className="text-xs sm:text-sm text-gray-600">
                           {city || "City not set"}
                         </p>
                       </div>
@@ -335,7 +331,7 @@ const hasSubTickets = !!selectedTicketObj?.subTickets?.length;
                       <MapContainer
                         center={previewMapCenter}
                         zoom={15}
-                        style={{ height: "240px" }}
+                        style={{ height: "220px" }}
                         scrollWheelZoom={false}
                       >
                         <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
@@ -349,9 +345,9 @@ const hasSubTickets = !!selectedTicketObj?.subTickets?.length;
 
                 {activeTab === "gallery" && mediaUrls.length > 0 && (
                   <div>
-                    <h2 className="text-xl font-bold mb-3 flex items-center gap-2">
+                    <h2 className="text-base sm:text-lg font-bold mb-2 sm:mb-3 flex items-center gap-2">
                       <svg
-                        className="w-5 h-5"
+                        className="w-4 h-4 sm:w-5 sm:h-5"
                         style={{ color: themeHex }}
                         fill="none"
                         stroke="currentColor"
@@ -361,22 +357,22 @@ const hasSubTickets = !!selectedTicketObj?.subTickets?.length;
                           strokeLinecap="round"
                           strokeLinejoin="round"
                           strokeWidth={2}
-                          d="M4 16l4.586-4.586a2 2 0 012.828 
-                             0L16 16m-2-2l1.586-1.586a2 2 0 
-                             012.828 0L20 14m-6-6h.01M6 20h12a2 
-                             2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 
+                          d="M4 16l4.586-4.586a2 2 0 012.828
+                             0L16 16m-2-2l1.586-1.586a2 2 0
+                             012.828 0L20 14m-6-6h.01M6 20h12a2
+                             2 0 002-2V6a2 2 0 00-2-2H6a2 2 0
                              00-2 2v12a2 2 0 002 2z"
                         />
                       </svg>
                       Photo Gallery
                     </h2>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                       {mediaUrls.map((url, i) => (
                         <img
                           key={url + i}
                           src={url}
                           alt={`Gallery ${i + 1}`}
-                          className="rounded-xl h-40 w-full object-cover hover:opacity-90 transition cursor-pointer shadow-lg hover:shadow-xl"
+                          className="rounded-xl h-28 sm:h-32 md:h-40 w-full object-cover hover:opacity-90 transition cursor-pointer shadow"
                         />
                       ))}
                     </div>
@@ -385,20 +381,19 @@ const hasSubTickets = !!selectedTicketObj?.subTickets?.length;
               </div>
             </div>
 
-            {/* RIGHT - STICKY TICKETS (preview version, no real register) */}
-            <div className="lg:sticky lg:top-6 h-fit">
+            {/* RIGHT: tickets */}
+            <div className="lg:sticky lg:top-4 h-fit">
               <div
-                className="bg-white rounded-2xl border-2 shadow-xl overflow-hidden"
+                className="bg-white rounded-2xl border-2 shadow-lg overflow-hidden"
                 style={{ borderColor: `${themeHex}40` }}
               >
-                {/* Header */}
                 <div
-                  className="p-4 text-white font-bold"
+                  className="p-3 sm:p-4 text-white font-bold text-sm sm:text-base"
                   style={{ backgroundColor: themeHex }}
                 >
                   <div className="flex items-center gap-2">
                     <svg
-                      className="w-5 h-5"
+                      className="w-4 h-4 sm:w-5 sm:h-5"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -407,9 +402,9 @@ const hasSubTickets = !!selectedTicketObj?.subTickets?.length;
                         strokeLinecap="round"
                         strokeLinejoin="round"
                         strokeWidth={2}
-                        d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 
-                           00-2 2v3a2 2 0 110 4v3a2 2 0 
-                           002 2h14a2 2 0 002-2v-3a2 2 0 
+                        d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0
+                           00-2 2v3a2 2 0 110 4v3a2 2 0
+                           002 2h14a2 2 0 002-2v-3a2 2 0
                            110-4V7a2 2 0 00-2-2H5z"
                       />
                     </svg>
@@ -417,10 +412,9 @@ const hasSubTickets = !!selectedTicketObj?.subTickets?.length;
                   </div>
                 </div>
 
-                {/* Tickets List */}
-                <div className="p-3 space-y-3 max-h-[340px] overflow-y-auto">
+                <div className="p-3 space-y-3 max-h-[320px] overflow-y-auto">
                   {tickets.length === 0 && (
-                    <p className="text-sm text-gray-500">
+                    <p className="text-xs sm:text-sm text-gray-500">
                       No tickets configured yet.
                     </p>
                   )}
@@ -441,16 +435,14 @@ const hasSubTickets = !!selectedTicketObj?.subTickets?.length;
                             isSelected ? "shadow-md" : ""
                           }`}
                           style={{
-                            borderColor: isSelected ? themeHex : "#e5e7eb"
+                            borderColor: isSelected ? themeHex : "#e5e7eb",
                           }}
                         >
                           <div className="flex justify-between items-center">
-                            <div>
-                              <p className="font-bold text-gray-900">
-                                {ticket.name || "Ticket"}
-                              </p>
-                            </div>
-                            <span className="font-bold text-lg text-green-600">
+                            <p className="font-bold text-sm text-gray-900">
+                              {ticket.name || "Ticket"}
+                            </p>
+                            <span className="font-bold text-sm sm:text-base text-green-600">
                               {ticket.price <= 0
                                 ? "FREE"
                                 : ticket.finalPrice.toFixed(2)}
@@ -460,13 +452,11 @@ const hasSubTickets = !!selectedTicketObj?.subTickets?.length;
 
                         {isSelected && ticketHasSub && (
                           <div
-                            className="mt-2 ml-3 space-y-2 p-2 rounded-lg"
-                            style={{
-                              backgroundColor: `${themeHex}08`
-                            }}
+                            className="mt-2 ml-2 space-y-2 p-2 rounded-lg"
+                            style={{ backgroundColor: `${themeHex}08` }}
                           >
-                            <p className="text-xs font-semibold text-gray-600 uppercase mb-1">
-                              Select Option (Optional)
+                            <p className="text-[11px] sm:text-xs font-semibold text-gray-600 uppercase mb-1">
+                              Select option (optional)
                             </p>
                             {ticket.subTickets.map((sub) => (
                               <button
@@ -475,7 +465,7 @@ const hasSubTickets = !!selectedTicketObj?.subTickets?.length;
                                 onClick={() =>
                                   setSelectedSubTicket(sub.name ?? sub.id)
                                 }
-                                className={`w-full flex justify-between p-2 rounded-lg border transition text-sm ${
+                                className={`w-full flex justify-between p-2 rounded-lg border transition text-xs sm:text-sm ${
                                   selectedSubTicket === (sub.name ?? sub.id)
                                     ? "bg-white border-2 shadow-md"
                                     : "bg-white hover:shadow"
@@ -505,9 +495,8 @@ const hasSubTickets = !!selectedTicketObj?.subTickets?.length;
                   })}
                 </div>
 
-                {/* Footer */}
                 <div className="p-3 bg-gray-50 border-t text-center">
-                  <p className="text-xs text-gray-600 font-medium">
+                  <p className="text-[11px] sm:text-xs text-gray-600 font-medium">
                     💳 Secure Payment • 🎫 Instant E‑Tickets
                   </p>
                 </div>
@@ -515,7 +504,7 @@ const hasSubTickets = !!selectedTicketObj?.subTickets?.length;
             </div>
           </div>
         </div>
-      </div>  
+      </div> {/* card */}
     </div>
   );
 };
