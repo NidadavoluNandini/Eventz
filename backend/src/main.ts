@@ -40,6 +40,9 @@ async function bootstrap() {
   );
 
   const port = process.env.PORT || 3000;
+  console.log("MONGO_URI =", process.env.MONGO_URI);
+  console.log("TEST_VAR =", process.env.TEST_VAR);
+  console.log("MONGO_URI =", process.env.MONGO_URI);  
   await app.listen(port);
 
   console.log(`🚀 Backend running on port ${port}`);

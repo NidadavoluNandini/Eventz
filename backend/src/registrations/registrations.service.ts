@@ -54,7 +54,7 @@ export class RegistrationsService {
 
     @InjectModel(Event.name)
     private readonly eventModel: Model<Event>,
-    private readonly eventsService: EventsService, // ✅ ADD
+    private readonly eventsService: EventsService, 
 
     private readonly emailService: EmailService,
     private readonly smsService: SmsService,
@@ -189,8 +189,13 @@ const requiredChecks: Array<[string, string]> = [
   // base for all tickets (no GST/platform yet)
   const baseTotal = basePricePerTicket * quantity;
 
-  // GST ONLY on base
-  const gstAmount = Math.round((baseTotal * (gstRate || 0)) / 100);
+// GST calculated per ticket
+const gstPerTicket = Math.round(
+  (basePricePerTicket * (gstRate || 0)) / 100,
+);
+
+// total GST = per-ticket GST × quantity
+const gstAmount = gstPerTicket * quantity;
 
 // =====================================================
 // PLATFORM FEE CALCULATION (SAFE + ENV BASED)
@@ -326,7 +331,7 @@ const finalAmount = baseTotal + gstAmount + platformFee;
     userName: dto.userName,
     userEmail: dto.userEmail,
     userPhone: dto.userPhone,
-
+    
     linkedin,
     gender,
     altPhone,
@@ -367,6 +372,12 @@ console.log("PLATFORM %:", PLATFORM_FEE_PERCENT);
   return {
     status: 'OTP_SENT',
     registrationId: registration._id,
+     pricing: {
+    baseTotal,
+    gstAmount,
+    platformFee,
+    finalAmount,
+  }
   };
 }
 

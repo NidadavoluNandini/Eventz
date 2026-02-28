@@ -1,8 +1,9 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
-import { ContactsModule } from './contact/contacts.module';
+import { ScheduleModule } from '@nestjs/schedule';
 
+import { ContactsModule } from './contact/contacts.module';
 import { AuthModule } from './auth/auth.module';
 import { EventsModule } from './events/events.module';
 import { OrdersModule } from './orders/orders.module';
@@ -13,14 +14,30 @@ import { RegistrationsModule } from './registrations/registrations.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { OrganizersModule } from './organizers/organizer.module';
 import { MailModule } from './email/mail.module';
-import { ScheduleModule } from '@nestjs/schedule';
 import { UploadModule } from './upload/upload.module';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true }),
-    MongooseModule.forRoot(process.env.MONGO_URI || ''),
+    /**
+     * ✅ Load ENV first
+     */
+    ConfigModule.forRoot({
+      isGlobal: true,
+      envFilePath: '.env.development', // ← IMPORTANT
+    }),
+
+    /**
+     * ✅ MongoDB connection (CORRECT WAY)
+     */
+    MongooseModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => ({
+        uri: configService.get<string>('MONGO_URI'),
+      }),
+    }),
+
     ScheduleModule.forRoot(),
+
     AuthModule,
     ContactsModule,
     EventsModule,

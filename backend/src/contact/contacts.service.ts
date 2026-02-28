@@ -288,7 +288,7 @@ export class ContactsService {
                 <tr>
                   <td style="background-color: #fef3c7; border-left: 4px solid #f59e0b; padding: 16px 20px; border-radius: 6px;">
                     <p style="margin: 0; color: #92400e; font-size: 14px; font-weight: 600; padding-bottom: 8px;">🚨 Need Urgent Help?</p>
-                    <p style="margin: 0; color: #b45309; font-size: 13px;">Call us at <a href="tel:+919876543210" style="color: #d97706; text-decoration: none; font-weight: 700;">+91 9876543210</a></p>
+                    <p style="margin: 0; color: #b45309; font-size: 13px;">Call us at <a href="tel:+917506727976" style="color: #d97706; text-decoration: none; font-weight: 700;">+91 9876543210</a></p>
                   </td>
                 </tr>
               </table>

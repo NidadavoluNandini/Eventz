@@ -6,14 +6,38 @@ import { getEventById } from "../../api/events.api";
 import { initiateRegistration } from "../../api/registrations.api";
 
 /* ---------- DYNAMIC GST CALCULATION ---------- */
+export const calculateTicketTotals = (
+  price: number,
+  quantity: number,
+  gstPercent: number
+) => {
+  // base amount
+  const baseTotal = price * quantity;
+
+  // GST PER TICKET (client rule)
+  const gstPerTicket = gstPercent
+    ? Math.round((price * gstPercent) / 100)
+    : 0;
+
+  // total GST
+  const gstAmount = gstPerTicket * quantity;
+
+  // final amount
+  const finalAmount = baseTotal + gstAmount;
+
+  return {
+    baseTotal,
+    gstPerTicket,
+    gstAmount,
+    finalAmount,
+  };
+};
 const calculateGST = (price: number, gstPercent: number) => {
   if (!gstPercent) return 0;
+
+  // CLIENT RULE: GST per ticket
   return Math.round((price * gstPercent) / 100);
 };
-
-const calculateFinalPrice = (price: number, gstPercent: number) =>
-  price + calculateGST(price, gstPercent);
-
 export default function RegisterEvent() {
   const { id } = useParams();
   const location = useLocation() as any;
